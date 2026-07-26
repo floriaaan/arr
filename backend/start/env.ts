@@ -28,4 +28,10 @@ export default await Env.create(new URL('../', import.meta.url), {
   DB_USER: Env.schema.string(),
   DB_PASSWORD: Env.schema.string.optional(),
   DB_DATABASE: Env.schema.string(),
+
+  // OIDC (PocketID) — precedence over database config when set, cf. docs/adr.
+  OIDC_ISSUER_URL: Env.schema.string.optional({ format: 'url', tld: false }),
+  OIDC_CLIENT_ID: Env.schema.string.optional(),
+  OIDC_CLIENT_SECRET: Env.schema.string.optional(),
+  DISABLE_PASSWORD_LOGIN: Env.schema.boolean.optional(),
 })
