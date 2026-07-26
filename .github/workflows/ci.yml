@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: arr
+          POSTGRES_PASSWORD: arr
+          POSTGRES_DB: arr_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U arr -d arr_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      TZ: UTC
+      PORT: 3333
+      HOST: localhost
+      LOG_LEVEL: info
+      APP_KEY: ci-test-app-key-not-for-production-use
+      APP_URL: http://localhost:3333
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: arr
+      DB_PASSWORD: arr
+      DB_DATABASE: arr_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run checks (lint + typecheck + tests + boundary lint)
+        run: task check

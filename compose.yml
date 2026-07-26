@@ -1,0 +1,83 @@
+networks:
+  internal:
+
+volumes:
+  pgdata:
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-arr}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-arr}
+      POSTGRES_DB: ${POSTGRES_DB:-arr}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-arr} -d ${POSTGRES_DB:-arr}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    networks:
+      - internal
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3333
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL:-http://localhost:3333}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-arr}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-arr}
+      DB_DATABASE: ${POSTGRES_DB:-arr}
+      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      DISABLE_PASSWORD_LOGIN: ${DISABLE_PASSWORD_LOGIN:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3333/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Not published to the host on purpose — only the frontend is exposed.
+    # The frontend's own server proxies /api/* to this service over the
+    # internal network (cf. docs/adr).
+    networks:
+      - internal
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      BACKEND_URL: http://backend:3333
+    ports:
+      - '${FRONTEND_PORT:-3000}:3000'
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - internal
