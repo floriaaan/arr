@@ -1,0 +1,17 @@
+node_modules/
+.pnpm-store/
+dist/
+build/
+.adonisjs/
+tmp/
+*.log
+.env
+.env.*.local
+!.env.example
+.DS_Store
+coverage/
+.turbo/
+.vite/
+.output/
+.tanstack/
+*.sqlite3

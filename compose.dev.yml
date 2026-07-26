@@ -1,0 +1,30 @@
+# Dev override: hot reload via mounted source, dev servers instead of built
+# artifacts. Usage: docker compose -f compose.yml -f compose.dev.yml up
+services:
+  backend:
+    build:
+      target: deps
+    command: ['pnpm', '--filter', 'arr-backend', 'run', 'dev']
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./backend:/app/backend
+      - /app/backend/node_modules
+      - /app/node_modules
+    ports:
+      - '${BACKEND_PORT:-3333}:3333'
+    healthcheck:
+      disable: true
+
+  frontend:
+    build:
+      target: deps
+    command: ['pnpm', '--filter', 'arr-frontend', 'run', 'dev']
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
+      - /app/node_modules
+    healthcheck:
+      disable: true
