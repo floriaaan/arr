@@ -8,8 +8,16 @@ import type { ExternalId } from '#domain/catalog/external-id.vo'
 
 const ACTIVE_STATUSES = ['submitted', 'downloading', 'importing']
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export class LucidMediaRequestRepository implements MediaRequestRepository {
   async findById(id: string): Promise<MediaRequest | null> {
+    // `id` is a `uuid` column — an arbitrary route param (e.g. from a stale
+    // link or a client typo) that isn't UUID-shaped would otherwise reach
+    // Postgres and raise a raw "invalid input syntax for type uuid" error
+    // instead of the clean "not found" this actually is.
+    if (!UUID_PATTERN.test(id)) return null
+
     const row = await MediaRequestLucidModel.find(id)
     return row ? toDomain(row) : null
   }

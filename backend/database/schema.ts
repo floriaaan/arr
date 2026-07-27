@@ -3,3 +3,302 @@
  * DO NOT EDIT manually
  * Run "node ace migration:run" command to re-generate this file
  */
+
+import { BaseModel, column } from '@adonisjs/lucid/orm'
+import { DateTime } from 'luxon'
+
+export class AccountSchema extends BaseModel {
+  static $columns = [
+    'accessToken',
+    'accessTokenExpiresAt',
+    'accountId',
+    'createdAt',
+    'id',
+    'idToken',
+    'password',
+    'providerId',
+    'refreshToken',
+    'refreshTokenExpiresAt',
+    'scope',
+    'updatedAt',
+    'userId',
+  ] as const
+  $columns = AccountSchema.$columns
+  @column()
+  declare accessToken: string | null
+  @column.dateTime()
+  declare accessTokenExpiresAt: DateTime | null
+  @column()
+  declare accountId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare idToken: string | null
+  @column({ serializeAs: null })
+  declare password: string | null
+  @column()
+  declare providerId: string
+  @column()
+  declare refreshToken: string | null
+  @column.dateTime()
+  declare refreshTokenExpiresAt: DateTime | null
+  @column()
+  declare scope: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare userId: string
+}
+
+export class AuthSettingSchema extends BaseModel {
+  static $columns = [
+    'createdAt',
+    'id',
+    'oidcClaimsMapping',
+    'oidcClientId',
+    'oidcClientSecretEncrypted',
+    'oidcIssuerUrl',
+    'updatedAt',
+  ] as const
+  $columns = AuthSettingSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare oidcClaimsMapping: any | null
+  @column()
+  declare oidcClientId: string | null
+  @column()
+  declare oidcClientSecretEncrypted: string | null
+  @column()
+  declare oidcIssuerUrl: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class MediaRequestSchema extends BaseModel {
+  static $columns = [
+    'createdAt',
+    'externalIdScheme',
+    'externalIdValue',
+    'externalRefRemoteId',
+    'failureReason',
+    'id',
+    'kind',
+    'progressEta',
+    'progressPercentage',
+    'progressSizeLeftBytes',
+    'progressStepLabel',
+    'requestedByUserId',
+    'servarrInstanceId',
+    'status',
+    'title',
+    'updatedAt',
+  ] as const
+  $columns = MediaRequestSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare externalIdScheme: string
+  @column()
+  declare externalIdValue: string
+  @column()
+  declare externalRefRemoteId: string | null
+  @column()
+  declare failureReason: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column.dateTime()
+  declare progressEta: DateTime | null
+  @column()
+  declare progressPercentage: string | null
+  @column()
+  declare progressSizeLeftBytes: bigint | number | null
+  @column()
+  declare progressStepLabel: string | null
+  @column()
+  declare requestedByUserId: string
+  @column()
+  declare servarrInstanceId: string
+  @column()
+  declare status: string
+  @column()
+  declare title: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class OnboardingStateSchema extends BaseModel {
+  static $columns = [
+    'adminCreatedAt',
+    'completedAt',
+    'createdAt',
+    'id',
+    'servicesConfiguredAt',
+    'status',
+    'updatedAt',
+  ] as const
+  $columns = OnboardingStateSchema.$columns
+  @column.dateTime()
+  declare adminCreatedAt: DateTime | null
+  @column.dateTime()
+  declare completedAt: DateTime | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column.dateTime()
+  declare servicesConfiguredAt: DateTime | null
+  @column()
+  declare status: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class ServarrInstanceSchema extends BaseModel {
+  static $columns = [
+    'apiKeyEncrypted',
+    'baseUrl',
+    'createdAt',
+    'detectedVersion',
+    'enabled',
+    'id',
+    'kind',
+    'languageProfileId',
+    'lastHealthCheckAt',
+    'lastHealthCheckErrorMessage',
+    'lastHealthCheckErrorType',
+    'lastHealthCheckOk',
+    'metadataProfileId',
+    'qualityProfileId',
+    'rootFolderPath',
+    'updatedAt',
+  ] as const
+  $columns = ServarrInstanceSchema.$columns
+  @column()
+  declare apiKeyEncrypted: string
+  @column()
+  declare baseUrl: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare detectedVersion: string | null
+  @column()
+  declare enabled: boolean
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare languageProfileId: number | null
+  @column.dateTime()
+  declare lastHealthCheckAt: DateTime | null
+  @column()
+  declare lastHealthCheckErrorMessage: string | null
+  @column()
+  declare lastHealthCheckErrorType: string | null
+  @column()
+  declare lastHealthCheckOk: boolean | null
+  @column()
+  declare metadataProfileId: number | null
+  @column()
+  declare qualityProfileId: number | null
+  @column()
+  declare rootFolderPath: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class SessionSchema extends BaseModel {
+  static $columns = [
+    'createdAt',
+    'expiresAt',
+    'id',
+    'impersonatedBy',
+    'ipAddress',
+    'token',
+    'updatedAt',
+    'userAgent',
+    'userId',
+  ] as const
+  $columns = SessionSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime()
+  declare expiresAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare impersonatedBy: string | null
+  @column()
+  declare ipAddress: string | null
+  @column()
+  declare token: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare userAgent: string | null
+  @column()
+  declare userId: string
+}
+
+export class UserSchema extends BaseModel {
+  static $columns = [
+    'banExpires',
+    'banReason',
+    'banned',
+    'createdAt',
+    'email',
+    'emailVerified',
+    'id',
+    'image',
+    'name',
+    'role',
+    'updatedAt',
+  ] as const
+  $columns = UserSchema.$columns
+  @column.dateTime()
+  declare banExpires: DateTime | null
+  @column()
+  declare banReason: string | null
+  @column()
+  declare banned: boolean
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare email: string
+  @column()
+  declare emailVerified: boolean
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare image: string | null
+  @column()
+  declare name: string
+  @column()
+  declare role: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class VerificationSchema extends BaseModel {
+  static $columns = ['createdAt', 'expiresAt', 'id', 'identifier', 'updatedAt', 'value'] as const
+  $columns = VerificationSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime()
+  declare expiresAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare identifier: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare value: string
+}

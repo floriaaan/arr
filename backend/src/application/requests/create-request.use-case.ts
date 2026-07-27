@@ -55,11 +55,11 @@ export class CreateRequest implements UseCase<
     const existing = await this.repository.findByExternalId(input.kind, externalId.value)
     if (existing) return Result.err('already_requested')
 
-    const detail = await this.lookup.detail(externalId.value)
-    if (detail.alreadyManaged) return Result.err('already_managed')
-
     const instance = await this.resolveInstance(input.kind, input.instanceId)
     if (!instance.ok) return instance
+
+    const detail = await this.lookup.detail(externalId.value)
+    if (detail.alreadyManaged) return Result.err('already_managed')
 
     const request = MediaRequest.request(
       this.idGenerator.next(),

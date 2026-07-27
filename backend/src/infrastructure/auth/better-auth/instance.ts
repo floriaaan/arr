@@ -24,6 +24,55 @@ function buildAuthInstance(
     database: { db, type: 'postgres' },
     emailAndPassword: { enabled: true },
     /**
+     * The migration (`create_identity_tables_table.ts`) uses snake_case
+     * columns, matching every other table in this codebase — better-auth's
+     * Kysely adapter otherwise queries columns by its own camelCase field
+     * names verbatim (no automatic case translation), so every multi-word
+     * field (core + admin plugin's `banReason`/`banExpires`/
+     * `impersonatedBy`) needs an explicit mapping here.
+     */
+    user: {
+      fields: {
+        emailVerified: 'email_verified',
+        createdAt: 'created_at',
+        updatedAt: 'updated_at',
+        banReason: 'ban_reason',
+        banExpires: 'ban_expires',
+      } as Record<string, string>,
+    },
+    session: {
+      fields: {
+        userId: 'user_id',
+        expiresAt: 'expires_at',
+        ipAddress: 'ip_address',
+        userAgent: 'user_agent',
+        createdAt: 'created_at',
+        updatedAt: 'updated_at',
+        impersonatedBy: 'impersonated_by',
+      } as Record<string, string>,
+    },
+    account: {
+      fields: {
+        userId: 'user_id',
+        accountId: 'account_id',
+        providerId: 'provider_id',
+        accessToken: 'access_token',
+        refreshToken: 'refresh_token',
+        idToken: 'id_token',
+        accessTokenExpiresAt: 'access_token_expires_at',
+        refreshTokenExpiresAt: 'refresh_token_expires_at',
+        createdAt: 'created_at',
+        updatedAt: 'updated_at',
+      },
+    },
+    verification: {
+      fields: {
+        expiresAt: 'expires_at',
+        createdAt: 'created_at',
+        updatedAt: 'updated_at',
+      },
+    },
+    /**
      * Runs after the `admin` plugin's own `user.create.before` hook (plugin
      * hooks run first, top-level `databaseHooks` last — cf. better-auth's
      * `runPluginInit`), so this override wins: the very first account ever
