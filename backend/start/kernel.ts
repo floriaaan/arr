@@ -35,12 +35,16 @@ server.use([
 router.use([
   () => import('@adonisjs/core/bodyparser_middleware'),
   () => import('@adonisjs/shield/shield_middleware'),
+  () => import('#middleware/auth_middleware'),
 ])
 
 /**
- * Named middleware collection must be explicitly assigned to
- * the routes or the routes group. Populated in Phase 4 with the
- * middleware that resolves the better-auth session into an
- * AuthenticatedUser (cf. docs/phase-0/02-modele-de-domaine.md).
+ * Named middleware, explicitly assigned to routes/groups that need it —
+ * `auth_middleware` above already runs on every routed request and sets
+ * `ctx.authenticatedUser` (possibly `null`), these two layer stricter
+ * guards on top of that for the route groups that need them.
  */
-export const middleware = router.named({})
+export const middleware = router.named({
+  onboardingGuard: () => import('#middleware/onboarding_guard_middleware'),
+  adminOnly: () => import('#middleware/admin_only_middleware'),
+})
