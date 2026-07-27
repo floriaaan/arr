@@ -229,7 +229,29 @@ export class HttpArrConnector implements ArrConnector {
 
   async cancelRequest(id: string) {
     const response = await this.http.post(`/api/requests/${id}/cancel`)
-    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    if (!response.ok) {
+      // 409 on this endpoint puts `currentStatus` as a sibling of
+      // `type`/`message`, not under `details` like every other error body —
+      // read it directly instead of losing it to `toApiError`'s stricter schema.
+      const body: unknown = await response.json().catch(() => null)
+      const conflict = body as {
+        error?: { type?: string; message?: string; currentStatus?: string }
+      }
+      const error =
+        conflict.error?.type === 'not_cancellable'
+          ? {
+              type: conflict.error.type,
+              message: conflict.error.message ?? 'This request cannot be cancelled.',
+              details: { currentStatus: conflict.error.currentStatus },
+              status: response.status,
+            }
+          : {
+              type: conflict.error?.type ?? 'unknown',
+              message: conflict.error?.message ?? `Unexpected response (${response.status})`,
+              status: response.status,
+            }
+      return { ok: false as const, error }
+    }
     const body = (await response.json()) as { request: unknown }
     return { ok: true as const, value: mediaRequestDtoSchema.parse(body.request) }
   }
