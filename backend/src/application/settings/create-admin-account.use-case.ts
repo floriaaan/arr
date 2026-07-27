@@ -18,9 +18,13 @@ export interface CreateAdminAccountInput {
 export type CreateAdminAccountError =
   RegistrationError | 'invalid_email' | 'admin_already_exists' | InvalidTransition
 
+export interface CreateAdminAccountOutput {
+  userId: string
+}
+
 export class CreateAdminAccount implements UseCase<
   CreateAdminAccountInput,
-  Result<void, CreateAdminAccountError>
+  Result<CreateAdminAccountOutput, CreateAdminAccountError>
 > {
   constructor(
     private readonly userDirectory: UserDirectory,
@@ -29,7 +33,9 @@ export class CreateAdminAccount implements UseCase<
     private readonly clock: Clock,
   ) {}
 
-  async execute(input: CreateAdminAccountInput): Promise<Result<void, CreateAdminAccountError>> {
+  async execute(
+    input: CreateAdminAccountInput,
+  ): Promise<Result<CreateAdminAccountOutput, CreateAdminAccountError>> {
     const alreadyExists = await this.userDirectory.existsAny()
     if (alreadyExists) {
       return Result.err('admin_already_exists')
@@ -48,6 +54,6 @@ export class CreateAdminAccount implements UseCase<
     if (!transitioned.ok) return transitioned
 
     await this.onboardingStateRepository.save(state)
-    return Result.ok(undefined)
+    return Result.ok({ userId: registered.value.id })
   }
 }

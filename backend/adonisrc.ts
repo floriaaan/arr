@@ -46,6 +46,7 @@ export default defineConfig({
     () => import('@adonisjs/lucid/database_provider'),
     () => import('@adonisjs/cors/cors_provider'),
     () => import('#providers/api_provider'),
+    () => import('#providers/shared_provider'),
     () => import('#providers/identity_provider'),
     () => import('#providers/settings_provider'),
     () => import('#providers/catalog_provider'),
