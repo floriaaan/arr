@@ -2,9 +2,13 @@ import { test } from '@japa/runner'
 import app from '@adonisjs/core/services/app'
 
 test.group('service provider bindings', () => {
-  test('every Phase 3 container binding resolves without throwing', async ({ assert }) => {
+  test('every Phase 3/4 container binding resolves without throwing', async ({ assert }) => {
     const bindings = [
       'identity.userDirectory',
+      'identity.authentication',
+      'identity.session',
+      'identity.accountRegistrar',
+      'identity.authHandler',
       'settings.instanceRepository',
       'settings.authSettingsRepository',
       'settings.onboardingStateRepository',

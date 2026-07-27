@@ -33,6 +33,15 @@ export default class IdentityProvider {
       const authSettingsProvider = await resolver.make('settings.authSettingsProvider')
       return new BetterAuthAccountRegistrar(authSettingsProvider)
     })
+
+    this.app.container.singleton('identity.authHandler', async (resolver) => {
+      const { getAuthInstance } = await import('#infrastructure/auth/better-auth/instance')
+      const authSettingsProvider = await resolver.make('settings.authSettingsProvider')
+      return async (request: Request) => {
+        const auth = await getAuthInstance(authSettingsProvider)
+        return auth.handler(request)
+      }
+    })
   }
 }
 
@@ -42,5 +51,6 @@ declare module '@adonisjs/core/types' {
     'identity.authentication': Authentication
     'identity.session': Session
     'identity.accountRegistrar': AccountRegistrar
+    'identity.authHandler': (request: Request) => Promise<Response>
   }
 }
