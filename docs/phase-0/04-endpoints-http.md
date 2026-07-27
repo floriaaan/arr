@@ -101,6 +101,21 @@ et avec un contrôle `admin_only_middleware` :
 
 `MediaRequestDto = { id, requestedBy: { id, email }, kind, externalId, title, status, progress: RequestProgressDto | null, failureReason: string | null, createdAt, updatedAt }`
 
+## Library (`/api/library/*`) — authentifié
+
+- `GET /api/library?kind=movie|series|album`
+  → `{ items: LibraryItemDto[] }` — sans `kind`, agrège les 3 services (une
+    instance en panne est simplement omise, pas d'erreur).
+  `LibraryItemDto = { externalId; kind; title; year: number | null; posterRef: string | null; monitored: boolean; hasFile: boolean; sizeOnDiskBytes: number; status: string; instanceId: string }`
+
+## Calendar (`/api/calendar/*`) — authentifié
+
+- `GET /api/calendar?start=YYYY-MM-DD&end=YYYY-MM-DD`
+  → `{ entries: CalendarEntryDto[] }` — agrège toujours les 3 services, erreurs
+    par instance isolées (sous-ensemble partiel renvoyé plutôt qu'un échec
+    global).
+  `CalendarEntryDto = { id: string; kind: 'movie' | 'episode' | 'album'; title; subtitle: string | null; releaseDate: string; posterRef: string | null; monitored: boolean; hasFile: boolean; instanceId: string }`
+
 ## Images (`/api/images`)
 
 - `GET /api/images?ref=<signed>`

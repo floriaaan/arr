@@ -26,10 +26,28 @@ export const SonarrSeriesSchema = z.object({
   genres: z.array(z.string()).optional(),
   network: z.string().optional(),
   status: z.string().optional(),
-  statistics: z.object({ episodeFileCount: z.number().optional() }).optional(),
+  statistics: z
+    .object({ episodeFileCount: z.number().optional(), sizeOnDisk: z.number().optional() })
+    .optional(),
 })
 
 export const SonarrSeriesArraySchema = SonarrSeriesSchema.array()
+
+/** `GET /api/v3/calendar?includeSeries=true` — one entry per episode. */
+export const SonarrCalendarEpisodeSchema = z.object({
+  id: z.number(),
+  seriesId: z.number(),
+  title: z.string().nullable().optional(),
+  airDateUtc: z.string().nullable().optional(),
+  seasonNumber: z.number().optional(),
+  episodeNumber: z.number().optional(),
+  monitored: z.boolean().optional(),
+  hasFile: z.boolean().optional(),
+  series: SonarrSeriesSchema.optional(),
+})
+
+export const SonarrCalendarEpisodeArraySchema = SonarrCalendarEpisodeSchema.array()
+export type SonarrCalendarEpisode = z.infer<typeof SonarrCalendarEpisodeSchema>
 
 export const SonarrQualityProfileArraySchema = z
   .object({ id: z.number(), name: z.string() })

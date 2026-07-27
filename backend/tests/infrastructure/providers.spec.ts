@@ -20,6 +20,7 @@ test.group('service provider bindings', () => {
       'settings.authSettingsProvider',
       'servarr.registry',
       'catalog.mediaLookup',
+      'catalog.mediaLibrary',
       'requests.repository',
       'requests.provisioning',
       'requests.downloadProgress',

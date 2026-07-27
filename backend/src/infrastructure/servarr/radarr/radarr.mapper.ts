@@ -1,8 +1,10 @@
-import type { RadarrMovie, RadarrQueueRecord } from './radarr.schemas.js'
+import type { RadarrMovie, RadarrCalendarMovie, RadarrQueueRecord } from './radarr.schemas.js'
 import { ExternalId } from '#domain/catalog/external-id.vo'
 import { PosterRef } from '#domain/catalog/poster-ref.vo'
 import { MediaItem } from '#domain/catalog/media-item.entity'
 import { MediaDetail } from '#domain/catalog/media-detail.entity'
+import { LibraryItem } from '#domain/catalog/library-item.entity'
+import { CalendarEntry } from '#domain/catalog/calendar-entry.entity'
 import { RequestProgress } from '#domain/requests/request-progress.vo'
 import type { RequestStatus } from '#domain/requests/request-status.vo'
 
@@ -48,6 +50,38 @@ export function toMediaDetail(movie: RadarrMovie, instanceId: string): MediaDeta
             qualityProfileId: movie.qualityProfileId,
           }
         : undefined,
+  })
+}
+
+export function toLibraryItem(movie: RadarrMovie, instanceId: string): LibraryItem {
+  return LibraryItem.create(externalIdFor(movie), {
+    kind: 'movie',
+    title: movie.title ?? 'Unknown title',
+    year: movie.year ?? null,
+    posterRef: posterRefFrom(movie),
+    monitored: movie.monitored ?? false,
+    hasFile: movie.hasFile ?? false,
+    sizeOnDiskBytes: movie.sizeOnDisk ?? 0,
+    status: movie.status ?? 'unknown',
+    instanceId,
+  })
+}
+
+function calendarReleaseDate(movie: RadarrCalendarMovie): string {
+  const date = movie.digitalRelease ?? movie.physicalRelease ?? movie.inCinemas
+  return date ? date.slice(0, 10) : new Date().toISOString().slice(0, 10)
+}
+
+export function toCalendarEntry(movie: RadarrCalendarMovie, instanceId: string): CalendarEntry {
+  return CalendarEntry.create(`radarr:${instanceId}:${movie.id}`, {
+    kind: 'movie',
+    title: movie.title ?? 'Unknown title',
+    subtitle: null,
+    releaseDate: calendarReleaseDate(movie),
+    posterRef: posterRefFrom(movie),
+    monitored: movie.monitored ?? false,
+    hasFile: movie.hasFile ?? false,
+    instanceId,
   })
 }
 

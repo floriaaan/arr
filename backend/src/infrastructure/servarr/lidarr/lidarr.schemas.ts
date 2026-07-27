@@ -33,7 +33,9 @@ export const LidarrAlbumSchema = z.object({
   artist: LidarrArtistSchema.optional(),
   images: z.array(LidarrImageSchema).optional(),
   monitored: z.boolean().optional(),
-  statistics: z.object({ trackFileCount: z.number().optional() }).optional(),
+  statistics: z
+    .object({ trackFileCount: z.number().optional(), sizeOnDisk: z.number().optional() })
+    .optional(),
 })
 
 export const LidarrAlbumArraySchema = LidarrAlbumSchema.array()

@@ -1,15 +1,25 @@
 import { type BaseServarrClient } from '../base-servarr-client.js'
 import { classifyProvisioningError } from '../errors.js'
+import { isoDate } from '../date-range.js'
 import {
   RadarrMovieArraySchema,
   RadarrMovieSchema,
+  RadarrCalendarMovieArraySchema,
   RadarrQueueResponseSchema,
 } from './radarr.schemas.js'
-import { toMediaItem, toMediaDetail, toQueueProgress } from './radarr.mapper.js'
+import {
+  toMediaItem,
+  toMediaDetail,
+  toLibraryItem,
+  toCalendarEntry,
+  toQueueProgress,
+} from './radarr.mapper.js'
 import type { ServarrKindAdapter } from '../servarr-kind-adapter.interface.js'
 import type { ServarrInstance } from '#domain/settings/servarr-instance.aggregate'
 import type { MediaItem } from '#domain/catalog/media-item.entity'
 import type { MediaDetail } from '#domain/catalog/media-detail.entity'
+import type { LibraryItem } from '#domain/catalog/library-item.entity'
+import type { CalendarEntry } from '#domain/catalog/calendar-entry.entity'
 import type { ExternalId } from '#domain/catalog/external-id.vo'
 import type { MediaRequest } from '#domain/requests/media-request.aggregate'
 import { ExternalRef } from '#domain/requests/external-ref.vo'
@@ -103,5 +113,20 @@ export class RadarrAdapter implements ServarrKindAdapter {
       }
     }
     return snapshots
+  }
+
+  async list(): Promise<LibraryItem[]> {
+    const raw = await this.client.request({ path: '/api/v3/movie' })
+    return RadarrMovieArraySchema.parse(raw).map((movie) => toLibraryItem(movie, this.instance.id))
+  }
+
+  async calendar(start: Date, end: Date): Promise<CalendarEntry[]> {
+    const raw = await this.client.request({
+      path: '/api/v3/calendar',
+      query: { start: isoDate(start), end: isoDate(end) },
+    })
+    return RadarrCalendarMovieArraySchema.parse(raw).map((movie) =>
+      toCalendarEntry(movie, this.instance.id),
+    )
   }
 }
