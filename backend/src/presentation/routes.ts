@@ -1,0 +1,5 @@
+import './identity/auth.routes.js'
+import './settings/settings.routes.js'
+import './catalog/catalog.routes.js'
+import './requests/requests.routes.js'
+import './images/images.routes.js'

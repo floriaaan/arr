@@ -10,6 +10,7 @@
 */
 
 import router from '@adonisjs/core/services/router'
+import '#presentation/routes'
 
 router.get('/health', () => {
   return { status: 'ok' }
