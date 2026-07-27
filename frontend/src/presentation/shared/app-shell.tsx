@@ -1,7 +1,15 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
-import { Search, Settings, LogOut, Clapperboard, ListChecks } from 'lucide-react'
+import {
+  Search,
+  Settings,
+  LogOut,
+  Clapperboard,
+  ListChecks,
+  LibraryBig,
+  CalendarDays,
+} from 'lucide-react'
 import { Button } from '#presentation/ui/button'
 import { Badge } from '#presentation/ui/badge'
 import { CommandPalette } from './command-palette'
@@ -10,7 +18,11 @@ import { useSignOut } from '#application/identity/sign-out.mutation'
 import { useQueryClient } from '@tanstack/react-query'
 import { cn } from '#presentation/shared/utils'
 
-const NAV_ITEMS = [{ to: '/requests', label: 'Requests', icon: ListChecks }] as const
+const NAV_ITEMS = [
+  { to: '/requests', label: 'Requests', icon: ListChecks },
+  { to: '/library', label: 'Library', icon: LibraryBig },
+  { to: '/calendar', label: 'Calendar', icon: CalendarDays },
+] as const
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false)

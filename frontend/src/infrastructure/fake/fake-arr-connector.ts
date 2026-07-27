@@ -21,6 +21,8 @@ import type { MediaItem } from '#domain/catalog/media-item'
 import type { MediaDetail } from '#domain/catalog/media-detail'
 import type { MediaRequest } from '#domain/requests/media-request'
 import type { RequestFilter } from '#domain/requests/request-filter'
+import type { LibraryItem } from '#domain/library/library-item'
+import type { CalendarEntry, CalendarEntryKind } from '#domain/calendar/calendar-entry'
 
 const ALL_FIXTURES: MediaDetail[] = [...movieFixtures, ...seriesFixtures, ...albumFixtures]
 
@@ -32,6 +34,15 @@ const SERVARR_KIND_BY_MEDIA_KIND: Record<MediaKind, ServarrKind> = {
 
 function sameExternalId(a: ExternalId, b: ExternalId): boolean {
   return a.scheme === b.scheme && a.value === b.value
+}
+
+/** Deterministic, timer-free pseudo-randomness — same fixture always gets the same seed. */
+function hashString(value: string): number {
+  let hash = 0
+  for (let index = 0; index < value.length; index++) {
+    hash = (hash * 31 + value.charCodeAt(index)) | 0
+  }
+  return Math.abs(hash)
 }
 
 function notFound(message: string): ApiError {
@@ -388,6 +399,50 @@ export class FakeArrConnector implements ArrConnector {
     }
     this.requests.set(id, cancelled)
     return { ok: true as const, value: cancelled }
+  }
+
+  async listLibrary(kind?: MediaKind): Promise<LibraryItem[]> {
+    return ALL_FIXTURES.filter((item) => !kind || item.kind === kind).map((item) => {
+      const seed = hashString(item.externalId.value)
+      return {
+        externalId: item.externalId,
+        kind: item.kind,
+        title: item.title,
+        year: item.year,
+        posterUrl: item.posterUrl,
+        monitored: seed % 3 !== 0,
+        hasFile: seed % 4 !== 0,
+        sizeOnDiskBytes: (seed % 20) * 250_000_000,
+        status: seed % 4 === 0 ? 'missing' : 'downloaded',
+        instanceId: `${SERVARR_KIND_BY_MEDIA_KIND[item.kind]}-fake`,
+      }
+    })
+  }
+
+  async getCalendar(startDate: string, endDate: string): Promise<CalendarEntry[]> {
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const totalDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1)
+
+    return ALL_FIXTURES.map((item, index) => {
+      const seed = hashString(item.externalId.value)
+      const dayOffset = (seed + index) % totalDays
+      const releaseDate = new Date(start.getTime() + dayOffset * 86_400_000)
+      const entryKind: CalendarEntryKind = item.kind === 'series' ? 'episode' : item.kind
+
+      return {
+        id: `${item.kind}:${item.externalId.value}`,
+        kind: entryKind,
+        title: item.title,
+        subtitle:
+          entryKind === 'episode' ? `S01E${String((seed % 12) + 1).padStart(2, '0')}` : null,
+        releaseDate: releaseDate.toISOString().slice(0, 10),
+        posterUrl: item.posterUrl,
+        monitored: seed % 3 !== 0,
+        hasFile: seed % 4 !== 0,
+        instanceId: `${SERVARR_KIND_BY_MEDIA_KIND[item.kind]}-fake`,
+      }
+    })
   }
 
   private upsertInstance(kind: ServarrKind, draft: InstanceDraft): ServarrInstanceDto {

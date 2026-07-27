@@ -77,6 +77,39 @@ describe.each<{ name: string; create: () => ArrConnector }>([
         'GET /api/requests/does-not-exist': () => NOT_FOUND_INSTANCE,
         'POST /api/requests/does-not-exist/cancel': () =>
           json({ error: { type: 'not_found', message: 'Request not found.' } }, 404),
+        'GET /api/library': () =>
+          json({
+            items: [
+              {
+                externalId: { scheme: 'tmdb', value: '550' },
+                kind: 'movie',
+                title: 'Fight Club',
+                year: 1999,
+                posterRef: 'signed-token',
+                monitored: true,
+                hasFile: true,
+                sizeOnDiskBytes: 4_000_000_000,
+                status: 'downloaded',
+                instanceId: 'radarr-1',
+              },
+            ],
+          }),
+        'GET /api/calendar': () =>
+          json({
+            entries: [
+              {
+                id: 'sonarr:instance-1:42',
+                kind: 'episode',
+                title: 'Severance',
+                subtitle: 'S02E01',
+                releaseDate: '2026-01-17',
+                posterRef: null,
+                monitored: true,
+                hasFile: false,
+                instanceId: 'instance-1',
+              },
+            ],
+          }),
       }),
   },
 ])('$name', ({ create }) => {
@@ -139,5 +172,23 @@ describe.each<{ name: string; create: () => ArrConnector }>([
     const result = await connector.cancelRequest('does-not-exist')
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.type).toBe('not_found')
+  })
+
+  test('library items expose a ready-to-use posterUrl, never the raw ref', async () => {
+    const items = await connector.listLibrary()
+    expect(items.length).toBeGreaterThan(0)
+    for (const item of items) {
+      expect(item).not.toHaveProperty('posterRef')
+      if (item.posterUrl !== null) expect(typeof item.posterUrl).toBe('string')
+    }
+  })
+
+  test('calendar entries fall within the requested range and expose a posterUrl', async () => {
+    const entries = await connector.getCalendar('2026-01-01', '2026-01-31')
+    expect(entries.length).toBeGreaterThan(0)
+    for (const entry of entries) {
+      expect(entry).not.toHaveProperty('posterRef')
+      if (entry.posterUrl !== null) expect(typeof entry.posterUrl).toBe('string')
+    }
   })
 })

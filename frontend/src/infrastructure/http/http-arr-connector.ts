@@ -11,6 +11,7 @@ import {
 } from './schemas/settings.schema'
 import { mediaItemDtoSchema, mediaDetailDtoSchema } from './schemas/catalog.schema'
 import { mediaRequestDtoSchema } from './schemas/requests.schema'
+import { libraryItemDtoSchema, calendarEntryDtoSchema } from './schemas/library.schema'
 import type {
   ArrConnector,
   ConnectionTestResult,
@@ -30,6 +31,8 @@ import type { MediaDetail } from '#domain/catalog/media-detail'
 import type { MediaRequest } from '#domain/requests/media-request'
 import type { RequestFilter } from '#domain/requests/request-filter'
 import type { OnboardingStatus } from '#domain/settings/onboarding-state'
+import type { LibraryItem } from '#domain/library/library-item'
+import type { CalendarEntry } from '#domain/calendar/calendar-entry'
 import type { z } from 'zod'
 
 function toMediaItem(dto: z.infer<typeof mediaItemDtoSchema>): MediaItem {
@@ -38,6 +41,16 @@ function toMediaItem(dto: z.infer<typeof mediaItemDtoSchema>): MediaItem {
 }
 
 function toMediaDetail(dto: z.infer<typeof mediaDetailDtoSchema>): MediaDetail {
+  const { posterRef, ...rest } = dto
+  return { ...rest, posterUrl: toPosterUrl(posterRef) }
+}
+
+function toLibraryItem(dto: z.infer<typeof libraryItemDtoSchema>): LibraryItem {
+  const { posterRef, ...rest } = dto
+  return { ...rest, posterUrl: toPosterUrl(posterRef) }
+}
+
+function toCalendarEntry(dto: z.infer<typeof calendarEntryDtoSchema>): CalendarEntry {
   const { posterRef, ...rest } = dto
   return { ...rest, posterUrl: toPosterUrl(posterRef) }
 }
@@ -256,6 +269,20 @@ export class HttpArrConnector implements ArrConnector {
     }
     const body = (await response.json()) as { request: unknown }
     return { ok: true as const, value: mediaRequestDtoSchema.parse(body.request) }
+  }
+
+  async listLibrary(kind?: MediaKind): Promise<LibraryItem[]> {
+    const qs = kind ? `?${new URLSearchParams({ kind }).toString()}` : ''
+    const response = await this.http.get(`/api/library${qs}`)
+    const body = (await response.json()) as { items: unknown[] }
+    return body.items.map((item) => toLibraryItem(libraryItemDtoSchema.parse(item)))
+  }
+
+  async getCalendar(startDate: string, endDate: string): Promise<CalendarEntry[]> {
+    const qs = new URLSearchParams({ start: startDate, end: endDate })
+    const response = await this.http.get(`/api/calendar?${qs.toString()}`)
+    const body = (await response.json()) as { entries: unknown[] }
+    return body.entries.map((entry) => toCalendarEntry(calendarEntryDtoSchema.parse(entry)))
   }
 
   private async parseConnectionTestResult(response: Response): Promise<ConnectionTestResult> {
