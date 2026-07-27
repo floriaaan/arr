@@ -19,7 +19,20 @@ export class HttpExceptionHandler extends BaseExceptionHandler {
     const [error, ctx] = args
     if (this.isDebuggingEnabled(ctx)) return super.renderErrorAsJSON(error, ctx)
 
-    ctx.response.status(error.status).send({
+    // Most escaped exceptions carry a numeric `status` (Adonis convention).
+    // better-auth's `APIError` (thrown by `auth.api.*` calls made directly
+    // from application code, bypassing the HTTP bridge in auth.routes.ts)
+    // is the exception: its `status` is a string status-code key (e.g.
+    // "UNPROCESSABLE_ENTITY") and the numeric code lives in `statusCode`.
+    const statusCode = (error as unknown as { statusCode?: unknown }).statusCode
+    const status =
+      typeof error.status === 'number'
+        ? error.status
+        : typeof statusCode === 'number'
+          ? statusCode
+          : 500
+
+    ctx.response.status(status).send({
       error: { type: error.code ?? 'internal_error', message: error.message },
     })
   }
