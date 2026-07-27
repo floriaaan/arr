@@ -1,5 +1,5 @@
-import { useState  } from 'react'
-import type {ReactNode} from 'react';
+import { useState } from 'react'
+import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Search, Settings, LogOut } from 'lucide-react'
 import { Button } from '#presentation/ui/button'
