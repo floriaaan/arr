@@ -62,7 +62,11 @@ et avec un contrôle `admin_only_middleware` :
 - `PUT /api/settings/instances/:kind`, `DELETE /api/settings/instances/:kind`
 - `POST /api/settings/instances/:kind/test-connection`
 - `GET /api/settings/sso`, `PUT /api/settings/sso`, `POST /api/settings/sso/test`
-- `GET /api/settings/auth`
+
+- `GET /api/settings/auth` — **public**, sans `admin_only_middleware` : la page de
+  connexion en a besoin avant même qu'une session existe, pour savoir quoi afficher
+  (formulaire mot de passe, bouton SSO, ou les deux). Aucune donnée sensible dans la
+  réponse (booléens + enum).
   → `{ passwordLoginEnabled: boolean; oidcConfigured: boolean; source: 'database' | 'environment' }`
   (lecture seule côté UI quand `source === 'environment'`)
 

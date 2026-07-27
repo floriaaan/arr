@@ -27,7 +27,15 @@ router
     router.get('/sso', [SettingsController, 'getSso'])
     router.put('/sso', [SettingsController, 'updateSso'])
     router.post('/sso/test', [SettingsController, 'testSso'])
-    router.get('/auth', [SettingsController, 'getAuthSettings'])
   })
   .prefix('/api/settings')
   .use(middleware.adminOnly())
+
+/**
+ * Public on purpose: the login page needs to know whether password login is
+ * enabled and whether SSO is configured *before* any session exists, to
+ * decide which of the two to render — same reasoning that puts "Sign in
+ * with Google" buttons in front of anonymous visitors everywhere. Only
+ * booleans + an enum, nothing sensitive.
+ */
+router.get('/api/settings/auth', [SettingsController, 'getAuthSettings'])

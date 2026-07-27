@@ -1,0 +1,214 @@
+import { useState } from 'react'
+import { toast } from 'sonner'
+import { useTestInstance } from '#application/settings/test-instance.mutation'
+import { useFetchInstanceProfiles } from '#application/settings/fetch-instance-profiles.mutation'
+import { useSaveInstance } from '#application/settings/save-instance.mutation'
+import { Input } from '#presentation/ui/input'
+import { Label } from '#presentation/ui/label'
+import { Button } from '#presentation/ui/button'
+import { Switch } from '#presentation/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#presentation/ui/select'
+import type { ServarrKind, ServarrInstanceDto } from '#domain/settings/servarr-instance'
+import type { InstanceProfiles } from '#domain/interfaces/arr-connector'
+
+export function ServiceInstanceForm({
+  kind,
+  existing,
+  duringOnboarding,
+  onSaved,
+}: {
+  kind: ServarrKind
+  existing?: ServarrInstanceDto
+  duringOnboarding: boolean
+  onSaved?: (instance: ServarrInstanceDto) => void
+}) {
+  const [baseUrl, setBaseUrl] = useState(existing?.baseUrl ?? '')
+  const [apiKey, setApiKey] = useState('')
+  const [profiles, setProfiles] = useState<InstanceProfiles | null>(null)
+  const [rootFolderPath, setRootFolderPath] = useState(existing?.rootFolderPath ?? '')
+  const [qualityProfileId, setQualityProfileId] = useState(existing?.qualityProfileId ?? undefined)
+  const [metadataProfileId, setMetadataProfileId] = useState(
+    existing?.metadataProfileId ?? undefined,
+  )
+  const [languageProfileId, setLanguageProfileId] = useState(
+    existing?.languageProfileId ?? undefined,
+  )
+  const [enabled, setEnabled] = useState(existing?.enabled ?? false)
+
+  const testInstance = useTestInstance()
+  const fetchProfiles = useFetchInstanceProfiles()
+  const saveInstance = useSaveInstance()
+
+  function handleTest() {
+    testInstance.mutate(
+      { kind, baseUrl, apiKey },
+      {
+        onSuccess: (result) => {
+          if (!result.ok) return toast.error(result.error.message)
+          toast.success(`Connected — ${result.detectedVersion}`)
+          fetchProfiles.mutate(
+            { kind, baseUrl, apiKey },
+            {
+              onSuccess: (profilesResult) => profilesResult.ok && setProfiles(profilesResult.value),
+            },
+          )
+        },
+      },
+    )
+  }
+
+  function handleSave() {
+    saveInstance.mutate(
+      {
+        kind,
+        duringOnboarding,
+        draft: {
+          baseUrl,
+          apiKey,
+          rootFolderPath,
+          qualityProfileId: qualityProfileId ?? 0,
+          metadataProfileId,
+          languageProfileId,
+          enabled,
+        },
+      },
+      {
+        onSuccess: (result) => {
+          if (!result.ok) return toast.error(result.error.message)
+          toast.success(`${kind} saved.`)
+          onSaved?.(result.value)
+        },
+      },
+    )
+  }
+
+  const canSave = rootFolderPath !== '' && qualityProfileId !== undefined
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Base URL</Label>
+          <Input
+            placeholder="http://localhost:7878"
+            value={baseUrl}
+            onChange={(event) => setBaseUrl(event.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>API key</Label>
+          <Input
+            type="password"
+            placeholder={existing?.hasApiKey ? 'Re-enter to change' : ''}
+            value={apiKey}
+            onChange={(event) => setApiKey(event.target.value)}
+          />
+        </div>
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleTest}
+        disabled={!baseUrl || !apiKey || testInstance.isPending}
+      >
+        {testInstance.isPending ? 'Testing…' : 'Test connection'}
+      </Button>
+
+      {profiles ? (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Root folder</Label>
+            <Select value={rootFolderPath} onValueChange={setRootFolderPath}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a root folder" />
+              </SelectTrigger>
+              <SelectContent>
+                {profiles.rootFolders.map((folder) => (
+                  <SelectItem key={folder.path} value={folder.path}>
+                    {folder.path}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Quality profile</Label>
+            <Select
+              value={qualityProfileId?.toString()}
+              onValueChange={(value) => setQualityProfileId(Number(value))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a quality profile" />
+              </SelectTrigger>
+              <SelectContent>
+                {profiles.qualityProfiles.map((profile) => (
+                  <SelectItem key={profile.id} value={profile.id.toString()}>
+                    {profile.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {kind === 'lidarr' && profiles.metadataProfiles ? (
+            <div className="space-y-2">
+              <Label>Metadata profile</Label>
+              <Select
+                value={metadataProfileId?.toString()}
+                onValueChange={(value) => setMetadataProfileId(Number(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a metadata profile" />
+                </SelectTrigger>
+                <SelectContent>
+                  {profiles.metadataProfiles.map((profile) => (
+                    <SelectItem key={profile.id} value={profile.id.toString()}>
+                      {profile.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+
+          {kind === 'sonarr' && profiles.languageProfiles ? (
+            <div className="space-y-2">
+              <Label>Language profile</Label>
+              <Select
+                value={languageProfileId?.toString()}
+                onValueChange={(value) => setLanguageProfileId(Number(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a language profile" />
+                </SelectTrigger>
+                <SelectContent>
+                  {profiles.languageProfiles.map((profile) => (
+                    <SelectItem key={profile.id} value={profile.id.toString()}>
+                      {profile.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="flex items-center gap-2">
+        <Switch checked={enabled} onCheckedChange={setEnabled} />
+        <Label>Enabled</Label>
+      </div>
+
+      <Button onClick={handleSave} disabled={!canSave || saveInstance.isPending}>
+        {saveInstance.isPending ? 'Saving…' : 'Save'}
+      </Button>
+    </div>
+  )
+}
