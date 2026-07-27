@@ -1,12 +1,9 @@
 import type { ApplicationService } from '@adonisjs/core/types'
 import type { UserDirectory } from '#domain/identity/interfaces/user-directory.interface'
+import type { Authentication } from '#domain/identity/interfaces/authentication.interface'
+import type { Session } from '#domain/identity/interfaces/session.interface'
+import type { AccountRegistrar } from '#domain/identity/interfaces/account-registrar.interface'
 
-/**
- * Authentication/Session/AccountRegistrar are bound in Phase 4 once
- * better-auth is actually wired in — they need its running instance.
- * UserDirectory only reads the `user` table directly, so it can be wired
- * now (cf. docs/adr/0005-better-auth-tables-identite.md).
- */
 export default class IdentityProvider {
   constructor(protected app: ApplicationService) {}
 
@@ -16,11 +13,34 @@ export default class IdentityProvider {
         await import('#infrastructure/persistence/identity/user-directory.repository')
       return new BetterAuthUserDirectory()
     })
+
+    this.app.container.singleton('identity.authentication', async (resolver) => {
+      const { BetterAuthAuthentication } =
+        await import('#infrastructure/auth/better-auth/authentication.adapter')
+      const authSettingsProvider = await resolver.make('settings.authSettingsProvider')
+      return new BetterAuthAuthentication(authSettingsProvider)
+    })
+
+    this.app.container.singleton('identity.session', async (resolver) => {
+      const { BetterAuthSession } = await import('#infrastructure/auth/better-auth/session.adapter')
+      const authSettingsProvider = await resolver.make('settings.authSettingsProvider')
+      return new BetterAuthSession(authSettingsProvider)
+    })
+
+    this.app.container.singleton('identity.accountRegistrar', async (resolver) => {
+      const { BetterAuthAccountRegistrar } =
+        await import('#infrastructure/auth/better-auth/account-registrar.adapter')
+      const authSettingsProvider = await resolver.make('settings.authSettingsProvider')
+      return new BetterAuthAccountRegistrar(authSettingsProvider)
+    })
   }
 }
 
 declare module '@adonisjs/core/types' {
   interface ContainerBindings {
     'identity.userDirectory': UserDirectory
+    'identity.authentication': Authentication
+    'identity.session': Session
+    'identity.accountRegistrar': AccountRegistrar
   }
 }

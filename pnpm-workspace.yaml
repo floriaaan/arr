@@ -3,7 +3,9 @@ packages:
   - frontend
 
 allowBuilds:
+  '@prisma/client': false
   '@swc/core': true
+  better-sqlite3: false
   esbuild: true
   lightningcss: true
   unrs-resolver: true
