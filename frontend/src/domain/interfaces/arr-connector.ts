@@ -12,6 +12,8 @@ import type { MediaItem } from '../catalog/media-item'
 import type { MediaDetail } from '../catalog/media-detail'
 import type { MediaRequest } from '../requests/media-request'
 import type { RequestFilter } from '../requests/request-filter'
+import type { LibraryItem } from '../library/library-item'
+import type { CalendarEntry } from '../calendar/calendar-entry'
 
 export interface OidcConfigInput {
   issuerUrl: string
@@ -117,4 +119,10 @@ export interface ArrConnector {
   ) => Promise<Result<MediaRequest, ApiError>>
   getRequest: (id: string) => Promise<MediaRequest | null>
   cancelRequest: (id: string) => Promise<Result<MediaRequest, ApiError>>
+
+  // library
+  listLibrary: (kind?: MediaKind) => Promise<LibraryItem[]>
+
+  // calendar
+  getCalendar: (startDate: string, endDate: string) => Promise<CalendarEntry[]>
 }

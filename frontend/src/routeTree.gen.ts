@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as CalendarIndexRouteImport } from './routes/calendar/index'
+import { Route as LibraryIndexRouteImport } from './routes/library/index'
 import { Route as RequestsIndexRouteImport } from './routes/requests/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as SetupIndexRouteImport } from './routes/setup/index'
@@ -23,6 +25,16 @@ const IndexRoute = IndexRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalendarIndexRoute = CalendarIndexRouteImport.update({
+  id: '/calendar/',
+  path: '/calendar/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LibraryIndexRoute = LibraryIndexRouteImport.update({
+  id: '/library/',
+  path: '/library/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RequestsIndexRoute = RequestsIndexRouteImport.update({
@@ -44,6 +56,8 @@ const SetupIndexRoute = SetupIndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/calendar/': typeof CalendarIndexRoute
+  '/library/': typeof LibraryIndexRoute
   '/requests/': typeof RequestsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/setup/': typeof SetupIndexRoute
@@ -51,6 +65,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/calendar': typeof CalendarIndexRoute
+  '/library': typeof LibraryIndexRoute
   '/requests': typeof RequestsIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/setup': typeof SetupIndexRoute
@@ -59,21 +75,47 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/calendar/': typeof CalendarIndexRoute
+  '/library/': typeof LibraryIndexRoute
   '/requests/': typeof RequestsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/setup/': typeof SetupIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/requests/' | '/settings/' | '/setup/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/calendar/'
+    | '/library/'
+    | '/requests/'
+    | '/settings/'
+    | '/setup/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/requests' | '/settings' | '/setup'
-  id: '__root__' | '/' | '/login' | '/requests/' | '/settings/' | '/setup/'
+  to:
+    | '/'
+    | '/login'
+    | '/calendar'
+    | '/library'
+    | '/requests'
+    | '/settings'
+    | '/setup'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/calendar/'
+    | '/library/'
+    | '/requests/'
+    | '/settings/'
+    | '/setup/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  CalendarIndexRoute: typeof CalendarIndexRoute
+  LibraryIndexRoute: typeof LibraryIndexRoute
   RequestsIndexRoute: typeof RequestsIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
   SetupIndexRoute: typeof SetupIndexRoute
@@ -93,6 +135,20 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calendar/': {
+      id: '/calendar/'
+      path: '/calendar'
+      fullPath: '/calendar/'
+      preLoaderRoute: typeof CalendarIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/library/': {
+      id: '/library/'
+      path: '/library'
+      fullPath: '/library/'
+      preLoaderRoute: typeof LibraryIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/requests/': {
@@ -122,6 +178,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  CalendarIndexRoute: CalendarIndexRoute,
+  LibraryIndexRoute: LibraryIndexRoute,
   RequestsIndexRoute: RequestsIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
   SetupIndexRoute: SetupIndexRoute,
