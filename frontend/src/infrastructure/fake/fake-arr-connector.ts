@@ -38,10 +38,22 @@ function notFound(message: string): ApiError {
   return { type: 'not_found', message, status: 404 }
 }
 
+const ONBOARDING_STORAGE_KEY = 'arr:fake:onboarding'
+
+interface PersistedOnboardingState {
+  adminCreated: boolean
+  onboardingStatus: OnboardingStatus
+  instances: [ServarrKind, ServarrInstanceDto & { apiKey: string }][]
+  ssoConfig: (OidcConfigInput & { claimsMapping?: Record<string, string> }) | null
+}
+
 /**
  * Fully offline implementation of `ArrConnector` — no network, no backend
- * (`task dev:fake`). State lives on the instance and is reset on reload,
- * which is the point: a disposable sandbox to poke at the UI.
+ * (`task dev:fake`). Most state lives on the instance and is reset on
+ * reload — the point of a disposable sandbox. Onboarding progress is the
+ * exception: it's mirrored to `localStorage` (browser only — the SSR
+ * instance still starts fresh) so a page refresh mid-setup doesn't bounce
+ * you back to `/setup` every time Vite HMR recreates this singleton.
  */
 export class FakeArrConnector implements ArrConnector {
   private user: AuthenticatedUser | null = null
@@ -50,6 +62,36 @@ export class FakeArrConnector implements ArrConnector {
   private readonly instances = new Map<ServarrKind, ServarrInstanceDto & { apiKey: string }>()
   private ssoConfig: (OidcConfigInput & { claimsMapping?: Record<string, string> }) | null = null
   private readonly requests = new Map<string, MediaRequest>()
+
+  constructor() {
+    this.restoreOnboardingState()
+  }
+
+  private restoreOnboardingState(): void {
+    if (typeof window === 'undefined') return
+    const raw = window.localStorage.getItem(ONBOARDING_STORAGE_KEY)
+    if (!raw) return
+    try {
+      const persisted = JSON.parse(raw) as PersistedOnboardingState
+      this.adminCreated = persisted.adminCreated
+      this.onboardingStatus = persisted.onboardingStatus
+      for (const [kind, instance] of persisted.instances) this.instances.set(kind, instance)
+      this.ssoConfig = persisted.ssoConfig
+    } catch {
+      window.localStorage.removeItem(ONBOARDING_STORAGE_KEY)
+    }
+  }
+
+  private persistOnboardingState(): void {
+    if (typeof window === 'undefined') return
+    const persisted: PersistedOnboardingState = {
+      adminCreated: this.adminCreated,
+      onboardingStatus: this.onboardingStatus,
+      instances: [...this.instances.entries()],
+      ssoConfig: this.ssoConfig,
+    }
+    window.localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(persisted))
+  }
 
   async getSession(): Promise<Session> {
     return { user: this.user }
@@ -92,6 +134,7 @@ export class FakeArrConnector implements ArrConnector {
     }
     this.adminCreated = true
     this.onboardingStatus = 'admin_created'
+    this.persistOnboardingState()
     return { ok: true, value: { userId: 'fake-admin' } }
   }
 
@@ -127,7 +170,10 @@ export class FakeArrConnector implements ArrConnector {
 
   async saveOnboardingInstance(kind: ServarrKind, draft: InstanceDraft) {
     const instance = this.upsertInstance(kind, draft)
-    if (this.onboardingStatus === 'admin_created') this.onboardingStatus = 'services_configured'
+    if (this.onboardingStatus === 'admin_created') {
+      this.onboardingStatus = 'services_configured'
+      this.persistOnboardingState()
+    }
     return { ok: true as const, value: instance }
   }
 
@@ -144,6 +190,7 @@ export class FakeArrConnector implements ArrConnector {
 
   async saveOnboardingSso(config: OidcConfigInput | null) {
     this.ssoConfig = config
+    this.persistOnboardingState()
     return { ok: true as const, value: { oidcEnabled: config !== null } }
   }
 
@@ -169,6 +216,7 @@ export class FakeArrConnector implements ArrConnector {
       }
     }
     this.onboardingStatus = 'completed'
+    this.persistOnboardingState()
     return { ok: true as const, value: { status: 'completed' as const } }
   }
 
@@ -182,6 +230,7 @@ export class FakeArrConnector implements ArrConnector {
 
   async deleteInstance(kind: ServarrKind): Promise<void> {
     this.instances.delete(kind)
+    this.persistOnboardingState()
   }
 
   async testSavedInstanceConnection(kind: ServarrKind): Promise<ConnectionTestResult> {
@@ -356,6 +405,7 @@ export class FakeArrConnector implements ArrConnector {
       enabled: draft.enabled,
     }
     this.instances.set(kind, instance)
+    this.persistOnboardingState()
     const { apiKey: _apiKey, ...dto } = instance
     return dto
   }

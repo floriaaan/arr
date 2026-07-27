@@ -16,6 +16,12 @@ export const Route = createFileRoute('/settings/')({
 function SettingsRoute() {
   return (
     <AppShell>
+      <div className="mb-6 space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+        <p className="text-sm text-muted-foreground">
+          Manage connected services, single sign-on, and authentication.
+        </p>
+      </div>
       <SettingsPanels />
     </AppShell>
   )

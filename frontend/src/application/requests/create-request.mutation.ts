@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { defineMutation } from '#application/shared/define-mutation'
 import { useDomainMutation } from '#application/shared/use-domain-mutation'
 import type { MediaKind } from '#domain/catalog/media-kind'
@@ -21,5 +22,8 @@ export const createRequestMutation = defineMutation<
 })
 
 export function useCreateRequest() {
-  return useDomainMutation(createRequestMutation)
+  const queryClient = useQueryClient()
+  return useDomainMutation(createRequestMutation, {
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['requests'] }),
+  })
 }
