@@ -33,11 +33,13 @@ import type { OnboardingStatus } from '#domain/settings/onboarding-state'
 import type { z } from 'zod'
 
 function toMediaItem(dto: z.infer<typeof mediaItemDtoSchema>): MediaItem {
-  return { ...dto, posterUrl: toPosterUrl(dto.posterRef) }
+  const { posterRef, ...rest } = dto
+  return { ...rest, posterUrl: toPosterUrl(posterRef) }
 }
 
 function toMediaDetail(dto: z.infer<typeof mediaDetailDtoSchema>): MediaDetail {
-  return { ...dto, posterUrl: toPosterUrl(dto.posterRef) }
+  const { posterRef, ...rest } = dto
+  return { ...rest, posterUrl: toPosterUrl(posterRef) }
 }
 
 export class HttpArrConnector implements ArrConnector {
