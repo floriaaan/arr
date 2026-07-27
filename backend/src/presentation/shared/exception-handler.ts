@@ -2,6 +2,7 @@ import app from '@adonisjs/core/services/app'
 import { ExceptionHandler as BaseExceptionHandler } from '@adonisjs/core/http'
 
 type RenderErrorAsJSON = BaseExceptionHandler['renderErrorAsJSON']
+type RenderValidationErrorAsJSON = BaseExceptionHandler['renderValidationErrorAsJSON']
 
 /**
  * Only reached for exceptions that escape a controller uncaught. Expected
@@ -19,8 +20,16 @@ export class HttpExceptionHandler extends BaseExceptionHandler {
     if (this.isDebuggingEnabled(ctx)) return super.renderErrorAsJSON(error, ctx)
 
     ctx.response.status(error.status).send({
-      code: error.code ?? 'internal_error',
-      message: error.message,
+      error: { type: error.code ?? 'internal_error', message: error.message },
+    })
+  }
+
+  async renderValidationErrorAsJSON(
+    ...args: Parameters<RenderValidationErrorAsJSON>
+  ): ReturnType<RenderValidationErrorAsJSON> {
+    const [error, ctx] = args
+    ctx.response.status(error.status).send({
+      error: { type: 'validation_failed', message: 'Validation failed.', details: error.messages },
     })
   }
 }
