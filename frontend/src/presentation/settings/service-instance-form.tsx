@@ -39,7 +39,7 @@ export function ServiceInstanceForm({
   const [languageProfileId, setLanguageProfileId] = useState(
     existing?.languageProfileId ?? undefined,
   )
-  const [enabled, setEnabled] = useState(existing?.enabled ?? false)
+  const [enabled, setEnabled] = useState(existing?.enabled ?? true)
 
   const testInstance = useTestInstance()
   const fetchProfiles = useFetchInstanceProfiles()

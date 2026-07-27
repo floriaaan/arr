@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { defineMutation } from '#application/shared/define-mutation'
 import { useDomainMutation } from '#application/shared/use-domain-mutation'
 import type { MediaRequest } from '#domain/requests/media-request'
@@ -9,5 +10,8 @@ export const cancelRequestMutation = defineMutation<Result<MediaRequest, ApiErro
 })
 
 export function useCancelRequest() {
-  return useDomainMutation(cancelRequestMutation)
+  const queryClient = useQueryClient()
+  return useDomainMutation(cancelRequestMutation, {
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['requests'] }),
+  })
 }

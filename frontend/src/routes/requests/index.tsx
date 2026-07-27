@@ -16,6 +16,12 @@ export const Route = createFileRoute('/requests/')({
 function RequestsRoute() {
   return (
     <AppShell>
+      <div className="mb-6 space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Requests</h1>
+        <p className="text-sm text-muted-foreground">
+          Everything requested for Radarr, Sonarr, and Lidarr, in one timeline.
+        </p>
+      </div>
       <RequestsTimeline />
     </AppShell>
   )
