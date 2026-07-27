@@ -41,10 +41,11 @@ router.use([
 /**
  * Named middleware, explicitly assigned to routes/groups that need it —
  * `auth_middleware` above already runs on every routed request and sets
- * `ctx.authenticatedUser` (possibly `null`), these two layer stricter
- * guards on top of that for the route groups that need them.
+ * `ctx.authenticatedUser` (possibly `null`), these layer stricter guards on
+ * top of that for the route groups that need them.
  */
 export const middleware = router.named({
   onboardingGuard: () => import('#middleware/onboarding_guard_middleware'),
   adminOnly: () => import('#middleware/admin_only_middleware'),
+  authRequired: () => import('#middleware/auth_required_middleware'),
 })
