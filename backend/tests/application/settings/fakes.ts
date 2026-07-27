@@ -165,6 +165,10 @@ export class InMemoryOnboardingStateRepository implements OnboardingStateReposit
 export class FakeUserDirectory implements UserDirectory {
   users: User[] = []
 
+  async findById(id: string): Promise<User | null> {
+    return this.users.find((user) => user.id === id) ?? null
+  }
+
   async findByEmail(email: Email): Promise<User | null> {
     return this.users.find((user) => user.email.equals(email)) ?? null
   }
