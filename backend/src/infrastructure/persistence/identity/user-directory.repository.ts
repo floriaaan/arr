@@ -31,6 +31,11 @@ function toDomain(row: UserRow): User {
  * (cf. docs/adr/0005-better-auth-tables-identite.md), never through here.
  */
 export class BetterAuthUserDirectory implements UserDirectory {
+  async findById(id: string): Promise<User | null> {
+    const row = await db.from('user').where('id', id).first()
+    return row ? toDomain(row) : null
+  }
+
   async findByEmail(email: Email): Promise<User | null> {
     const row = await db.from('user').where('email', email.value).first()
     return row ? toDomain(row) : null
