@@ -1,15 +1,25 @@
 import { type BaseServarrClient } from '../base-servarr-client.js'
 import { classifyProvisioningError } from '../errors.js'
+import { isoDate } from '../date-range.js'
 import {
   LidarrAlbumArraySchema,
   LidarrAlbumSchema,
+  LidarrAlbumLookupArraySchema,
   LidarrQueueResponseSchema,
 } from './lidarr.schemas.js'
-import { toMediaItem, toMediaDetail, toQueueProgress } from './lidarr.mapper.js'
+import {
+  toMediaItem,
+  toMediaDetail,
+  toLibraryItem,
+  toCalendarEntry,
+  toQueueProgress,
+} from './lidarr.mapper.js'
 import type { ServarrKindAdapter } from '../servarr-kind-adapter.interface.js'
 import type { ServarrInstance } from '#domain/settings/servarr-instance.aggregate'
 import type { MediaItem } from '#domain/catalog/media-item.entity'
 import type { MediaDetail } from '#domain/catalog/media-detail.entity'
+import type { LibraryItem } from '#domain/catalog/library-item.entity'
+import type { CalendarEntry } from '#domain/catalog/calendar-entry.entity'
 import type { ExternalId } from '#domain/catalog/external-id.vo'
 import type { MediaRequest } from '#domain/requests/media-request.aggregate'
 import { ExternalRef } from '#domain/requests/external-ref.vo'
@@ -25,7 +35,7 @@ export class LidarrAdapter implements ServarrKindAdapter {
 
   async search(term: string): Promise<MediaItem[]> {
     const raw = await this.client.request({ path: '/api/v1/album/lookup', query: { term } })
-    return LidarrAlbumArraySchema.parse(raw).map(toMediaItem)
+    return LidarrAlbumLookupArraySchema.parse(raw).map(toMediaItem)
   }
 
   async detail(externalId: ExternalId): Promise<MediaDetail> {
@@ -44,7 +54,7 @@ export class LidarrAdapter implements ServarrKindAdapter {
       path: '/api/v1/album/lookup',
       query: { term: foreignAlbumId },
     })
-    const [album] = LidarrAlbumArraySchema.parse(raw)
+    const [album] = LidarrAlbumLookupArraySchema.parse(raw)
     if (!album) throw new Error(`Lidarr lookup returned no result for ${foreignAlbumId}`)
     return album
   }
@@ -129,5 +139,25 @@ export class LidarrAdapter implements ServarrKindAdapter {
       }
     }
     return snapshots
+  }
+
+  /**
+   * `GET /api/v1/album` without `artistId` returns every album across all
+   * artists on the instance — moderate rather than fully-verified
+   * confidence, same caveat class as the lookup-term convention above.
+   */
+  async list(): Promise<LibraryItem[]> {
+    const raw = await this.client.request({ path: '/api/v1/album' })
+    return LidarrAlbumArraySchema.parse(raw).map((album) => toLibraryItem(album, this.instance.id))
+  }
+
+  async calendar(start: Date, end: Date): Promise<CalendarEntry[]> {
+    const raw = await this.client.request({
+      path: '/api/v1/calendar',
+      query: { start: isoDate(start), end: isoDate(end) },
+    })
+    return LidarrAlbumArraySchema.parse(raw).map((album) =>
+      toCalendarEntry(album, this.instance.id),
+    )
   }
 }

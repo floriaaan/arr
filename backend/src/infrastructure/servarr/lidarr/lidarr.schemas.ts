@@ -33,10 +33,26 @@ export const LidarrAlbumSchema = z.object({
   artist: LidarrArtistSchema.optional(),
   images: z.array(LidarrImageSchema).optional(),
   monitored: z.boolean().optional(),
-  statistics: z.object({ trackFileCount: z.number().optional() }).optional(),
+  statistics: z
+    .object({ trackFileCount: z.number().optional(), sizeOnDisk: z.number().optional() })
+    .optional(),
 })
 
 export const LidarrAlbumArraySchema = LidarrAlbumSchema.array()
+
+/**
+ * `GET /api/v1/album/lookup` — a lookup hit for an album (and its nested
+ * artist) not yet added has no Lidarr-internal `id` at all (cf. Radarr's
+ * equivalent lookup schema) — `submit()` relies on this exact case to add a
+ * brand-new album, so it can't require a real id either.
+ */
+export const LidarrArtistLookupSchema = LidarrArtistSchema.extend({ id: z.number().optional() })
+export const LidarrAlbumLookupSchema = LidarrAlbumSchema.extend({
+  id: z.number().optional(),
+  artist: LidarrArtistLookupSchema.optional(),
+})
+export const LidarrAlbumLookupArraySchema = LidarrAlbumLookupSchema.array()
+export type LidarrAlbumLookup = z.infer<typeof LidarrAlbumLookupSchema>
 
 export const LidarrMetadataProfileArraySchema = z
   .object({ id: z.number(), name: z.string() })

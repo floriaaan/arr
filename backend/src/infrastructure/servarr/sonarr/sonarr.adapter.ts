@@ -1,15 +1,26 @@
 import { type BaseServarrClient } from '../base-servarr-client.js'
 import { classifyProvisioningError } from '../errors.js'
+import { isoDate } from '../date-range.js'
 import {
   SonarrSeriesArraySchema,
   SonarrSeriesSchema,
+  SonarrSeriesLookupArraySchema,
+  SonarrCalendarEpisodeArraySchema,
   SonarrQueueResponseSchema,
 } from './sonarr.schemas.js'
-import { toMediaItem, toMediaDetail, toQueueProgress } from './sonarr.mapper.js'
+import {
+  toMediaItem,
+  toMediaDetail,
+  toLibraryItem,
+  toCalendarEntry,
+  toQueueProgress,
+} from './sonarr.mapper.js'
 import type { ServarrKindAdapter } from '../servarr-kind-adapter.interface.js'
 import type { ServarrInstance } from '#domain/settings/servarr-instance.aggregate'
 import type { MediaItem } from '#domain/catalog/media-item.entity'
 import type { MediaDetail } from '#domain/catalog/media-detail.entity'
+import type { LibraryItem } from '#domain/catalog/library-item.entity'
+import type { CalendarEntry } from '#domain/catalog/calendar-entry.entity'
 import type { ExternalId } from '#domain/catalog/external-id.vo'
 import type { MediaRequest } from '#domain/requests/media-request.aggregate'
 import { ExternalRef } from '#domain/requests/external-ref.vo'
@@ -25,7 +36,7 @@ export class SonarrAdapter implements ServarrKindAdapter {
 
   async search(term: string): Promise<MediaItem[]> {
     const raw = await this.client.request({ path: '/api/v3/series/lookup', query: { term } })
-    return SonarrSeriesArraySchema.parse(raw).map(toMediaItem)
+    return SonarrSeriesLookupArraySchema.parse(raw).map(toMediaItem)
   }
 
   async detail(externalId: ExternalId): Promise<MediaDetail> {
@@ -34,7 +45,7 @@ export class SonarrAdapter implements ServarrKindAdapter {
       path: '/api/v3/series/lookup',
       query: { term: `tvdb:${externalId.value}` },
     })
-    const [series] = SonarrSeriesArraySchema.parse(raw)
+    const [series] = SonarrSeriesLookupArraySchema.parse(raw)
     if (!series) throw new Error(`Sonarr lookup returned no result for tvdb:${externalId.value}`)
     return toMediaDetail(series, this.instance.id)
   }
@@ -103,5 +114,22 @@ export class SonarrAdapter implements ServarrKindAdapter {
       }
     }
     return snapshots
+  }
+
+  async list(): Promise<LibraryItem[]> {
+    const raw = await this.client.request({ path: '/api/v3/series' })
+    return SonarrSeriesArraySchema.parse(raw).map((series) =>
+      toLibraryItem(series, this.instance.id),
+    )
+  }
+
+  async calendar(start: Date, end: Date): Promise<CalendarEntry[]> {
+    const raw = await this.client.request({
+      path: '/api/v3/calendar',
+      query: { start: isoDate(start), end: isoDate(end), includeSeries: 'true' },
+    })
+    return SonarrCalendarEpisodeArraySchema.parse(raw).map((episode) =>
+      toCalendarEntry(episode, this.instance.id),
+    )
   }
 }

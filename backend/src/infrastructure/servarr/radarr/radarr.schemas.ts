@@ -19,6 +19,7 @@ export const RadarrMovieSchema = z.object({
   overview: z.string().nullable().optional(),
   images: z.array(RadarrImageSchema).optional(),
   hasFile: z.boolean().nullable().optional(),
+  sizeOnDisk: z.number().optional(),
   qualityProfileId: z.number().optional(),
   rootFolderPath: z.string().nullable().optional(),
   monitored: z.boolean().optional(),
@@ -28,6 +29,25 @@ export const RadarrMovieSchema = z.object({
 })
 
 export const RadarrMovieArraySchema = RadarrMovieSchema.array()
+
+/**
+ * `GET /api/v3/movie/lookup` — unlike movies actually in the library, a
+ * lookup hit for something not yet added has no Radarr-internal `id` at all
+ * (the field is entirely absent from the response, not `0`).
+ */
+export const RadarrMovieLookupSchema = RadarrMovieSchema.extend({ id: z.number().optional() })
+export const RadarrMovieLookupArraySchema = RadarrMovieLookupSchema.array()
+export type RadarrMovieLookup = z.infer<typeof RadarrMovieLookupSchema>
+
+/** `GET /api/v3/calendar` — a movie plus its release-date fields. */
+export const RadarrCalendarMovieSchema = RadarrMovieSchema.extend({
+  physicalRelease: z.string().nullable().optional(),
+  digitalRelease: z.string().nullable().optional(),
+  inCinemas: z.string().nullable().optional(),
+})
+
+export const RadarrCalendarMovieArraySchema = RadarrCalendarMovieSchema.array()
+export type RadarrCalendarMovie = z.infer<typeof RadarrCalendarMovieSchema>
 
 export const RadarrQualityProfileArraySchema = z
   .object({ id: z.number(), name: z.string() })
