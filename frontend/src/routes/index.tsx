@@ -1,14 +1,12 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createConnector, getCookieHeader } from '../../providers/create-connector'
+import { requireOnboarded, requireSession } from '#presentation/shared/route-guards'
 
-export const Route = createFileRoute('/')({ component: Home })
-
-function Home() {
-  return (
-    <div className="p-8">
-      <h1 className="text-4xl font-bold">Welcome to TanStack Start</h1>
-      <p className="mt-4 text-lg">
-        Edit <code>src/routes/index.tsx</code> to get started.
-      </p>
-    </div>
-  )
-}
+export const Route = createFileRoute('/')({
+  beforeLoad: async () => {
+    const connector = createConnector(getCookieHeader())
+    await requireOnboarded(connector)
+    await requireSession(connector)
+    throw redirect({ to: '/requests' })
+  },
+})
