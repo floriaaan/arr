@@ -47,13 +47,19 @@ export type OidcTestResult = { ok: true; discovery: OidcDiscovery } | { ok: fals
 export interface ArrConnector {
   // identity
   getSession: () => Promise<Session>
-  signInWithPassword: (email: string, password: string) => Promise<Result<AuthenticatedUser, ApiError>>
+  signInWithPassword: (
+    email: string,
+    password: string,
+  ) => Promise<Result<AuthenticatedUser, ApiError>>
   startOidcSignIn: (callbackUrl: string) => Promise<Result<{ url: string }, ApiError>>
   signOut: () => Promise<void>
 
   // settings — onboarding
   getOnboardingState: () => Promise<{ status: OnboardingStatus }>
-  createAdminAccount: (email: string, password: string) => Promise<Result<{ userId: string }, ApiError>>
+  createAdminAccount: (
+    email: string,
+    password: string,
+  ) => Promise<Result<{ userId: string }, ApiError>>
   testInstanceConnection: (
     kind: ServarrKind,
     baseUrl: string,
