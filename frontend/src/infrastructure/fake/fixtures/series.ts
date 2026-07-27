@@ -1,0 +1,53 @@
+import { placeholderPoster } from '../placeholder-poster'
+import type { MediaDetail } from '#domain/catalog/media-detail'
+
+export const seriesFixtures: MediaDetail[] = [
+  {
+    externalId: { scheme: 'tvdb', value: '81189' },
+    kind: 'series',
+    title: 'Breaking Bad',
+    year: 2008,
+    overview: 'A chemistry teacher turned methamphetamine producer.',
+    posterUrl: placeholderPoster('Breaking Bad', 150),
+    alreadyManaged: false,
+    genres: ['Drama', 'Crime'],
+    network: 'AMC',
+    status: 'Ended',
+  },
+  {
+    externalId: { scheme: 'tvdb', value: '121361' },
+    kind: 'series',
+    title: 'Game of Thrones',
+    year: 2011,
+    overview: 'Nine noble families fight for control over the lands of Westeros.',
+    posterUrl: placeholderPoster('Game of Thrones', 280),
+    alreadyManaged: true,
+    genres: ['Drama', 'Adventure', 'Fantasy'],
+    network: 'HBO',
+    status: 'Ended',
+  },
+  {
+    externalId: { scheme: 'tvdb', value: '305288' },
+    kind: 'series',
+    title: 'Severance',
+    year: 2022,
+    overview: 'Employees undergo a procedure to separate work memories from personal ones.',
+    posterUrl: placeholderPoster('Severance', 190),
+    alreadyManaged: false,
+    genres: ['Drama', 'Mystery', 'Science Fiction'],
+    network: 'Apple TV+',
+    status: 'Continuing',
+  },
+  {
+    externalId: { scheme: 'tvdb', value: '371572' },
+    kind: 'series',
+    title: 'The Bear',
+    year: 2022,
+    overview: 'A young chef returns home to run his family sandwich shop in Chicago.',
+    posterUrl: placeholderPoster('The Bear', 25),
+    alreadyManaged: false,
+    genres: ['Comedy', 'Drama'],
+    network: 'FX',
+    status: 'Continuing',
+  },
+]
