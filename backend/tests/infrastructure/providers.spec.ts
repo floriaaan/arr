@@ -4,6 +4,8 @@ import app from '@adonisjs/core/services/app'
 test.group('service provider bindings', () => {
   test('every Phase 3/4 container binding resolves without throwing', async ({ assert }) => {
     const bindings = [
+      'shared.clock',
+      'shared.idGenerator',
       'identity.userDirectory',
       'identity.authentication',
       'identity.session',
