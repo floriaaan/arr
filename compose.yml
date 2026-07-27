@@ -19,6 +19,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
     networks:
       - internal
 
@@ -31,7 +33,9 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: 3333
+      LOG_LEVEL: ${LOG_LEVEL:-info}
       APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL:-http://localhost:3333}
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: ${POSTGRES_USER:-arr}
