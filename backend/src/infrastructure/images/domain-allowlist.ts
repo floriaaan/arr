@@ -1,5 +1,11 @@
 /** Known poster/artwork hosts. *arr instance hosts are added dynamically by ImageProxyService. */
-const ALLOWED_HOSTS = new Set(['image.tmdb.org', 'assets.fanart.tv', 'artworks.thetvdb.com'])
+const ALLOWED_HOSTS = new Set([
+  'image.tmdb.org',
+  'assets.fanart.tv',
+  'artworks.thetvdb.com',
+  'coverartarchive.org',
+  'images.lidarr.audio',
+])
 
 export function isAllowedImageHost(
   remoteUrl: string,

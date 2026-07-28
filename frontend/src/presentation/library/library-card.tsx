@@ -15,12 +15,30 @@ export function LibraryCard({ item, onSelect }: { item: LibraryItem; onSelect?: 
     >
       <div className="relative aspect-[2/3] overflow-hidden rounded-md bg-muted">
         {item.posterUrl ? (
-          <img
-            src={item.posterUrl}
-            alt={item.title}
-            className="size-full object-cover transition-transform group-hover:scale-105"
-            loading="lazy"
-          />
+          item.kind === 'album' ? (
+            <>
+              <img
+                src={item.posterUrl}
+                alt=""
+                aria-hidden="true"
+                className="size-full scale-110 object-cover blur-xl"
+                loading="lazy"
+              />
+              <img
+                src={item.posterUrl}
+                alt={item.title}
+                className="absolute inset-0 m-auto aspect-square w-[calc(100%-1.5rem)] rounded object-cover shadow-md transition-transform group-hover:scale-105"
+                loading="lazy"
+              />
+            </>
+          ) : (
+            <img
+              src={item.posterUrl}
+              alt={item.title}
+              className="size-full object-cover transition-transform group-hover:scale-105"
+              loading="lazy"
+            />
+          )
         ) : (
           <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
             No poster

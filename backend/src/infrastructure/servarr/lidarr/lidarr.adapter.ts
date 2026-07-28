@@ -45,15 +45,14 @@ export class LidarrAdapter implements ServarrKindAdapter {
   }
 
   /**
-   * Lidarr's own lookup accepts a raw MusicBrainz id as the term for a direct
-   * lookup (same family of convention as Radarr's "tmdb:<id>", but Lidarr
-   * doesn't need a scheme prefix since MBIDs are unambiguous UUIDs) —
-   * moderate rather than fully-verified confidence.
+   * Lidarr needs the "lidarr:<mbid>" scheme prefix for a direct id lookup —
+   * same convention family as Radarr's "tmdb:<id>". A bare MBID falls back
+   * to MusicBrainz text search and can miss the exact album.
    */
   private async lookupByForeignAlbumId(foreignAlbumId: string) {
     const raw = await this.client.request({
       path: '/api/v1/album/lookup',
-      query: { term: foreignAlbumId },
+      query: { term: `lidarr:${foreignAlbumId}` },
     })
     const [album] = LidarrAlbumLookupArraySchema.parse(raw)
     if (!album) throw new Error(`Lidarr lookup returned no result for ${foreignAlbumId}`)
