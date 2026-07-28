@@ -1,4 +1,6 @@
 import { Badge } from '#presentation/ui/badge'
+import { cn } from '#presentation/shared/utils.ts'
+import { MEDIA_KIND_ICONS } from '#presentation/shared/media-kind-icons'
 import type { LibraryItem } from '#domain/library/library-item'
 
 function formatSize(bytes: number): string {
@@ -8,6 +10,8 @@ function formatSize(bytes: number): string {
 }
 
 export function LibraryCard({ item, onSelect }: { item: LibraryItem; onSelect?: () => void }) {
+  const KindIcon = MEDIA_KIND_ICONS[item.kind]
+
   return (
     <button
       type="button"
@@ -27,7 +31,17 @@ export function LibraryCard({ item, onSelect }: { item: LibraryItem; onSelect?: 
             No poster
           </div>
         )}
-        <Badge className="absolute top-2 right-2" variant={item.hasFile ? 'default' : 'outline'}>
+        <div className="absolute top-2 left-2 flex size-6 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm">
+          <KindIcon className="size-3.5" />
+        </div>
+        <Badge
+          className={cn(
+            'absolute top-2 right-2 border-0 shadow-sm',
+            item.hasFile
+              ? 'bg-black/60 text-white backdrop-blur-sm'
+              : 'bg-destructive text-white',
+          )}
+        >
           {item.hasFile ? 'Downloaded' : 'Missing'}
         </Badge>
       </div>

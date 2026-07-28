@@ -34,8 +34,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isAdmin = session.data?.user?.role === 'admin'
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <aside className="flex w-60 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground">
+    <div className="flex h-screen overflow-hidden bg-background">
+      <aside className="flex h-full w-60 shrink-0 flex-col overflow-y-auto border-r bg-sidebar text-sidebar-foreground">
         <div className="flex items-center gap-2 px-4 py-4">
           <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <Clapperboard className="size-4" />
@@ -119,7 +119,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 p-6">
+      <main className="min-w-0 flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-5xl">{children}</div>
       </main>
 
