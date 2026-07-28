@@ -1,14 +1,23 @@
-import { useState } from 'react'
-import { Clapperboard, ListChecks, Music, Tv } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Clapperboard, ListChecks, Music, Search, Tv } from 'lucide-react'
 import { useLibrary } from '#application/library/library.query'
 import { LibraryCard } from './library-card'
 import { EmptyState } from '#presentation/shared/empty-state'
 import { ErrorState } from '#presentation/shared/error-state'
 import { Skeleton } from '#presentation/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '#presentation/ui/tabs'
+import { Input } from '#presentation/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#presentation/ui/select'
+import { useDebouncedValue } from '#presentation/shared/use-debounced-value'
 import { MediaDetailDrawer } from '#presentation/catalog/media-detail-drawer'
 import type { MediaKind } from '#domain/catalog/media-kind'
-import type { ExternalId } from '#domain/catalog/external-id'
+import type { LibraryItem } from '#domain/library/library-item'
 
 const KIND_TABS = [
   { value: 'all', label: 'All', icon: ListChecks },
@@ -18,11 +27,73 @@ const KIND_TABS = [
 ] as const
 type KindTab = (typeof KIND_TABS)[number]['value']
 
+const AVAILABILITY_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'downloaded', label: 'Downloaded' },
+  { value: 'missing', label: 'Missing' },
+] as const
+type Availability = (typeof AVAILABILITY_OPTIONS)[number]['value']
+
+const MONITORED_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'monitored', label: 'Monitored' },
+  { value: 'unmonitored', label: 'Unmonitored' },
+] as const
+type Monitored = (typeof MONITORED_OPTIONS)[number]['value']
+
+const SORT_OPTIONS = [
+  { value: 'title-asc', label: 'Title (A–Z)' },
+  { value: 'title-desc', label: 'Title (Z–A)' },
+  { value: 'year-desc', label: 'Year (newest)' },
+  { value: 'year-asc', label: 'Year (oldest)' },
+  { value: 'size-desc', label: 'Size (largest)' },
+  { value: 'size-asc', label: 'Size (smallest)' },
+] as const
+type Sort = (typeof SORT_OPTIONS)[number]['value']
+
+function sortItems(items: LibraryItem[], sort: Sort): LibraryItem[] {
+  const sorted = [...items]
+  switch (sort) {
+    case 'title-asc':
+      return sorted.sort((a, b) => a.title.localeCompare(b.title))
+    case 'title-desc':
+      return sorted.sort((a, b) => b.title.localeCompare(a.title))
+    case 'year-desc':
+      return sorted.sort((a, b) => (b.year ?? 0) - (a.year ?? 0))
+    case 'year-asc':
+      return sorted.sort((a, b) => (a.year ?? 0) - (b.year ?? 0))
+    case 'size-desc':
+      return sorted.sort((a, b) => b.sizeOnDiskBytes - a.sizeOnDiskBytes)
+    case 'size-asc':
+      return sorted.sort((a, b) => a.sizeOnDiskBytes - b.sizeOnDiskBytes)
+  }
+}
+
 export function LibraryGrid() {
   const [kindTab, setKindTab] = useState<KindTab>('all')
   const kind: MediaKind | undefined = kindTab === 'all' ? undefined : kindTab
   const { data, isLoading, isError, refetch } = useLibrary(kind)
-  const [selected, setSelected] = useState<{ externalId: ExternalId; kind: MediaKind } | null>(null)
+  const [selected, setSelected] = useState<LibraryItem | null>(null)
+
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebouncedValue(search, 300)
+  const [availability, setAvailability] = useState<Availability>('all')
+  const [monitored, setMonitored] = useState<Monitored>('all')
+  const [sort, setSort] = useState<Sort>('title-asc')
+
+  const filtered = useMemo(() => {
+    if (!data) return data
+    const term = debouncedSearch.trim().toLowerCase()
+    const items = data.filter((item) => {
+      if (term && !item.title.toLowerCase().includes(term)) return false
+      if (availability === 'downloaded' && !item.hasFile) return false
+      if (availability === 'missing' && item.hasFile) return false
+      if (monitored === 'monitored' && !item.monitored) return false
+      if (monitored === 'unmonitored' && item.monitored) return false
+      return true
+    })
+    return sortItems(items, sort)
+  }, [data, debouncedSearch, availability, monitored, sort])
 
   return (
     <div className="space-y-6">
@@ -37,6 +108,54 @@ export function LibraryGrid() {
         </TabsList>
       </Tabs>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search library…"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={availability} onValueChange={(value) => setAvailability(value as Availability)}>
+          <SelectTrigger size="sm">
+            <SelectValue placeholder="Availability" />
+          </SelectTrigger>
+          <SelectContent>
+            {AVAILABILITY_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={monitored} onValueChange={(value) => setMonitored(value as Monitored)}>
+          <SelectTrigger size="sm">
+            <SelectValue placeholder="Monitored" />
+          </SelectTrigger>
+          <SelectContent>
+            {MONITORED_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={sort} onValueChange={(value) => setSort(value as Sort)}>
+          <SelectTrigger size="sm">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            {SORT_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {isLoading ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {Array.from({ length: 10 }, (_, index) => (
@@ -50,13 +169,18 @@ export function LibraryGrid() {
           title="Nothing here"
           description="Nothing managed by your *arr instances yet."
         />
+      ) : !filtered || filtered.length === 0 ? (
+        <EmptyState
+          title="No matches"
+          description="No items match the current search and filters."
+        />
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {data.map((item) => (
+          {filtered.map((item) => (
             <LibraryCard
               key={`${item.externalId.scheme}:${item.externalId.value}`}
               item={item}
-              onSelect={() => setSelected({ externalId: item.externalId, kind: item.kind })}
+              onSelect={() => setSelected(item)}
             />
           ))}
         </div>
@@ -64,6 +188,7 @@ export function LibraryGrid() {
       <MediaDetailDrawer
         externalId={selected?.externalId ?? null}
         kind={selected?.kind ?? 'movie'}
+        libraryItem={selected}
         onOpenChange={(open) => {
           if (!open) setSelected(null)
         }}
