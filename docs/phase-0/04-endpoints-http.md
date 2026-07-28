@@ -17,7 +17,10 @@ HTTP approprié (`400` validation, `401` non authentifié, `403` non autorisé, 
 
 ## Onboarding (`/api/onboarding/*`) — accessible uniquement si `OnboardingState !== Completed`
 
-- `GET /api/onboarding/state`
+- `GET /api/onboarding/state` — **public, jamais gardé** par `onboardingGuard`
+  (contrairement au reste du groupe) : la garde de routing racine (cf.
+  décision 5) l'appelle sur chaque requête pour savoir s'il faut rediriger
+  vers `/setup`, y compris une fois l'onboarding terminé.
   → `{ state: 'not_started' | 'admin_created' | 'services_configured' | 'completed' }`
 
 - `POST /api/onboarding/admin`

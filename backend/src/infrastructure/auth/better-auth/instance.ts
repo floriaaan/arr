@@ -22,6 +22,21 @@ function buildAuthInstance(
 ) {
   return betterAuth({
     database: { db, type: 'postgres' },
+    /**
+     * Without these, better-auth derives its notion of "trusted" purely
+     * from the incoming request, which is fine for plain cookie-based
+     * session calls but rejects the OIDC flow with INVALID_ORIGIN: the
+     * redirect_uri sent to the provider needs a stable `baseURL`, and the
+     * browser's `Origin` header on the initiating request needs to be in
+     * `trustedOrigins` (cf. docs/phase-0/04-endpoints-http.md, same-origin
+     * proxy setup — the frontend's origin, not this server's own).
+     */
+    baseURL: env.get('APP_URL'),
+    trustedOrigins: env
+      .get('CORS_ORIGIN', '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
     emailAndPassword: { enabled: true },
     /**
      * The migration (`create_identity_tables_table.ts`) uses snake_case
@@ -102,6 +117,10 @@ function buildAuthInstance(
                   clientId: oidc.clientId,
                   clientSecret: oidc.clientSecret.reveal(),
                   discoveryUrl: `${oidc.issuerUrl.value}/.well-known/openid-configuration`,
+                  // Without this, better-auth defaults to `scopes: []` — an
+                  // empty `scope=` param that PocketID rejects outright with
+                  // access_denied rather than a scope-specific error.
+                  scopes: ['openid', 'profile', 'email'],
                 },
               ],
             }),

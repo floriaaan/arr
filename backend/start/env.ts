@@ -34,4 +34,8 @@ export default await Env.create(new URL('../', import.meta.url), {
   OIDC_CLIENT_ID: Env.schema.string.optional(),
   OIDC_CLIENT_SECRET: Env.schema.string.optional(),
   DISABLE_PASSWORD_LOGIN: Env.schema.boolean.optional(),
+
+  // Frontend origin(s) the browser actually calls the API from — used by
+  // better-auth's trustedOrigins check (cf. instance.ts), comma-separated.
+  CORS_ORIGIN: Env.schema.string.optional(),
 })

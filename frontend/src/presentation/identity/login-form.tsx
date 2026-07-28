@@ -16,7 +16,11 @@ export function LoginForm({ onSignedIn }: { onSignedIn: () => void }) {
   const authSettings = useEffectiveAuthSettings()
 
   function handleOidcSignIn() {
-    startOidcSignIn.mutate('/', {
+    // Absolute, not '/': better-auth resolves a relative callbackURL
+    // against its own `baseURL` (the backend's origin, cf. instance.ts),
+    // which has no page to serve — it'd bounce the browser to a bare
+    // AdonisJS 404 instead of back to this (frontend) app.
+    startOidcSignIn.mutate(`${window.location.origin}/`, {
       onSuccess: (result) => {
         if (result.ok) window.location.href = result.value.url
         else toast.error(result.error.message)

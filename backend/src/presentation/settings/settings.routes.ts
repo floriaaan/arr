@@ -4,9 +4,16 @@ import { middleware } from '#start/kernel'
 const OnboardingController = () => import('./onboarding.controller.js')
 const SettingsController = () => import('./settings.controller.js')
 
+/**
+ * Public on purpose, and outside the `onboardingGuard` group below: the
+ * root routing guard (cf. docs/phase-1 decision 5) calls this on every
+ * request to decide whether to redirect to `/setup` — it must keep working
+ * after onboarding completes too, or the whole app 404s on first load.
+ */
+router.get('/api/onboarding/state', [OnboardingController, 'state'])
+
 router
   .group(() => {
-    router.get('/state', [OnboardingController, 'state'])
     router.post('/admin', [OnboardingController, 'createAdmin'])
     router.post('/instances/test', [OnboardingController, 'testInstance'])
     router.post('/instances/profiles', [OnboardingController, 'instanceProfiles'])
