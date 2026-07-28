@@ -87,6 +87,7 @@ export function toCalendarEntry(movie: RadarrCalendarMovie, instanceId: string):
     monitored: movie.monitored ?? false,
     hasFile: movie.hasFile ?? false,
     instanceId,
+    externalId: externalIdFor(movie),
   })
 }
 

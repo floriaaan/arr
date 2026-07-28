@@ -28,4 +28,5 @@ export const calendarEntryDtoSchema = z.object({
   monitored: z.boolean(),
   hasFile: z.boolean(),
   instanceId: z.string(),
+  externalId: externalIdSchema.nullable(),
 })

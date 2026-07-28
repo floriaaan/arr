@@ -1,5 +1,6 @@
 import { Entity } from '#domain/shared/entity'
 import type { PosterRef } from './poster-ref.vo.js'
+import type { ExternalId } from './external-id.vo.js'
 
 export type CalendarEntryKind = 'movie' | 'episode' | 'album'
 
@@ -12,6 +13,8 @@ export interface CalendarEntryProps {
   monitored: boolean
   hasFile: boolean
   instanceId: string
+  /** The parent movie/series/album's id — null on the rare episode whose series didn't come back embedded. */
+  externalId: ExternalId | null
 }
 
 /**
@@ -66,6 +69,10 @@ export class CalendarEntry extends Entity<string> {
 
   get instanceId(): string {
     return this.props.instanceId
+  }
+
+  get externalId(): ExternalId | null {
+    return this.props.externalId
   }
 
   equals(other: unknown): boolean {

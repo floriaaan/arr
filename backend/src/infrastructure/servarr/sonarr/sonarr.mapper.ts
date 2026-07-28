@@ -90,6 +90,7 @@ export function toCalendarEntry(episode: SonarrCalendarEpisode, instanceId: stri
     monitored: episode.monitored ?? false,
     hasFile: episode.hasFile ?? false,
     instanceId,
+    externalId: episode.series ? externalIdFor(episode.series) : null,
   })
 }
 

@@ -107,6 +107,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
                 monitored: true,
                 hasFile: false,
                 instanceId: 'instance-1',
+                externalId: { scheme: 'tvdb', value: '81189' },
               },
             ],
           }),

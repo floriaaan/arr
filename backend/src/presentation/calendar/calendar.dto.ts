@@ -1,5 +1,6 @@
 import type { CalendarEntryKind } from '#domain/catalog/calendar-entry.entity'
 import type { PosterRef } from '#domain/catalog/poster-ref.vo'
+import type { ExternalId } from '#domain/catalog/external-id.vo'
 import type { ImageRefSigner } from '#presentation/shared/interfaces/image-ref-signer.interface'
 
 interface CalendarEntryLike {
@@ -12,6 +13,7 @@ interface CalendarEntryLike {
   monitored: boolean
   hasFile: boolean
   instanceId: string
+  externalId: ExternalId | null
 }
 
 export function toCalendarEntryDto(entry: CalendarEntryLike, signer: ImageRefSigner) {
@@ -25,5 +27,8 @@ export function toCalendarEntryDto(entry: CalendarEntryLike, signer: ImageRefSig
     monitored: entry.monitored,
     hasFile: entry.hasFile,
     instanceId: entry.instanceId,
+    externalId: entry.externalId
+      ? { scheme: entry.externalId.scheme, value: entry.externalId.value }
+      : null,
   }
 }
