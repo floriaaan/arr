@@ -65,6 +65,33 @@ services:
     networks:
       - internal
 
+  reconciler:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ['node', 'bin/console.js', 'requests:reconcile']
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3333
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL:-http://localhost:3333}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-arr}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-arr}
+      DB_DATABASE: ${POSTGRES_DB:-arr}
+    depends_on:
+      db:
+        condition: service_healthy
+    # cf. docs/adr/0003 — its own process/service, polls *arr instances for
+    # download progress and updates MediaRequest state (nothing else did,
+    # so request progress silently never advanced past "submitted").
+    networks:
+      - internal
+
   frontend:
     build:
       context: .
