@@ -6,7 +6,10 @@ import { Tabs, TabsList, TabsTrigger } from '#presentation/ui/tabs'
 import { Skeleton } from '#presentation/ui/skeleton'
 import { ErrorState } from '#presentation/shared/error-state'
 import { cn } from '#presentation/shared/utils'
-import type { CalendarEntry } from '#domain/calendar/calendar-entry'
+import { MediaDetailDrawer } from '#presentation/catalog/media-detail-drawer'
+import type { CalendarEntry, CalendarEntryKind } from '#domain/calendar/calendar-entry'
+import type { MediaKind } from '#domain/catalog/media-kind'
+import type { ExternalId } from '#domain/catalog/external-id'
 
 const KIND_TABS = [
   { value: 'all', label: 'All', icon: ListChecks },
@@ -15,6 +18,16 @@ const KIND_TABS = [
   { value: 'album', label: 'Music', icon: Music },
 ] as const
 type KindTab = (typeof KIND_TABS)[number]['value']
+
+const ENTRY_ICON: Record<CalendarEntryKind, typeof Clapperboard> = {
+  movie: Clapperboard,
+  episode: Tv,
+  album: Music,
+}
+
+function toMediaKind(kind: CalendarEntryKind): MediaKind {
+  return kind === 'episode' ? 'series' : kind
+}
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -46,6 +59,7 @@ export function CalendarGrid() {
     return new Date(now.getFullYear(), now.getMonth(), 1)
   })
   const [kindTab, setKindTab] = useState<KindTab>('all')
+  const [selected, setSelected] = useState<{ externalId: ExternalId; kind: MediaKind } | null>(null)
 
   const gridDays = useMemo(() => getMonthGridDays(currentMonth), [currentMonth])
   const startDate = toDateKey(gridDays[0] ?? currentMonth)
@@ -136,16 +150,33 @@ export function CalendarGrid() {
                     {day.getDate()}
                   </p>
                   <div className="space-y-1">
-                    {entries.slice(0, 3).map((entry) => (
-                      <div
-                        key={entry.id}
-                        className="truncate rounded bg-secondary px-1.5 py-0.5 text-[11px] text-secondary-foreground"
-                        title={entry.subtitle ? `${entry.title} — ${entry.subtitle}` : entry.title}
-                      >
-                        {entry.subtitle ? `${entry.subtitle} ` : ''}
-                        {entry.title}
-                      </div>
-                    ))}
+                    {entries.slice(0, 3).map((entry) => {
+                      const Icon = ENTRY_ICON[entry.kind]
+                      return (
+                        <button
+                          key={entry.id}
+                          type="button"
+                          disabled={!entry.externalId}
+                          onClick={() =>
+                            entry.externalId &&
+                            setSelected({
+                              externalId: entry.externalId,
+                              kind: toMediaKind(entry.kind),
+                            })
+                          }
+                          className="flex w-full items-center gap-1 truncate rounded bg-secondary px-1.5 py-0.5 text-left text-[11px] text-secondary-foreground disabled:cursor-default disabled:opacity-70 enabled:hover:bg-secondary/70"
+                          title={
+                            entry.subtitle ? `${entry.title} — ${entry.subtitle}` : entry.title
+                          }
+                        >
+                          <Icon className="size-3 shrink-0" />
+                          <span className="truncate">
+                            {entry.subtitle ? `${entry.subtitle} ` : ''}
+                            {entry.title}
+                          </span>
+                        </button>
+                      )
+                    })}
                     {entries.length > 3 ? (
                       <p className="text-[11px] text-muted-foreground">
                         +{entries.length - 3} more
@@ -158,6 +189,13 @@ export function CalendarGrid() {
           </div>
         </div>
       )}
+      <MediaDetailDrawer
+        externalId={selected?.externalId ?? null}
+        kind={selected?.kind ?? 'movie'}
+        onOpenChange={(open) => {
+          if (!open) setSelected(null)
+        }}
+      />
     </div>
   )
 }

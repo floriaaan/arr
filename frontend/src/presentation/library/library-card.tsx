@@ -7,9 +7,13 @@ function formatSize(bytes: number): string {
   return gb >= 1 ? `${gb.toFixed(1)} GB` : `${(bytes / 1_000_000).toFixed(0)} MB`
 }
 
-export function LibraryCard({ item }: { item: LibraryItem }) {
+export function LibraryCard({ item, onSelect }: { item: LibraryItem; onSelect?: () => void }) {
   return (
-    <div className="group flex flex-col gap-2">
+    <button
+      type="button"
+      onClick={onSelect}
+      className="group flex flex-col gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
       <div className="relative aspect-[2/3] overflow-hidden rounded-md bg-muted">
         {item.posterUrl ? (
           <img
@@ -33,6 +37,6 @@ export function LibraryCard({ item }: { item: LibraryItem }) {
           {item.year ?? 'Unknown year'} · {formatSize(item.sizeOnDiskBytes)}
         </p>
       </div>
-    </div>
+    </button>
   )
 }

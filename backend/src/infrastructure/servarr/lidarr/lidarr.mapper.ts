@@ -81,6 +81,7 @@ export function toCalendarEntry(album: LidarrAlbum, instanceId: string): Calenda
     monitored: album.monitored ?? false,
     hasFile: (album.statistics?.trackFileCount ?? 0) > 0,
     instanceId,
+    externalId: externalIdFor(album),
   })
 }
 

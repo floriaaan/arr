@@ -1,11 +1,15 @@
 import { test } from '@japa/runner'
 import { GetCalendar } from '#application/calendar/get-calendar.use-case'
 import { CalendarEntry } from '#domain/catalog/calendar-entry.entity'
+import { ExternalId } from '#domain/catalog/external-id.vo'
 import { FakeMediaLibrary } from '../library/fakes.js'
 
 test.group('GetCalendar', () => {
   test('delegates the range to MediaLibrary and returns its results', async ({ assert }) => {
     const library = new FakeMediaLibrary()
+    const externalId = ExternalId.create('tvdb', '81189')
+    if (!externalId.ok) throw new Error('unreachable')
+
     library.calendarResult = [
       CalendarEntry.create('sonarr:instance-1:42', {
         kind: 'episode',
@@ -16,6 +20,7 @@ test.group('GetCalendar', () => {
         monitored: true,
         hasFile: false,
         instanceId: 'instance-1',
+        externalId: externalId.value,
       }),
     ]
 

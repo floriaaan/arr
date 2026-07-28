@@ -114,7 +114,8 @@ et avec un contrôle `admin_only_middleware` :
   → `{ entries: CalendarEntryDto[] }` — agrège toujours les 3 services, erreurs
     par instance isolées (sous-ensemble partiel renvoyé plutôt qu'un échec
     global).
-  `CalendarEntryDto = { id: string; kind: 'movie' | 'episode' | 'album'; title; subtitle: string | null; releaseDate: string; posterRef: string | null; monitored: boolean; hasFile: boolean; instanceId: string }`
+  `CalendarEntryDto = { id: string; kind: 'movie' | 'episode' | 'album'; title; subtitle: string | null; releaseDate: string; posterRef: string | null; monitored: boolean; hasFile: boolean; instanceId: string; externalId: ExternalIdDto | null }`
+  (`externalId` powers "click to open detail" in the UI; `null` only for the rare Sonarr episode whose parent series wasn't embedded)
 
 ## Images (`/api/images`)
 

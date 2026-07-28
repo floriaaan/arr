@@ -6,7 +6,9 @@ import { EmptyState } from '#presentation/shared/empty-state'
 import { ErrorState } from '#presentation/shared/error-state'
 import { Skeleton } from '#presentation/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '#presentation/ui/tabs'
+import { MediaDetailDrawer } from '#presentation/catalog/media-detail-drawer'
 import type { MediaKind } from '#domain/catalog/media-kind'
+import type { ExternalId } from '#domain/catalog/external-id'
 
 const KIND_TABS = [
   { value: 'all', label: 'All', icon: ListChecks },
@@ -20,6 +22,7 @@ export function LibraryGrid() {
   const [kindTab, setKindTab] = useState<KindTab>('all')
   const kind: MediaKind | undefined = kindTab === 'all' ? undefined : kindTab
   const { data, isLoading, isError, refetch } = useLibrary(kind)
+  const [selected, setSelected] = useState<{ externalId: ExternalId; kind: MediaKind } | null>(null)
 
   return (
     <div className="space-y-6">
@@ -50,10 +53,21 @@ export function LibraryGrid() {
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {data.map((item) => (
-            <LibraryCard key={`${item.externalId.scheme}:${item.externalId.value}`} item={item} />
+            <LibraryCard
+              key={`${item.externalId.scheme}:${item.externalId.value}`}
+              item={item}
+              onSelect={() => setSelected({ externalId: item.externalId, kind: item.kind })}
+            />
           ))}
         </div>
       )}
+      <MediaDetailDrawer
+        externalId={selected?.externalId ?? null}
+        kind={selected?.kind ?? 'movie'}
+        onOpenChange={(open) => {
+          if (!open) setSelected(null)
+        }}
+      />
     </div>
   )
 }

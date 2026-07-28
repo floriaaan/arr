@@ -441,6 +441,7 @@ export class FakeArrConnector implements ArrConnector {
         monitored: seed % 3 !== 0,
         hasFile: seed % 4 !== 0,
         instanceId: `${SERVARR_KIND_BY_MEDIA_KIND[item.kind]}-fake`,
+        externalId: item.externalId,
       }
     })
   }

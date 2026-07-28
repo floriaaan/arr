@@ -1,3 +1,5 @@
+import type { ExternalId } from '../catalog/external-id'
+
 export type CalendarEntryKind = 'movie' | 'episode' | 'album'
 
 export interface CalendarEntry {
@@ -10,4 +12,5 @@ export interface CalendarEntry {
   monitored: boolean
   hasFile: boolean
   instanceId: string
+  externalId: ExternalId | null
 }
