@@ -1,13 +1,8 @@
 import { Badge } from '#presentation/ui/badge'
 import { cn } from '#presentation/shared/utils.ts'
 import { MEDIA_KIND_ICONS } from '#presentation/shared/media-kind-icons'
+import { formatSize } from '#presentation/shared/format-size'
 import type { LibraryItem } from '#domain/library/library-item'
-
-function formatSize(bytes: number): string {
-  if (bytes <= 0) return '—'
-  const gb = bytes / 1_000_000_000
-  return gb >= 1 ? `${gb.toFixed(1)} GB` : `${(bytes / 1_000_000).toFixed(0)} MB`
-}
 
 export function LibraryCard({ item, onSelect }: { item: LibraryItem; onSelect?: () => void }) {
   const KindIcon = MEDIA_KIND_ICONS[item.kind]

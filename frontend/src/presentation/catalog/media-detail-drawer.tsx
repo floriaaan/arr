@@ -26,15 +26,10 @@ import { Button } from '#presentation/ui/button'
 import { Badge } from '#presentation/ui/badge'
 import { Skeleton } from '#presentation/ui/skeleton'
 import { MEDIA_KIND_ICONS } from '#presentation/shared/media-kind-icons'
+import { formatSize } from '#presentation/shared/format-size'
 import type { MediaKind } from '#domain/catalog/media-kind'
 import type { ExternalId } from '#domain/catalog/external-id'
 import type { LibraryItem } from '#domain/library/library-item'
-
-function formatSize(bytes: number): string {
-  if (bytes <= 0) return '—'
-  const gb = bytes / 1_000_000_000
-  return gb >= 1 ? `${gb.toFixed(1)} GB` : `${(bytes / 1_000_000).toFixed(0)} MB`
-}
 
 function MetaRow({
   icon: Icon,

@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react'
-import { Clapperboard, ListChecks, Music, Search, Tv } from 'lucide-react'
+import { Clapperboard, LayoutGrid, List, ListChecks, Music, Search, Tv } from 'lucide-react'
 import { useLibrary } from '#application/library/library.query'
 import { LibraryCard } from './library-card'
+import { LibraryListItem } from './library-list-item'
+import { LibrarySizeBreakdown } from './library-size-breakdown'
 import { EmptyState } from '#presentation/shared/empty-state'
 import { ErrorState } from '#presentation/shared/error-state'
 import { Skeleton } from '#presentation/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '#presentation/ui/tabs'
 import { Input } from '#presentation/ui/input'
+import { Button } from '#presentation/ui/button'
 import {
   Select,
   SelectContent,
@@ -14,9 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '#presentation/ui/select'
+import { cn } from '#presentation/shared/utils'
 import { useDebouncedValue } from '#presentation/shared/use-debounced-value'
 import { MediaDetailDrawer } from '#presentation/catalog/media-detail-drawer'
-import type { MediaKind } from '#domain/catalog/media-kind'
 import type { LibraryItem } from '#domain/library/library-item'
 
 const KIND_TABS = [
@@ -51,6 +54,8 @@ const SORT_OPTIONS = [
 ] as const
 type Sort = (typeof SORT_OPTIONS)[number]['value']
 
+type View = 'grid' | 'list'
+
 function sortItems(items: LibraryItem[], sort: Sort): LibraryItem[] {
   const sorted = [...items]
   switch (sort) {
@@ -70,11 +75,11 @@ function sortItems(items: LibraryItem[], sort: Sort): LibraryItem[] {
 }
 
 export function LibraryGrid() {
-  const [kindTab, setKindTab] = useState<KindTab>('all')
-  const kind: MediaKind | undefined = kindTab === 'all' ? undefined : kindTab
-  const { data, isLoading, isError, refetch } = useLibrary(kind)
+  const { data, isLoading, isError, refetch } = useLibrary()
   const [selected, setSelected] = useState<LibraryItem | null>(null)
 
+  const [kindTab, setKindTab] = useState<KindTab>('all')
+  const [view, setView] = useState<View>('grid')
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search, 300)
   const [availability, setAvailability] = useState<Availability>('all')
@@ -85,6 +90,7 @@ export function LibraryGrid() {
     if (!data) return data
     const term = debouncedSearch.trim().toLowerCase()
     const items = data.filter((item) => {
+      if (kindTab !== 'all' && item.kind !== kindTab) return false
       if (term && !item.title.toLowerCase().includes(term)) return false
       if (availability === 'downloaded' && !item.hasFile) return false
       if (availability === 'missing' && item.hasFile) return false
@@ -93,10 +99,12 @@ export function LibraryGrid() {
       return true
     })
     return sortItems(items, sort)
-  }, [data, debouncedSearch, availability, monitored, sort])
+  }, [data, kindTab, debouncedSearch, availability, monitored, sort])
 
   return (
     <div className="space-y-6">
+      {data && data.length > 0 ? <LibrarySizeBreakdown items={data} /> : null}
+
       <Tabs value={kindTab} onValueChange={(value) => setKindTab(value as KindTab)}>
         <TabsList>
           {KIND_TABS.map((tab) => (
@@ -109,6 +117,28 @@ export function LibraryGrid() {
       </Tabs>
 
       <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1 rounded-md border p-0.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn('size-7', view === 'grid' && 'bg-accent text-accent-foreground')}
+            onClick={() => setView('grid')}
+            title="Grid view"
+          >
+            <LayoutGrid className="size-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn('size-7', view === 'list' && 'bg-accent text-accent-foreground')}
+            onClick={() => setView('list')}
+            title="List view"
+          >
+            <List className="size-4" />
+          </Button>
+        </div>
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -174,10 +204,20 @@ export function LibraryGrid() {
           title="No matches"
           description="No items match the current search and filters."
         />
-      ) : (
+      ) : view === 'grid' ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {filtered.map((item) => (
             <LibraryCard
+              key={`${item.externalId.scheme}:${item.externalId.value}`}
+              item={item}
+              onSelect={() => setSelected(item)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="divide-y rounded-lg border">
+          {filtered.map((item) => (
+            <LibraryListItem
               key={`${item.externalId.scheme}:${item.externalId.value}`}
               item={item}
               onSelect={() => setSelected(item)}
