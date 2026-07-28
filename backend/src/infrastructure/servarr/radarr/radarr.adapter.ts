@@ -4,6 +4,7 @@ import { isoDate } from '../date-range.js'
 import {
   RadarrMovieArraySchema,
   RadarrMovieSchema,
+  RadarrMovieLookupArraySchema,
   RadarrCalendarMovieArraySchema,
   RadarrQueueResponseSchema,
 } from './radarr.schemas.js'
@@ -35,7 +36,7 @@ export class RadarrAdapter implements ServarrKindAdapter {
 
   async search(term: string): Promise<MediaItem[]> {
     const raw = await this.client.request({ path: '/api/v3/movie/lookup', query: { term } })
-    return RadarrMovieArraySchema.parse(raw).map(toMediaItem)
+    return RadarrMovieLookupArraySchema.parse(raw).map(toMediaItem)
   }
 
   async detail(externalId: ExternalId): Promise<MediaDetail> {
@@ -46,7 +47,7 @@ export class RadarrAdapter implements ServarrKindAdapter {
       path: '/api/v3/movie/lookup',
       query: { term: `tmdb:${externalId.value}` },
     })
-    const [movie] = RadarrMovieArraySchema.parse(raw)
+    const [movie] = RadarrMovieLookupArraySchema.parse(raw)
     if (!movie) throw new Error(`Radarr lookup returned no result for tmdb:${externalId.value}`)
     return toMediaDetail(movie, this.instance.id)
   }

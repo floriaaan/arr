@@ -1,4 +1,9 @@
-import type { RadarrMovie, RadarrCalendarMovie, RadarrQueueRecord } from './radarr.schemas.js'
+import type {
+  RadarrMovie,
+  RadarrMovieLookup,
+  RadarrCalendarMovie,
+  RadarrQueueRecord,
+} from './radarr.schemas.js'
 import { ExternalId } from '#domain/catalog/external-id.vo'
 import { PosterRef } from '#domain/catalog/poster-ref.vo'
 import { MediaItem } from '#domain/catalog/media-item.entity'
@@ -8,42 +13,42 @@ import { CalendarEntry } from '#domain/catalog/calendar-entry.entity'
 import { RequestProgress } from '#domain/requests/request-progress.vo'
 import type { RequestStatus } from '#domain/requests/request-status.vo'
 
-function posterRefFrom(movie: RadarrMovie): PosterRef | null {
+function posterRefFrom(movie: RadarrMovieLookup): PosterRef | null {
   const poster = movie.images?.find((image) => image.coverType === 'poster')
   const url = poster?.remoteUrl ?? poster?.url
   return url ? PosterRef.create(url) : null
 }
 
-function externalIdFor(movie: RadarrMovie): ExternalId {
+function externalIdFor(movie: RadarrMovieLookup): ExternalId {
   const result = ExternalId.create('tmdb', String(movie.tmdbId))
   if (!result.ok) throw new Error(`Radarr returned an invalid tmdbId: ${movie.tmdbId}`)
   return result.value
 }
 
-export function toMediaItem(movie: RadarrMovie): MediaItem {
+export function toMediaItem(movie: RadarrMovieLookup): MediaItem {
   return MediaItem.create(externalIdFor(movie), {
     kind: 'movie',
     title: movie.title ?? 'Unknown title',
     year: movie.year ?? null,
     overview: movie.overview ?? '',
     posterRef: posterRefFrom(movie),
-    alreadyManaged: movie.id > 0,
+    alreadyManaged: (movie.id ?? 0) > 0,
   })
 }
 
-export function toMediaDetail(movie: RadarrMovie, instanceId: string): MediaDetail {
+export function toMediaDetail(movie: RadarrMovieLookup, instanceId: string): MediaDetail {
   return MediaDetail.create(externalIdFor(movie), {
     kind: 'movie',
     title: movie.title ?? 'Unknown title',
     year: movie.year ?? null,
     overview: movie.overview ?? '',
     posterRef: posterRefFrom(movie),
-    alreadyManaged: movie.id > 0,
+    alreadyManaged: (movie.id ?? 0) > 0,
     genres: movie.genres ?? [],
     runtimeMinutes: movie.runtime,
     status: movie.status,
     managedBy:
-      movie.id > 0 && movie.rootFolderPath && movie.qualityProfileId
+      (movie.id ?? 0) > 0 && movie.rootFolderPath && movie.qualityProfileId
         ? {
             instanceId,
             rootFolderPath: movie.rootFolderPath,

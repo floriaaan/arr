@@ -4,6 +4,7 @@ import { isoDate } from '../date-range.js'
 import {
   SonarrSeriesArraySchema,
   SonarrSeriesSchema,
+  SonarrSeriesLookupArraySchema,
   SonarrCalendarEpisodeArraySchema,
   SonarrQueueResponseSchema,
 } from './sonarr.schemas.js'
@@ -35,7 +36,7 @@ export class SonarrAdapter implements ServarrKindAdapter {
 
   async search(term: string): Promise<MediaItem[]> {
     const raw = await this.client.request({ path: '/api/v3/series/lookup', query: { term } })
-    return SonarrSeriesArraySchema.parse(raw).map(toMediaItem)
+    return SonarrSeriesLookupArraySchema.parse(raw).map(toMediaItem)
   }
 
   async detail(externalId: ExternalId): Promise<MediaDetail> {
@@ -44,7 +45,7 @@ export class SonarrAdapter implements ServarrKindAdapter {
       path: '/api/v3/series/lookup',
       query: { term: `tvdb:${externalId.value}` },
     })
-    const [series] = SonarrSeriesArraySchema.parse(raw)
+    const [series] = SonarrSeriesLookupArraySchema.parse(raw)
     if (!series) throw new Error(`Sonarr lookup returned no result for tvdb:${externalId.value}`)
     return toMediaDetail(series, this.instance.id)
   }

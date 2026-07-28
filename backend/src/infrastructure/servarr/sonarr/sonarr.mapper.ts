@@ -1,4 +1,9 @@
-import type { SonarrSeries, SonarrCalendarEpisode, SonarrQueueRecord } from './sonarr.schemas.js'
+import type {
+  SonarrSeries,
+  SonarrSeriesLookup,
+  SonarrCalendarEpisode,
+  SonarrQueueRecord,
+} from './sonarr.schemas.js'
 import { ExternalId } from '#domain/catalog/external-id.vo'
 import { PosterRef } from '#domain/catalog/poster-ref.vo'
 import { MediaItem } from '#domain/catalog/media-item.entity'
@@ -8,42 +13,42 @@ import { CalendarEntry } from '#domain/catalog/calendar-entry.entity'
 import { RequestProgress } from '#domain/requests/request-progress.vo'
 import type { RequestStatus } from '#domain/requests/request-status.vo'
 
-function posterRefFrom(series: SonarrSeries): PosterRef | null {
+function posterRefFrom(series: SonarrSeriesLookup): PosterRef | null {
   const poster = series.images?.find((image) => image.coverType === 'poster')
   const url = poster?.remoteUrl ?? poster?.url
   return url ? PosterRef.create(url) : null
 }
 
-function externalIdFor(series: SonarrSeries): ExternalId {
+function externalIdFor(series: SonarrSeriesLookup): ExternalId {
   const result = ExternalId.create('tvdb', String(series.tvdbId))
   if (!result.ok) throw new Error(`Sonarr returned an invalid tvdbId: ${series.tvdbId}`)
   return result.value
 }
 
-export function toMediaItem(series: SonarrSeries): MediaItem {
+export function toMediaItem(series: SonarrSeriesLookup): MediaItem {
   return MediaItem.create(externalIdFor(series), {
     kind: 'series',
     title: series.title ?? 'Unknown title',
     year: series.year ?? null,
     overview: series.overview ?? '',
     posterRef: posterRefFrom(series),
-    alreadyManaged: series.id > 0,
+    alreadyManaged: (series.id ?? 0) > 0,
   })
 }
 
-export function toMediaDetail(series: SonarrSeries, instanceId: string): MediaDetail {
+export function toMediaDetail(series: SonarrSeriesLookup, instanceId: string): MediaDetail {
   return MediaDetail.create(externalIdFor(series), {
     kind: 'series',
     title: series.title ?? 'Unknown title',
     year: series.year ?? null,
     overview: series.overview ?? '',
     posterRef: posterRefFrom(series),
-    alreadyManaged: series.id > 0,
+    alreadyManaged: (series.id ?? 0) > 0,
     genres: series.genres ?? [],
     network: series.network,
     status: series.status,
     managedBy:
-      series.id > 0 && series.rootFolderPath && series.qualityProfileId
+      (series.id ?? 0) > 0 && series.rootFolderPath && series.qualityProfileId
         ? {
             instanceId,
             rootFolderPath: series.rootFolderPath,

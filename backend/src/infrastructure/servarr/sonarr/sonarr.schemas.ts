@@ -33,6 +33,14 @@ export const SonarrSeriesSchema = z.object({
 
 export const SonarrSeriesArraySchema = SonarrSeriesSchema.array()
 
+/**
+ * `GET /api/v3/series/lookup` — a lookup hit for a series not yet added has
+ * no Sonarr-internal `id` at all (cf. Radarr's equivalent lookup schema).
+ */
+export const SonarrSeriesLookupSchema = SonarrSeriesSchema.extend({ id: z.number().optional() })
+export const SonarrSeriesLookupArraySchema = SonarrSeriesLookupSchema.array()
+export type SonarrSeriesLookup = z.infer<typeof SonarrSeriesLookupSchema>
+
 /** `GET /api/v3/calendar?includeSeries=true` — one entry per episode. */
 export const SonarrCalendarEpisodeSchema = z.object({
   id: z.number(),

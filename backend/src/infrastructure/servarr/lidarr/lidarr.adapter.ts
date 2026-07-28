@@ -4,6 +4,7 @@ import { isoDate } from '../date-range.js'
 import {
   LidarrAlbumArraySchema,
   LidarrAlbumSchema,
+  LidarrAlbumLookupArraySchema,
   LidarrQueueResponseSchema,
 } from './lidarr.schemas.js'
 import {
@@ -34,7 +35,7 @@ export class LidarrAdapter implements ServarrKindAdapter {
 
   async search(term: string): Promise<MediaItem[]> {
     const raw = await this.client.request({ path: '/api/v1/album/lookup', query: { term } })
-    return LidarrAlbumArraySchema.parse(raw).map(toMediaItem)
+    return LidarrAlbumLookupArraySchema.parse(raw).map(toMediaItem)
   }
 
   async detail(externalId: ExternalId): Promise<MediaDetail> {
@@ -53,7 +54,7 @@ export class LidarrAdapter implements ServarrKindAdapter {
       path: '/api/v1/album/lookup',
       query: { term: foreignAlbumId },
     })
-    const [album] = LidarrAlbumArraySchema.parse(raw)
+    const [album] = LidarrAlbumLookupArraySchema.parse(raw)
     if (!album) throw new Error(`Lidarr lookup returned no result for ${foreignAlbumId}`)
     return album
   }
