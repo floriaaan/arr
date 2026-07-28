@@ -1,6 +1,11 @@
 import { HttpClient, toApiError } from './http-client'
 import { toPosterUrl } from './poster-url'
-import { authenticatedUserSchema, sessionSchema } from './schemas/identity.schema'
+import {
+  authenticatedUserSchema,
+  sessionSchema,
+  listUsersResponseSchema,
+  setUserRoleResponseSchema,
+} from './schemas/identity.schema'
 import {
   onboardingStatusSchema,
   servarrInstanceDtoSchema,
@@ -20,7 +25,8 @@ import type {
 } from '#domain/interfaces/arr-connector'
 import type { Result } from '#domain/shared/result'
 import type { ApiError } from '#domain/shared/api-error'
-import type { AuthenticatedUser } from '#domain/identity/user'
+import type { AuthenticatedUser, UserRole } from '#domain/identity/user'
+import type { UserAccount } from '#domain/identity/user-account'
 import type { Session } from '#domain/identity/session'
 import type { ServarrKind } from '#domain/settings/servarr-instance'
 import type { InstanceDraft } from '#domain/settings/instance-draft'
@@ -91,6 +97,22 @@ export class HttpArrConnector implements ArrConnector {
 
   async signOut(): Promise<void> {
     await this.http.post('/api/auth/sign-out')
+  }
+
+  /** `admin()` plugin route, not one of ours — mounted under `/api/auth/*` (cf. auth.routes.ts). */
+  async listUsers(): Promise<UserAccount[]> {
+    const response = await this.http.get('/api/auth/admin/list-users')
+    const body = (await response.json()) as { users: unknown[] }
+    return listUsersResponseSchema.parse(body).users
+  }
+
+  async setUserRole(
+    userId: string,
+    role: UserRole,
+  ): Promise<Result<{ user: UserAccount }, ApiError>> {
+    const response = await this.http.post('/api/auth/admin/set-role', { userId, role })
+    if (!response.ok) return { ok: false, error: await toApiError(response) }
+    return { ok: true, value: setUserRoleResponseSchema.parse(await response.json()) }
   }
 
   async getOnboardingState(): Promise<{ status: OnboardingStatus }> {
@@ -180,9 +202,25 @@ export class HttpArrConnector implements ArrConnector {
     await this.http.delete(`/api/settings/instances/${kind}`)
   }
 
-  async testSavedInstanceConnection(kind: ServarrKind): Promise<ConnectionTestResult> {
-    const response = await this.http.post(`/api/settings/instances/${kind}/test-connection`)
+  async testSavedInstanceConnection(
+    kind: ServarrKind,
+    baseUrl: string,
+    apiKey: string,
+  ): Promise<ConnectionTestResult> {
+    const response = await this.http.post(`/api/settings/instances/${kind}/test-connection`, {
+      baseUrl,
+      apiKey,
+    })
     return this.parseConnectionTestResult(response)
+  }
+
+  async fetchSettingsInstanceProfiles(kind: ServarrKind, baseUrl: string, apiKey: string) {
+    const response = await this.http.post(`/api/settings/instances/${kind}/profiles`, {
+      baseUrl,
+      apiKey,
+    })
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    return { ok: true as const, value: instanceProfilesSchema.parse(await response.json()) }
   }
 
   async getSso() {

@@ -9,14 +9,18 @@ export interface FetchInstanceProfilesVariables {
   kind: ServarrKind
   baseUrl: string
   apiKey: string
+  /** Onboarding and the admin settings panel fetch from different endpoints. */
+  duringOnboarding?: boolean
 }
 
 export const fetchInstanceProfilesMutation = defineMutation<
   Result<InstanceProfiles, ApiError>,
   FetchInstanceProfilesVariables
 >({
-  mutationFn: (connector, { kind, baseUrl, apiKey }) =>
-    connector.fetchInstanceProfiles(kind, baseUrl, apiKey),
+  mutationFn: (connector, { kind, baseUrl, apiKey, duringOnboarding }) =>
+    duringOnboarding
+      ? connector.fetchInstanceProfiles(kind, baseUrl, apiKey)
+      : connector.fetchSettingsInstanceProfiles(kind, baseUrl, apiKey),
 })
 
 export function useFetchInstanceProfiles() {

@@ -7,11 +7,15 @@ export interface TestInstanceVariables {
   kind: ServarrKind
   baseUrl: string
   apiKey: string
+  /** Onboarding and the admin settings panel test against different endpoints. */
+  duringOnboarding?: boolean
 }
 
 export const testInstanceMutation = defineMutation<ConnectionTestResult, TestInstanceVariables>({
-  mutationFn: (connector, { kind, baseUrl, apiKey }) =>
-    connector.testInstanceConnection(kind, baseUrl, apiKey),
+  mutationFn: (connector, { kind, baseUrl, apiKey, duringOnboarding }) =>
+    duringOnboarding
+      ? connector.testInstanceConnection(kind, baseUrl, apiKey)
+      : connector.testSavedInstanceConnection(kind, baseUrl, apiKey),
 })
 
 export function useTestInstance() {

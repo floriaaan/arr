@@ -31,6 +31,7 @@ router
     router.put('/instances/:kind', [SettingsController, 'saveInstance'])
     router.delete('/instances/:kind', [SettingsController, 'deleteInstance'])
     router.post('/instances/:kind/test-connection', [SettingsController, 'testInstanceConnection'])
+    router.post('/instances/:kind/profiles', [SettingsController, 'instanceProfiles'])
     router.get('/sso', [SettingsController, 'getSso'])
     router.put('/sso', [SettingsController, 'updateSso'])
     router.post('/sso/test', [SettingsController, 'testSso'])

@@ -14,8 +14,8 @@ export default class OnboardingGuardMiddleware {
     const state = await repository.get()
 
     if (state.status === 'completed') {
-      ctx.response.status(404).send({
-        error: { type: 'not_found', message: 'Onboarding has already been completed.' },
+      ctx.response.status(400).send({
+        error: { type: 'onboarding_completed', message: 'Onboarding has already been completed.' },
       })
       return
     }

@@ -4,6 +4,7 @@ import { ListInstances } from '#application/settings/list-instances.use-case'
 import { SaveInstance } from '#application/settings/save-instance.use-case'
 import { DeleteInstance } from '#application/settings/delete-instance.use-case'
 import { TestInstanceConnection } from '#application/settings/test-instance-connection.use-case'
+import { FetchInstanceProfiles } from '#application/settings/fetch-instance-profiles.use-case'
 import { TestOidcDiscovery } from '#application/settings/test-oidc-discovery.use-case'
 import { SaveAuthSettings } from '#application/settings/save-auth-settings.use-case'
 import { GetEffectiveAuthSettings } from '#application/settings/get-effective-auth-settings.use-case'
@@ -73,6 +74,20 @@ export default class SettingsController {
     }
 
     return ctx.response.json({ ok: true, detectedVersion: result.value.detectedVersion })
+  }
+
+  async instanceProfiles(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const payload = await ctx.request.validateUsing(testConnectionForKindValidator)
+    const catalog = await app.container.make('settings.profileCatalog')
+
+    const result = await new FetchInstanceProfiles(catalog).execute({ kind, ...payload })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    return ctx.response.json(result.value)
   }
 
   async getSso(ctx: HttpContext) {

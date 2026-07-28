@@ -1,6 +1,7 @@
 import type { Result } from '../shared/result'
 import type { ApiError } from '../shared/api-error'
-import type { AuthenticatedUser } from '../identity/user'
+import type { AuthenticatedUser, UserRole } from '../identity/user'
+import type { UserAccount } from '../identity/user-account'
 import type { Session } from '../identity/session'
 import type { OnboardingStatus } from '../settings/onboarding-state'
 import type { ServarrKind, ServarrInstanceDto } from '../settings/servarr-instance'
@@ -56,6 +57,13 @@ export interface ArrConnector {
   startOidcSignIn: (callbackUrl: string) => Promise<Result<{ url: string }, ApiError>>
   signOut: () => Promise<void>
 
+  // identity — admin user management
+  listUsers: () => Promise<UserAccount[]>
+  setUserRole: (
+    userId: string,
+    role: UserRole,
+  ) => Promise<Result<{ user: UserAccount }, ApiError>>
+
   // settings — onboarding
   getOnboardingState: () => Promise<{ status: OnboardingStatus }>
   createAdminAccount: (
@@ -93,7 +101,16 @@ export interface ArrConnector {
     draft: InstanceDraft,
   ) => Promise<Result<ServarrInstanceDto, ApiError>>
   deleteInstance: (kind: ServarrKind) => Promise<void>
-  testSavedInstanceConnection: (kind: ServarrKind) => Promise<ConnectionTestResult>
+  testSavedInstanceConnection: (
+    kind: ServarrKind,
+    baseUrl: string,
+    apiKey: string,
+  ) => Promise<ConnectionTestResult>
+  fetchSettingsInstanceProfiles: (
+    kind: ServarrKind,
+    baseUrl: string,
+    apiKey: string,
+  ) => Promise<Result<InstanceProfiles, ApiError>>
   getSso: () => Promise<{
     issuerUrl: string
     clientId: string

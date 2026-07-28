@@ -10,7 +10,8 @@ import type {
 } from '#domain/interfaces/arr-connector'
 import type { Result } from '#domain/shared/result'
 import type { ApiError } from '#domain/shared/api-error'
-import type { AuthenticatedUser } from '#domain/identity/user'
+import type { AuthenticatedUser, UserRole } from '#domain/identity/user'
+import type { UserAccount } from '#domain/identity/user-account'
 import type { Session } from '#domain/identity/session'
 import type { OnboardingStatus } from '#domain/settings/onboarding-state'
 import type { ServarrKind, ServarrInstanceDto } from '#domain/settings/servarr-instance'
@@ -73,6 +74,38 @@ export class FakeArrConnector implements ArrConnector {
   private readonly instances = new Map<ServarrKind, ServarrInstanceDto & { apiKey: string }>()
   private ssoConfig: (OidcConfigInput & { claimsMapping?: Record<string, string> }) | null = null
   private readonly requests = new Map<string, MediaRequest>()
+  private readonly users = new Map<string, UserAccount>([
+    [
+      'fake-user',
+      {
+        id: 'fake-user',
+        email: 'admin@example.com',
+        name: 'Admin',
+        role: 'admin',
+        createdAt: new Date().toISOString(),
+      },
+    ],
+    [
+      'fake-sso-1',
+      {
+        id: 'fake-sso-1',
+        email: 'alex@example.com',
+        name: 'Alex (via SSO)',
+        role: 'user',
+        createdAt: new Date().toISOString(),
+      },
+    ],
+    [
+      'fake-sso-2',
+      {
+        id: 'fake-sso-2',
+        email: 'sam@example.com',
+        name: 'Sam (via SSO)',
+        role: 'user',
+        createdAt: new Date().toISOString(),
+      },
+    ],
+  ])
 
   constructor() {
     this.restoreOnboardingState()
@@ -126,6 +159,24 @@ export class FakeArrConnector implements ArrConnector {
 
   async signOut(): Promise<void> {
     this.user = null
+  }
+
+  async listUsers(): Promise<UserAccount[]> {
+    return [...this.users.values()].sort((a, b) => a.email.localeCompare(b.email))
+  }
+
+  async setUserRole(userId: string, role: UserRole) {
+    const existing = this.users.get(userId)
+    if (!existing) {
+      return {
+        ok: false as const,
+        error: { type: 'not_found', message: 'User not found.', status: 404 },
+      }
+    }
+    const updated = { ...existing, role }
+    this.users.set(userId, updated)
+    if (this.user?.id === userId) this.user = { ...this.user, role }
+    return { ok: true as const, value: { user: updated } }
   }
 
   async getOnboardingState(): Promise<{ status: OnboardingStatus }> {
@@ -244,9 +295,16 @@ export class FakeArrConnector implements ArrConnector {
     this.persistOnboardingState()
   }
 
-  async testSavedInstanceConnection(kind: ServarrKind): Promise<ConnectionTestResult> {
-    const instance = this.instances.get(kind)
-    return this.testInstanceConnection(kind, instance?.baseUrl ?? '', instance?.apiKey ?? '')
+  async testSavedInstanceConnection(
+    kind: ServarrKind,
+    baseUrl: string,
+    apiKey: string,
+  ): Promise<ConnectionTestResult> {
+    return this.testInstanceConnection(kind, baseUrl, apiKey)
+  }
+
+  async fetchSettingsInstanceProfiles(kind: ServarrKind) {
+    return this.fetchInstanceProfiles(kind)
   }
 
   async getSso() {

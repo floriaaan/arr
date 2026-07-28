@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { Loader2, PlugZap, Save, Trash2 } from 'lucide-react'
 import { useTestInstance } from '#application/settings/test-instance.mutation'
 import { useFetchInstanceProfiles } from '#application/settings/fetch-instance-profiles.mutation'
 import { useSaveInstance } from '#application/settings/save-instance.mutation'
@@ -22,11 +23,13 @@ export function ServiceInstanceForm({
   existing,
   duringOnboarding,
   onSaved,
+  onRemove,
 }: {
   kind: ServarrKind
   existing?: ServarrInstanceDto
   duringOnboarding: boolean
   onSaved?: (instance: ServarrInstanceDto) => void
+  onRemove?: () => void
 }) {
   const [baseUrl, setBaseUrl] = useState(existing?.baseUrl ?? '')
   const [apiKey, setApiKey] = useState('')
@@ -47,13 +50,13 @@ export function ServiceInstanceForm({
 
   function handleTest() {
     testInstance.mutate(
-      { kind, baseUrl, apiKey },
+      { kind, baseUrl, apiKey, duringOnboarding },
       {
         onSuccess: (result) => {
           if (!result.ok) return toast.error(result.error.message)
           toast.success(`Connected — ${result.detectedVersion}`)
           fetchProfiles.mutate(
-            { kind, baseUrl, apiKey },
+            { kind, baseUrl, apiKey, duringOnboarding },
             {
               onSuccess: (profilesResult) => profilesResult.ok && setProfiles(profilesResult.value),
             },
@@ -118,6 +121,11 @@ export function ServiceInstanceForm({
         onClick={handleTest}
         disabled={!baseUrl || !apiKey || testInstance.isPending}
       >
+        {testInstance.isPending ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <PlugZap className="size-4" />
+        )}
         {testInstance.isPending ? 'Testing…' : 'Test connection'}
       </Button>
 
@@ -206,9 +214,22 @@ export function ServiceInstanceForm({
         <Label>Enabled</Label>
       </div>
 
-      <Button onClick={handleSave} disabled={!canSave || saveInstance.isPending}>
-        {saveInstance.isPending ? 'Saving…' : 'Save'}
-      </Button>
+      <div className="flex gap-2">
+        <Button onClick={handleSave} disabled={!canSave || saveInstance.isPending}>
+          {saveInstance.isPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Save className="size-4" />
+          )}
+          {saveInstance.isPending ? 'Saving…' : 'Save'}
+        </Button>
+        {onRemove ? (
+          <Button type="button" variant="destructive" onClick={onRemove}>
+            <Trash2 className="size-4" />
+            Remove
+          </Button>
+        ) : null}
+      </div>
     </div>
   )
 }
