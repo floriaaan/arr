@@ -83,6 +83,24 @@ test.group('ReconcileProgress', () => {
     assert.equal(updated?.status, 'available')
   })
 
+  test('fast-forwards a submitted request straight to available when a poll misses the intermediate stages', async ({
+    assert,
+  }) => {
+    const repository = new InMemoryMediaRequestRepository()
+    const request = aSubmittedRequest()
+    await repository.save(request)
+
+    const downloadProgress = new FakeDownloadProgress()
+    downloadProgress.snapshots = [
+      { ref: ExternalRef.create('instance-1', 'remote-1'), status: 'available' },
+    ]
+
+    await new ReconcileProgress(repository, downloadProgress, new FixedClock()).execute()
+
+    const updated = await repository.findById('1')
+    assert.equal(updated?.status, 'available')
+  })
+
   test('fails a request when the snapshot reports a failure', async ({ assert }) => {
     const repository = new InMemoryMediaRequestRepository()
     const request = aSubmittedRequest()

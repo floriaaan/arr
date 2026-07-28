@@ -38,6 +38,7 @@ export default class RequestsReconcile extends BaseCommand {
     this.logger.info('requests:reconcile started')
 
     let stopped = false
+    let wasIdle = false
     this.app.terminating(async () => {
       stopped = true
     })
@@ -47,12 +48,19 @@ export default class RequestsReconcile extends BaseCommand {
       const activeCount = activeRequests.length
 
       if (activeCount === 0) {
+        if (!wasIdle)
+          this.logger.info('requests:reconcile idle — no active request, polling every 30s')
+        wasIdle = true
         await sleep(IDLE_POLL_INTERVAL_MS)
         continue
       }
+      wasIdle = false
 
       try {
-        await reconcile.execute()
+        const summary = await reconcile.execute()
+        this.logger.info(
+          `requests:reconcile checked ${summary.checked} active request(s), updated ${summary.updated}`,
+        )
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         this.logger.error(`requests:reconcile iteration failed: ${message}`)

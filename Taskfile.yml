@@ -16,10 +16,11 @@ tasks:
       - task: build
 
   dev:
-    desc: Run the full dev stack (db in Docker, backend + frontend as local processes).
+    desc: Run the full dev stack (db in Docker, backend + frontend + reconciler as local processes).
     deps: [dev:db]
     cmds:
       - task: dev:back
+      - task: dev:reconcile
       - task: dev:front
 
   dev:db:
@@ -32,6 +33,14 @@ tasks:
     dir: backend
     cmds:
       - pnpm run dev
+
+  dev:reconcile:
+    desc: >-
+      Run the progress reconciler locally (cf. docs/adr/0003) — without this,
+      MediaRequest download progress never advances past "submitted".
+    dir: backend
+    cmds:
+      - node ace requests:reconcile
 
   dev:front:
     desc: Run the frontend dev server locally against the real backend.
