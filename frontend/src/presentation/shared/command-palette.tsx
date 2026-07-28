@@ -5,6 +5,7 @@ import { Input } from '#presentation/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '#presentation/ui/tabs'
 import { SearchResults } from '#presentation/catalog/search-results'
 import { MediaDetailDrawer } from '#presentation/catalog/media-detail-drawer'
+import { useDebouncedValue } from './use-debounced-value'
 import type { MediaKind } from '#domain/catalog/media-kind'
 import type { ExternalId } from '#domain/catalog/external-id'
 
@@ -21,6 +22,7 @@ export function CommandPalette({
 }) {
   const [kind, setKind] = useState<MediaKind>('movie')
   const [term, setTerm] = useState('')
+  const debouncedTerm = useDebouncedValue(term, 300)
   const [selected, setSelected] = useState<ExternalId | null>(null)
 
   return (
@@ -52,7 +54,7 @@ export function CommandPalette({
 
           <SearchResults
             kind={kind}
-            term={term}
+            term={debouncedTerm}
             onSelect={(item) => setSelected(item.externalId)}
           />
         </DialogContent>
