@@ -135,7 +135,11 @@ export class BaseServarrClient {
       }
 
       if (response.status === 204) return undefined
-      return await response.json()
+      // DELETE endpoints on *arr instances commonly answer 200 with an empty
+      // body rather than 204 — `response.json()` throws on that, so read the
+      // text first and only parse when there's something to parse.
+      const text = await response.text()
+      return text.length === 0 ? undefined : JSON.parse(text)
     } finally {
       clearTimeout(timeout)
     }

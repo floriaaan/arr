@@ -1,8 +1,11 @@
-import { type ServarrRegistry } from './servarr-registry.js'
+import { type ServarrRegistry, mediaKindForScheme } from './servarr-registry.js'
 import type { MediaLibrary } from '#domain/catalog/interfaces/media-library.interface'
 import type { MediaKind } from '#domain/catalog/media-kind.vo'
 import type { LibraryItem } from '#domain/catalog/library-item.entity'
 import type { CalendarEntry } from '#domain/catalog/calendar-entry.entity'
+import type { ExternalId } from '#domain/catalog/external-id.vo'
+import type { ConnectionError } from '#domain/settings/connection-error.vo'
+import { Result } from '#domain/shared/result'
 
 const ALL_MEDIA_KINDS: readonly MediaKind[] = ['movie', 'series', 'album']
 
@@ -28,6 +31,18 @@ export class ServarrMediaLibrary implements MediaLibrary {
       }
     }
     return items
+  }
+
+  async remove(id: ExternalId, deleteFiles: boolean): Promise<Result<void, ConnectionError>> {
+    const kind = mediaKindForScheme(id.scheme)
+    const adapter = await this.registry.resolveByKind(kind)
+    if (!adapter) {
+      return Result.err({
+        type: 'unexpected_response',
+        message: `No active *arr instance configured for ${kind}`,
+      })
+    }
+    return adapter.remove(id, deleteFiles)
   }
 
   async calendar(start: Date, end: Date): Promise<CalendarEntry[]> {

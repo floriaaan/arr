@@ -316,6 +316,20 @@ export class HttpArrConnector implements ArrConnector {
     return body.items.map((item) => toLibraryItem(libraryItemDtoSchema.parse(item)))
   }
 
+  async removeLibraryItem(
+    externalId: ExternalId,
+    deleteFiles: boolean,
+  ): Promise<Result<void, ApiError>> {
+    const qs = new URLSearchParams({
+      scheme: externalId.scheme,
+      value: externalId.value,
+      deleteFiles: String(deleteFiles),
+    })
+    const response = await this.http.delete(`/api/library?${qs.toString()}`)
+    if (!response.ok) return { ok: false, error: await toApiError(response) }
+    return { ok: true, value: undefined }
+  }
+
   async getCalendar(startDate: string, endDate: string): Promise<CalendarEntry[]> {
     const qs = new URLSearchParams({ start: startDate, end: endDate })
     const response = await this.http.get(`/api/calendar?${qs.toString()}`)

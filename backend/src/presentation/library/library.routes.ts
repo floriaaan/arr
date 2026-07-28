@@ -9,3 +9,5 @@ router
   })
   .prefix('/api/library')
   .use(middleware.authRequired())
+
+router.delete('/api/library', [LibraryController, 'remove']).use(middleware.adminOnly())

@@ -1,5 +1,5 @@
 import { type BaseServarrClient } from '../base-servarr-client.js'
-import { classifyProvisioningError } from '../errors.js'
+import { classifyProvisioningError, classifyConnectionError } from '../errors.js'
 import { isoDate } from '../date-range.js'
 import {
   LidarrAlbumArraySchema,
@@ -26,6 +26,7 @@ import { ExternalRef } from '#domain/requests/external-ref.vo'
 import type { ProvisioningError } from '#domain/requests/provisioning-error.vo'
 import { Result } from '#domain/shared/result'
 import type { ProgressSnapshot } from '#domain/requests/interfaces/download-progress.interface'
+import type { ConnectionError } from '#domain/settings/connection-error.vo'
 
 export class LidarrAdapter implements ServarrKindAdapter {
   constructor(
@@ -159,5 +160,26 @@ export class LidarrAdapter implements ServarrKindAdapter {
     return LidarrAlbumArraySchema.parse(raw).map((album) =>
       toCalendarEntry(album, this.instance.id),
     )
+  }
+
+  async remove(
+    externalId: ExternalId,
+    deleteFiles: boolean,
+  ): Promise<Result<void, ConnectionError>> {
+    try {
+      const album = await this.lookupByForeignAlbumId(externalId.value)
+      if (!album.id) {
+        return Result.err({ type: 'unexpected_response', message: 'Album not found on Lidarr' })
+      }
+
+      await this.client.request({
+        method: 'DELETE',
+        path: `/api/v1/album/${album.id}`,
+        query: { deleteFiles: String(deleteFiles) },
+      })
+      return Result.ok(undefined)
+    } catch (error) {
+      return Result.err(classifyConnectionError(error))
+    }
   }
 }

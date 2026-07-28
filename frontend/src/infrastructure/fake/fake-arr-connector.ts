@@ -74,6 +74,7 @@ export class FakeArrConnector implements ArrConnector {
   private readonly instances = new Map<ServarrKind, ServarrInstanceDto & { apiKey: string }>()
   private ssoConfig: (OidcConfigInput & { claimsMapping?: Record<string, string> }) | null = null
   private readonly requests = new Map<string, MediaRequest>()
+  private readonly removedLibraryItems = new Set<string>()
   private readonly users = new Map<string, UserAccount>([
     [
       'fake-user',
@@ -342,6 +343,9 @@ export class FakeArrConnector implements ArrConnector {
     )
     if (!fixture)
       return { ok: false as const, error: notFound(`No fixture for ${scheme}:${value}.`) }
+    if (this.removedLibraryItems.has(`${scheme}:${value}`)) {
+      return { ok: true as const, value: { ...fixture, alreadyManaged: false, managedBy: undefined } }
+    }
     return { ok: true as const, value: fixture }
   }
 
@@ -459,8 +463,17 @@ export class FakeArrConnector implements ArrConnector {
     return { ok: true as const, value: cancelled }
   }
 
+  async removeLibraryItem(externalId: ExternalId, _deleteFiles: boolean) {
+    this.removedLibraryItems.add(`${externalId.scheme}:${externalId.value}`)
+    return { ok: true as const, value: undefined }
+  }
+
   async listLibrary(kind?: MediaKind): Promise<LibraryItem[]> {
-    return ALL_FIXTURES.filter((item) => !kind || item.kind === kind).map((item) => {
+    return ALL_FIXTURES.filter(
+      (item) =>
+        (!kind || item.kind === kind) &&
+        !this.removedLibraryItems.has(`${item.externalId.scheme}:${item.externalId.value}`),
+    ).map((item) => {
       const seed = hashString(item.externalId.value)
       return {
         externalId: item.externalId,

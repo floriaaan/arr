@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   CalendarDays,
   CheckCircle2,
@@ -10,18 +11,33 @@ import {
   Folder,
   Gauge,
   HardDrive,
+  Loader2,
   Radio,
   Server,
+  Trash2,
   TriangleAlert,
 } from 'lucide-react'
 import { useMediaDetail } from '#application/catalog/media-detail.query'
 import { useCreateRequest } from '#application/requests/create-request.mutation'
+import { useRemoveLibraryItem } from '#application/library/remove-library-item.mutation'
+import { useSession } from '#application/identity/session.query'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '#presentation/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '#presentation/ui/alert-dialog'
 import { Button } from '#presentation/ui/button'
 import { Badge } from '#presentation/ui/badge'
 import { Skeleton } from '#presentation/ui/skeleton'
@@ -62,8 +78,12 @@ export function MediaDetailDrawer({
 }) {
   const detail = useMediaDetail(externalId?.scheme ?? 'tmdb', externalId?.value ?? '', kind)
   const createRequest = useCreateRequest()
+  const removeLibraryItem = useRemoveLibraryItem()
+  const session = useSession()
+  const queryClient = useQueryClient()
 
   const isOpen = externalId !== null
+  const isAdmin = session.data?.user?.role === 'admin'
 
   function handleRequest() {
     if (!externalId) return
@@ -77,6 +97,23 @@ export function MediaDetailDrawer({
           } else {
             toast.error(result.error.message)
           }
+        },
+        onError: () => toast.error('Something went wrong.'),
+      },
+    )
+  }
+
+  function handleRemove(title: string) {
+    if (!externalId) return
+    removeLibraryItem.mutate(
+      { externalId, deleteFiles: true },
+      {
+        onSuccess: (result) => {
+          if (!result.ok) return toast.error(result.error.message)
+          toast.success(`"${title}" removed from the library.`)
+          void queryClient.invalidateQueries({ queryKey: ['library'] })
+          void queryClient.invalidateQueries({ queryKey: ['catalog', 'detail'] })
+          onOpenChange(false)
         },
         onError: () => toast.error('Something went wrong.'),
       },
@@ -197,16 +234,56 @@ export function MediaDetailDrawer({
               )
             })()}
 
-            <Button
-              onClick={handleRequest}
-              disabled={detail.data.value.alreadyManaged || createRequest.isPending}
-            >
-              {detail.data.value.alreadyManaged
-                ? 'Already in library'
-                : createRequest.isPending
-                  ? 'Requesting…'
-                  : 'Request'}
-            </Button>
+            {(() => {
+              const value = detail.data.value
+              return (
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleRequest}
+                    disabled={value.alreadyManaged || createRequest.isPending}
+                  >
+                    {value.alreadyManaged
+                      ? 'Already in library'
+                      : createRequest.isPending
+                        ? 'Requesting…'
+                        : 'Request'}
+                  </Button>
+
+                  {value.alreadyManaged && isAdmin ? (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" disabled={removeLibraryItem.isPending}>
+                          {removeLibraryItem.isPending ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="size-4" />
+                          )}
+                          Remove from library
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remove "{value.title}"?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This removes it from its *arr instance and deletes its files from
+                            disk. This can't be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-white hover:bg-destructive/90"
+                            onClick={() => handleRemove(value.title)}
+                          >
+                            Remove
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  ) : null}
+                </div>
+              )
+            })()}
           </>
         )}
       </DialogContent>

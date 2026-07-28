@@ -1,5 +1,5 @@
 import { type BaseServarrClient } from '../base-servarr-client.js'
-import { classifyProvisioningError } from '../errors.js'
+import { classifyProvisioningError, classifyConnectionError } from '../errors.js'
 import { isoDate } from '../date-range.js'
 import {
   SonarrSeriesArraySchema,
@@ -27,6 +27,7 @@ import { ExternalRef } from '#domain/requests/external-ref.vo'
 import type { ProvisioningError } from '#domain/requests/provisioning-error.vo'
 import { Result } from '#domain/shared/result'
 import type { ProgressSnapshot } from '#domain/requests/interfaces/download-progress.interface'
+import type { ConnectionError } from '#domain/settings/connection-error.vo'
 
 export class SonarrAdapter implements ServarrKindAdapter {
   constructor(
@@ -131,5 +132,30 @@ export class SonarrAdapter implements ServarrKindAdapter {
     return SonarrCalendarEpisodeArraySchema.parse(raw).map((episode) =>
       toCalendarEntry(episode, this.instance.id),
     )
+  }
+
+  async remove(
+    externalId: ExternalId,
+    deleteFiles: boolean,
+  ): Promise<Result<void, ConnectionError>> {
+    try {
+      const raw = await this.client.request({
+        path: '/api/v3/series/lookup',
+        query: { term: `tvdb:${externalId.value}` },
+      })
+      const [series] = SonarrSeriesLookupArraySchema.parse(raw)
+      if (!series || !series.id) {
+        return Result.err({ type: 'unexpected_response', message: 'Series not found on Sonarr' })
+      }
+
+      await this.client.request({
+        method: 'DELETE',
+        path: `/api/v3/series/${series.id}`,
+        query: { deleteFiles: String(deleteFiles) },
+      })
+      return Result.ok(undefined)
+    } catch (error) {
+      return Result.err(classifyConnectionError(error))
+    }
   }
 }

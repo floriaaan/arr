@@ -8,6 +8,7 @@ import type { MediaRequest } from '#domain/requests/media-request.aggregate'
 import type { ExternalRef } from '#domain/requests/external-ref.vo'
 import type { ProvisioningError } from '#domain/requests/provisioning-error.vo'
 import type { ProgressSnapshot } from '#domain/requests/interfaces/download-progress.interface'
+import type { ConnectionError } from '#domain/settings/connection-error.vo'
 
 /**
  * Internal ACL contract — never exposed outside infrastructure/servarr.
@@ -23,4 +24,5 @@ export interface ServarrKindAdapter {
   fetchProgress(refs: ExternalRef[]): Promise<ProgressSnapshot[]>
   list(): Promise<LibraryItem[]>
   calendar(start: Date, end: Date): Promise<CalendarEntry[]>
+  remove(externalId: ExternalId, deleteFiles: boolean): Promise<Result<void, ConnectionError>>
 }

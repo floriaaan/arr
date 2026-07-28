@@ -1,5 +1,5 @@
 import { type BaseServarrClient } from '../base-servarr-client.js'
-import { classifyProvisioningError } from '../errors.js'
+import { classifyProvisioningError, classifyConnectionError } from '../errors.js'
 import { isoDate } from '../date-range.js'
 import {
   RadarrMovieArraySchema,
@@ -27,6 +27,7 @@ import { ExternalRef } from '#domain/requests/external-ref.vo'
 import type { ProvisioningError } from '#domain/requests/provisioning-error.vo'
 import { Result } from '#domain/shared/result'
 import type { ProgressSnapshot } from '#domain/requests/interfaces/download-progress.interface'
+import type { ConnectionError } from '#domain/settings/connection-error.vo'
 
 export class RadarrAdapter implements ServarrKindAdapter {
   constructor(
@@ -129,5 +130,30 @@ export class RadarrAdapter implements ServarrKindAdapter {
     return RadarrCalendarMovieArraySchema.parse(raw).map((movie) =>
       toCalendarEntry(movie, this.instance.id),
     )
+  }
+
+  async remove(
+    externalId: ExternalId,
+    deleteFiles: boolean,
+  ): Promise<Result<void, ConnectionError>> {
+    try {
+      const raw = await this.client.request({
+        path: '/api/v3/movie/lookup',
+        query: { term: `tmdb:${externalId.value}` },
+      })
+      const [movie] = RadarrMovieLookupArraySchema.parse(raw)
+      if (!movie || !movie.id) {
+        return Result.err({ type: 'unexpected_response', message: 'Movie not found on Radarr' })
+      }
+
+      await this.client.request({
+        method: 'DELETE',
+        path: `/api/v3/movie/${movie.id}`,
+        query: { deleteFiles: String(deleteFiles) },
+      })
+      return Result.ok(undefined)
+    } catch (error) {
+      return Result.err(classifyConnectionError(error))
+    }
   }
 }

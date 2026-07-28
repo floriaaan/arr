@@ -139,6 +139,7 @@ export interface ArrConnector {
 
   // library
   listLibrary: (kind?: MediaKind) => Promise<LibraryItem[]>
+  removeLibraryItem: (externalId: ExternalId, deleteFiles: boolean) => Promise<Result<void, ApiError>>
 
   // calendar
   getCalendar: (startDate: string, endDate: string) => Promise<CalendarEntry[]>
