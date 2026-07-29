@@ -1,5 +1,6 @@
 import type { ApplicationService } from '@adonisjs/core/types'
 import type { ServarrInstanceRepository } from '#domain/settings/interfaces/servarr-instance-repository.interface'
+import type { InstanceProfileRepository } from '#domain/settings/interfaces/instance-profile-repository.interface'
 import type { AuthSettingsRepository } from '#domain/settings/interfaces/auth-settings-repository.interface'
 import type { OnboardingStateRepository } from '#domain/settings/interfaces/onboarding-state-repository.interface'
 import type { ServarrConnectionTester } from '#domain/settings/interfaces/servarr-connection-tester.interface'
@@ -22,6 +23,12 @@ export default class SettingsProvider {
       const { LucidServarrInstanceRepository } =
         await import('#infrastructure/persistence/settings/servarr-instance.repository')
       return new LucidServarrInstanceRepository()
+    })
+
+    this.app.container.singleton('settings.instanceProfileRepository', async () => {
+      const { LucidInstanceProfileRepository } =
+        await import('#infrastructure/persistence/settings/instance-profile.repository')
+      return new LucidInstanceProfileRepository()
     })
 
     this.app.container.singleton('settings.authSettingsRepository', async () => {
@@ -70,6 +77,7 @@ export default class SettingsProvider {
 declare module '@adonisjs/core/types' {
   interface ContainerBindings {
     'settings.instanceRepository': ServarrInstanceRepository
+    'settings.instanceProfileRepository': InstanceProfileRepository
     'settings.authSettingsRepository': AuthSettingsRepository
     'settings.onboardingStateRepository': OnboardingStateRepository
     'settings.connectionTester': ServarrConnectionTester

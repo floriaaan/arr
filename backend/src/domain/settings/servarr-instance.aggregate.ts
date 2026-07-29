@@ -10,6 +10,7 @@ import type { MetadataProfileId } from './metadata-profile-id.vo.js'
 import type { LanguageProfileId } from './language-profile-id.vo.js'
 import type { HealthCheckResult } from './health-check-result.vo.js'
 import { instanceConnected, instanceHealthCheckFailed } from './settings.events.js'
+import { validateProfileSelection } from './profile-selection-rules.js'
 
 export interface ServarrInstanceProps {
   kind: ServarrKind
@@ -100,24 +101,12 @@ export class ServarrInstance extends AggregateRoot<string> {
     metadataProfileId: MetadataProfileId | null,
     languageProfileId: LanguageProfileId | null,
   ): Result<void, ValidationError> {
-    if (this.props.kind === 'lidarr' && !metadataProfileId) {
-      return Result.err({
-        field: 'metadataProfileId',
-        message: 'Lidarr instances require a metadata profile',
-      })
-    }
-    if (this.props.kind !== 'lidarr' && metadataProfileId) {
-      return Result.err({
-        field: 'metadataProfileId',
-        message: 'Metadata profile only applies to Lidarr instances',
-      })
-    }
-    if (this.props.kind !== 'sonarr' && languageProfileId) {
-      return Result.err({
-        field: 'languageProfileId',
-        message: 'Language profile only applies to Sonarr instances',
-      })
-    }
+    const selection = validateProfileSelection(
+      this.props.kind,
+      metadataProfileId,
+      languageProfileId,
+    )
+    if (!selection.ok) return selection
 
     this.props.rootFolderPath = rootFolderPath
     this.props.qualityProfileId = qualityProfileId

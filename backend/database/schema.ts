@@ -79,6 +79,42 @@ export class AuthSettingSchema extends BaseModel {
   declare updatedAt: DateTime
 }
 
+export class InstanceProfileSchema extends BaseModel {
+  static $columns = [
+    'createdAt',
+    'id',
+    'instanceId',
+    'isDefault',
+    'languageProfileId',
+    'metadataProfileId',
+    'name',
+    'qualityProfileId',
+    'rootFolderPath',
+    'updatedAt',
+  ] as const
+  $columns = InstanceProfileSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare instanceId: string
+  @column()
+  declare isDefault: boolean
+  @column()
+  declare languageProfileId: number | null
+  @column()
+  declare metadataProfileId: number | null
+  @column()
+  declare name: string
+  @column()
+  declare qualityProfileId: number
+  @column()
+  declare rootFolderPath: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
 export class MediaRequestSchema extends BaseModel {
   static $columns = [
     'createdAt',

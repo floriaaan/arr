@@ -12,6 +12,7 @@ test.group('service provider bindings', () => {
       'identity.accountRegistrar',
       'identity.authHandler',
       'settings.instanceRepository',
+      'settings.instanceProfileRepository',
       'settings.authSettingsRepository',
       'settings.onboardingStateRepository',
       'settings.connectionTester',

@@ -26,6 +26,17 @@ export const instanceProfilesSchema = z.object({
   languageProfiles: z.array(z.object({ id: z.number(), name: z.string() })).optional(),
 })
 
+export const instanceProfileDtoSchema = z.object({
+  id: z.string(),
+  instanceId: z.string(),
+  name: z.string(),
+  rootFolderPath: z.string(),
+  qualityProfileId: z.number(),
+  metadataProfileId: z.number().nullable(),
+  languageProfileId: z.number().nullable(),
+  isDefault: z.boolean(),
+})
+
 export const oidcDiscoverySchema = z.object({
   authorizationEndpoint: z.string(),
   tokenEndpoint: z.string(),

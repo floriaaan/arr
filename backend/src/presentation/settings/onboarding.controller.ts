@@ -92,8 +92,9 @@ export default class OnboardingController {
     const repository = await app.container.make('settings.instanceRepository')
     const tester = await app.container.make('settings.connectionTester')
     const idGenerator = await app.container.make('shared.idGenerator')
+    const instanceProfileRepository = await app.container.make('settings.instanceProfileRepository')
 
-    const useCase = new SaveInstance(repository, tester, idGenerator)
+    const useCase = new SaveInstance(repository, tester, idGenerator, instanceProfileRepository)
     const result = await useCase.execute({ kind, ...payload })
     if (!result.ok) {
       const { status, body } = serializeError(result.error)

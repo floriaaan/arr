@@ -14,6 +14,8 @@ import type {
 } from '#domain/settings/interfaces/servarr-profile-catalog.interface'
 import type { ServarrInstanceRepository } from '#domain/settings/interfaces/servarr-instance-repository.interface'
 import type { ServarrInstance } from '#domain/settings/servarr-instance.aggregate'
+import type { InstanceProfileRepository } from '#domain/settings/interfaces/instance-profile-repository.interface'
+import type { InstanceProfile } from '#domain/settings/instance-profile.aggregate'
 import type {
   OidcDiscovery,
   OidcDiscoveryInfo,
@@ -114,6 +116,26 @@ export class InMemoryServarrInstanceRepository implements ServarrInstanceReposit
 
   async save(instance: ServarrInstance): Promise<void> {
     this.byId.set(instance.id, instance)
+  }
+
+  async delete(id: string): Promise<void> {
+    this.byId.delete(id)
+  }
+}
+
+export class InMemoryInstanceProfileRepository implements InstanceProfileRepository {
+  private byId = new Map<string, InstanceProfile>()
+
+  async listByInstance(instanceId: string): Promise<InstanceProfile[]> {
+    return [...this.byId.values()].filter((profile) => profile.instanceId === instanceId)
+  }
+
+  async findById(id: string): Promise<InstanceProfile | null> {
+    return this.byId.get(id) ?? null
+  }
+
+  async save(profile: InstanceProfile): Promise<void> {
+    this.byId.set(profile.id, profile)
   }
 
   async delete(id: string): Promise<void> {

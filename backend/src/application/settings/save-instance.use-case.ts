@@ -1,5 +1,6 @@
 import type { UseCase } from '#application/shared/use-case'
 import type { ServarrInstanceRepository } from '#domain/settings/interfaces/servarr-instance-repository.interface'
+import type { InstanceProfileRepository } from '#domain/settings/interfaces/instance-profile-repository.interface'
 import type { ServarrConnectionTester } from '#domain/settings/interfaces/servarr-connection-tester.interface'
 import type { IdGenerator } from '#domain/shared/id-generator.interface'
 import type { ServarrKind } from '#domain/settings/servarr-kind.vo'
@@ -13,6 +14,7 @@ import { QualityProfileId } from '#domain/settings/quality-profile-id.vo'
 import { MetadataProfileId } from '#domain/settings/metadata-profile-id.vo'
 import { LanguageProfileId } from '#domain/settings/language-profile-id.vo'
 import { ServarrInstance } from '#domain/settings/servarr-instance.aggregate'
+import { InstanceProfile } from '#domain/settings/instance-profile.aggregate'
 
 export interface SaveInstanceInput {
   kind: ServarrKind
@@ -35,6 +37,7 @@ export class SaveInstance implements UseCase<
     private readonly repository: ServarrInstanceRepository,
     private readonly tester: ServarrConnectionTester,
     private readonly idGenerator: IdGenerator,
+    private readonly instanceProfiles: InstanceProfileRepository,
   ) {}
 
   async execute(input: SaveInstanceInput): Promise<Result<ServarrInstance, SaveInstanceError>> {
@@ -80,6 +83,23 @@ export class SaveInstance implements UseCase<
       languageProfileId,
     )
     if (!configured.ok) return configured
+
+    const existingProfiles = await this.instanceProfiles.listByInstance(instance.id)
+    if (existingProfiles.length === 0) {
+      const defaultProfile = InstanceProfile.create(
+        this.idGenerator.next(),
+        input.kind,
+        instance.id,
+        'Default',
+        rootFolderPath.value,
+        qualityProfileId.value,
+        metadataProfileId,
+        languageProfileId,
+        true,
+      )
+      if (!defaultProfile.ok) return defaultProfile
+      await this.instanceProfiles.save(defaultProfile.value)
+    }
 
     if (input.enabled) {
       const health = await this.tester.test(input.kind, baseUrl.value, apiKey.value)
