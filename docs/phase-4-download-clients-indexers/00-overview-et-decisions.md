@@ -1,108 +1,159 @@
 # Phase 4 — Download clients & indexers par instance *arr
 
-Ajout de deux pages, **`/download-clients`** et **`/indexers`** (admin uniquement,
-même emplacement que `/profiles`), affichant en **lecture seule** les download
-clients et les indexers configurés sur chaque instance *arr (Radarr, Sonarr,
-Lidarr), à la manière de `/profiles`. Contrairement aux quality profiles (qui
-ont été fusionnés dans un objet local `InstanceProfile` éditable, cf. phase 3),
-les download clients et indexers ne sont **pas** gérés depuis cette
-application : ils continuent de se configurer directement dans chaque *arr.
-Cette phase ajoute uniquement une **vue agrégée** pour voir d'un coup d'œil ce
-qui est branché où, sans dupliquer un formulaire d'édition par implémentation
-(qBittorrent, Transmission, SABnzbd, Torznab, Newznab, etc. n'ont pas les mêmes
-champs et ça representerait un gros scope pour un simple écran de visibilité).
+Ajout de deux pages, **`/download-clients`** et **`/indexers`** (admin
+uniquement, même emplacement que `/profiles`), permettant de **voir, créer,
+éditer et supprimer** les download clients et les indexers de chaque instance
+*arr (Radarr, Sonarr, Lidarr) — à la manière de `/profiles`, avec la même
+logique CRUD-par-passthrough que les quality profiles (phase 3) : créer/éditer
+depuis cette app écrit réellement l'enregistrement sur le *arr distant via son
+API (`POST`/`PUT`/`DELETE .../downloadclient[/:id]` et `.../indexer[/:id]`),
+il n'y a pas de table locale qui dupliquerait la donnée.
 
-Point central de la demande : si le **même** download client (ou le même
-indexer) est branché sur plusieurs instances (ex. qBittorrent utilisé par
-Radarr *et* Sonarr), il doit apparaître comme **une seule carte fusionnée**
-listant les instances concernées, plutôt qu'en double/triple.
+Différence structurante avec les quality profiles : un download client ou un
+indexer n'a pas une poignée de champs connus et stables (root folder, quality
+profile id…) mais un ensemble de champs **dynamique et propre à
+l'implémentation choisie** (host/port/catégorie pour qBittorrent, clé API
+pour SABnzbd, `baseUrl`+catégories pour un indexer Torznab, etc. — dizaines
+d'implémentations possibles, schéma différent pour chacune). Le formulaire ne
+peut donc pas être câblé à la main comme
+`instance-profile-form-dialog.tsx` (qui a des champs fixes : nom, root
+folder, select de cutoff…) ; il doit être **générique**, piloté par le schéma
+que le *arr renvoie pour l'implémentation choisie (mêmes objets `fields[]`
+que dans le "Add download client" natif de Radarr/Sonarr/Lidarr).
+
+Second point de la demande, inchangé : si le **même** download client (ou le
+même indexer) est branché sur plusieurs instances, il doit apparaître comme
+**une seule carte fusionnée** listant les instances concernées, plutôt qu'en
+double/triple. La fusion reste un regroupement **d'affichage** — chaque
+mutation (create/update/delete) continue de cibler un enregistrement précis
+sur une instance précise (cf. décision 4 plus bas).
 
 ## Portée
 
 - Deux nouvelles pages, protégées par `requireAdmin` (même garde que
   `/profiles` et `/settings`), avec leurs entrées de nav dans `AppShell`.
-- Backend : deux nouveaux ports read-only (`ServarrDownloadClientManager`,
-  `ServarrIndexerManager`), implémentations HTTP, use cases `list`, routes
-  `GET /api/settings/instances/:kind/download-clients` et
-  `GET /api/settings/instances/:kind/indexers`.
+- Backend : deux nouveaux ports `ServarrDownloadClientManager` /
+  `ServarrIndexerManager` (list, getSchema, create, update, delete, test),
+  implémentations HTTP, use cases correspondants, routes sous
+  `/api/settings/instances/:kind/download-clients` et `.../indexers`.
 - Frontend : deux nouveaux domaines de types, hooks `application/`, une
-  fonction pure de fusion par ressource, composants `presentation/`.
-- Aucune table de base de données, aucune mutation, aucun appel
-  create/update/delete côté *arr.
+  fonction pure de fusion par ressource, un composant de formulaire
+  **générique** réutilisé par les deux ressources, composants `presentation/`.
+- Aucune nouvelle table de base de données (comme pour les quality profiles
+  bruts — la donnée vit uniquement côté *arr, cette app ne fait que
+  proxy/passthrough).
 
 ## Décisions
 
-1. **Lecture seule, pas de fusion à la manière de `InstanceProfile`.** Les
-   quality profiles ont été fusionnés en phase 3 parce que ce sont des
-   préréglages qu'on veut créer/éditer *depuis cette app*. Les download
-   clients et indexers restent une ressource « appartenant » à chaque *arr,
-   avec des schémas de champs très hétérogènes par implémentation (host/port
-   pour qBittorrent, apiKey pour SABnzbd, baseUrl+categories pour un indexer
-   Torznab, etc.). Reconstruire un formulaire générique pour ça est hors
-   scope ici : cette phase n'ajoute que du `list`, jamais de `create` /
-   `update` / `delete` / `schema`. Pas de nouvelle table (pas de
-   `download_client_profiles` ni `indexer_profiles`).
+1. **CRUD complet, sans table locale — passthrough pur vers le *arr, comme
+   `HttpServarrQualityProfileManager`.** Pas d'aggregate domaine type
+   `InstanceProfile` ici : il n'y a rien à "fusionner en un objet local"
+   puisqu'il n'existe pas de concept applicatif équivalent à "profil par
+   défaut consommé par `CreateRequest`". Un download client / indexer reste
+   entièrement une ressource du *arr distant ; cette app se contente de
+   lister/créer/éditer/supprimer en passthrough, kind par kind.
 
-2. **Toujours pas de vrai multi-instance par kind (ADR-0006 inchangée).**
-   Comme pour `/profiles`, "plusieurs instances" veut dire ici "jusqu'à 3
-   instances fixes" (une par kind), pas plusieurs Radarr. La fusion ne se
-   fait donc jamais qu'entre au plus 3 enregistrements (un par kind
-   configuré), jamais entre plusieurs instances du même kind.
+2. **Formulaire générique piloté par le schéma, pas de champs câblés à la
+   main.** `GET .../downloadclient/schema` (et `.../indexer/schema`) renvoie
+   un tableau de **templates**, un par implémentation supportée
+   (`QBittorrent`, `Transmission`, `Deluge`, `Sabnzbd`… / `Torznab`,
+   `Newznab`, `Nyaa`…), chacun avec ses propres `fields[]` par défaut. Le flux
+   de création est donc en deux étapes : (a) choisir une implémentation dans
+   une liste (regroupée par `protocol`), (b) remplir un formulaire
+   **généré dynamiquement** à partir de `fields[]` de ce template. Un
+   composant partagé, `DynamicFieldsForm`, rend un input par field selon son
+   `type` (`textbox`/`number`/`path` → input texte/nombre ; `checkbox` →
+   switch ; `select` → `Select` avec `selectOptions` ; `password`/`apiKey`
+   (`privacy`) → input masqué ; `tag` → simplifié en input texte
+   virgule-séparée pour le MVP ; tout type non reconnu (`seedCriteria`,
+   `device`, etc., rares et propres à quelques implémentations exotiques) →
+   repli sur un textarea JSON brut, affiché mais non validé — limitation
+   assumée et documentée dans le formulaire).
 
-3. **Clé de fusion visuelle : `(implementation, protocol, name normalisé)`.**
-   Deux enregistrements — un venant de Radarr, un venant de Sonarr par
-   exemple — sont considérés comme "le même" download client/indexer si :
-   - même `implementation` (ex. `"QBittorrent"`, `"Transmission"` /
-     `"Torznab"`, `"Newznab"`) ;
-   - même `protocol` (`torrent` / `usenet`) — redondant avec
-     `implementation` dans la quasi-totalité des cas, mais gratuit à vérifier
-     et ça évite un faux positif si deux implémentations partagent un nom ;
-   - même `name` après normalisation (`trim().toLowerCase()`).
+3. **Clé de fusion visuelle inchangée : `(implementation, protocol, name
+   normalisé)`.** Comme dans la version précédente de cette spec — deux
+   enregistrements de kinds différents partageant ces trois critères sont
+   affichés comme une seule carte avec un badge par instance. Toujours une
+   heuristique d'affichage (pas de comparaison des champs de connexion
+   dynamiques), isolée dans une fonction pure `computeMergeKey` testée
+   indépendamment de l'UI.
 
-   C'est une heuristique pragmatique : elle suppose que l'utilisateur nomme
-   identiquement un même client/indexer physique sur ses différents *arr
-   (ce qui est l'usage courant — "qBittorrent", "Prowlarr - 1337x" — plutôt
-   qu'un renommage différent par instance). Elle n'inspecte pas les champs de
-   connexion dynamiques (`fields[]` : host/port/baseUrl/apiKey…) qui varient
-   trop par implémentation pour un matching fiable en MVP. Si deux
-   enregistrements partagent l'implémentation/protocole mais pas le nom, ils
-   sont affichés comme deux cartes distinctes (pas de fusion silencieuse
-   incorrecte).
+4. **Toute mutation cible une seule instance à la fois — pas d'édition en
+   masse propagée aux autres instances du groupe fusionné.** Une carte
+   fusionnée affiche une ligne par instance (comme `ProfileRow` dans
+   `profiles-page.tsx`), chacune avec ses propres actions **Edit**/**Delete**
+   qui n'agissent que sur l'enregistrement de cette instance précise
+   (identifié par son `id` distant). Modifier la ligne "Radarr" d'une carte
+   qBittorrent fusionnée ne touche pas l'enregistrement Sonarr. Raison : les
+   trois enregistrements ne sont *pas garantis identiques* au-delà de la clé
+   de fusion (ex. `category` diffère typiquement entre Radarr et Sonarr même
+   pour "le même" client physique) — une propagation automatique risquerait
+   d'écraser une configuration volontairement différente. Ce choix est
+   documenté explicitement pour arbitrage : si l'usage réel montre que
+   l'édition groupée serait plus pratique, elle pourra être ajoutée en phase
+   suivante sans changer le modèle de fusion (affichage) ni les endpoints
+   (déjà par-instance).
 
-   Implémentée comme fonction pure isolée (`computeMergeKey`), testée
-   indépendamment de l'UI, pour pouvoir l'affiner plus tard (ex. comparer
-   aussi `host`/`baseUrl` extrait de `fields[]`) sans toucher aux composants.
+5. **"Cloner vers une autre instance" comme pont entre la fusion visuelle et
+   la création.** Sur une carte fusionnée où toutes les instances configurées
+   n'ont pas (encore) ce client/indexer, un bouton **Clone to
+   &lt;Kind&gt;** pré-remplit le formulaire de création avec les valeurs d'une
+   instance existante du groupe (implémentation + champs), sur l'instance
+   manquante — l'utilisateur ajuste (ex. `category`) puis soumet une création
+   normale sur cette instance. Ce n'est jamais un appel réseau multi-instance
+   implicite : juste un pré-remplissage de formulaire, la création reste un
+   `POST` unique explicite.
 
-4. **Champs qui diffèrent par instance affichés par instance, jamais
-   écrasés.** À l'intérieur d'une carte fusionnée, `enable`/`priority`
-   (download clients) ou `enableRss`/`enableAutomaticSearch`/
-   `enableInteractiveSearch`/`priority` (indexers) peuvent différer d'une
-   instance à l'autre (ex. activé sur Radarr, désactivé sur Sonarr). Affichés
-   comme une ligne par instance sous l'en-tête fusionné, jamais moyennés ou
-   silencieusement pris depuis une seule instance.
+6. **Test de connexion avant sauvegarde, mêmes conventions que
+   `test-connection` d'instance.** `POST .../downloadclient/test` (et
+   `.../indexer/test`) exposé comme port `test(kind, baseUrl, apiKey,
+   payload)`, bouton "Test" dans le dialogue de formulaire. Les échecs de
+   validation renvoyés par le *arr (tableau `{propertyName, errorMessage}`)
+   sont condensés en un seul message d'erreur (même simplification que
+   `classifyConnectionError`/`testInstanceConnection` existants) plutôt que
+   d'introduire un nouveau type d'union d'erreurs de validation par champ —
+   limitation MVP assumée.
 
-5. **Deux pages séparées, pas un écran à onglets.** Cohérent avec le fait que
+7. **Suppression par instance, confirmation nommant l'instance ciblée.**
+   `DELETE .../downloadclient/:id` (ou `.../indexer/:id`) sur l'instance de
+   la ligne cliquée uniquement, `AlertDialog` de confirmation précisant quelle
+   instance est affectée (pas "supprimer partout").
+
+8. **Toujours pas de vrai multi-instance par kind (ADR-0006 inchangée).**
+   La fusion regroupe au plus 3 enregistrements (un par kind configuré),
+   jamais plusieurs instances du même kind.
+
+9. **Deux pages séparées, pas un écran à onglets.** Cohérent avec le fait que
    ce sont deux ressources *arr distinctes (comme "Indexers" et "Download
-   Clients" sont deux onglets séparés dans Radarr/Sonarr/Lidarr eux-mêmes),
-   et ça garde chaque page/composant simple (une fonction de fusion, un type
-   de carte). Deux entrées de nav admin-only, à côté de "Profiles".
+   Clients" sont deux onglets séparés dans Radarr/Sonarr/Lidarr eux-mêmes) et
+   avec le composant `DynamicFieldsForm` partagé mais instancié séparément
+   par page. Deux entrées de nav admin-only, à côté de "Profiles".
 
-6. **Aucun nouvel appel réseau ajouté au socle.** Réutilisation telle quelle
-   de `BaseServarrClient` (retry, circuit breaker), `apiPathPrefix(kind)` et
-   `classifyConnectionError`. Les payloads *arr sont typés en mode
-   passthrough (`Record<string, unknown> & {...champs connus}`), comme
-   `QualityProfileRecord` — `fields[]` n'est pas re-modélisé champ par champ.
+10. **Aucun nouvel appel réseau ajouté au socle.** Réutilisation telle quelle
+    de `BaseServarrClient`, `apiPathPrefix(kind)`, `classifyConnectionError`.
+    Payloads *arr en passthrough (`Record<string, unknown> & {...champs
+    connus}`), comme `QualityProfileRecord`.
 
-7. **Pas de masquage additionnel des champs sensibles.** Les endpoints
-   `/downloadclient` et `/indexer` des *arr renvoient déjà les valeurs de
-   `fields[]` telles que l'API les expose (mots de passe/API keys en clair
-   selon la version). Cette phase ne fait qu'un passthrough en lecture,
-   derrière `adminOnly()` déjà en place sur tout `/api/settings` — même
-   posture de sécurité que `listQualityProfiles` aujourd'hui. Aucune donnée
-   supplémentaire n'est stockée côté app (pas de colonne, pas de cache
-   persistant).
+11. **Pas de masquage additionnel des champs sensibles.** Comme pour les
+    quality profiles, les valeurs de `fields[]` (y compris mots de
+    passe/API keys) transitent telles que le *arr les expose, derrière
+    `adminOnly()` déjà en place sur tout `/api/settings`.
 
 ## Modèle de domaine
+
+```ts
+// domain/settings/servarr-field.vo.ts (partagé download client / indexer)
+export interface ServarrField {
+  name: string
+  label?: string
+  value?: unknown
+  type?: string // 'textbox' | 'number' | 'path' | 'checkbox' | 'select' | 'password' | 'tag' | ...
+  helpText?: string
+  advanced?: boolean
+  privacy?: 'normal' | 'password' | 'apiKey'
+  selectOptions?: Array<{ value: number | string; name: string }>
+}
+```
 
 ```ts
 // domain/settings/interfaces/servarr-download-client-manager.interface.ts
@@ -111,18 +162,20 @@ export type DownloadClientRecord = Record<string, unknown> & {
   name: string
   implementation: string
   implementationName?: string
+  configContract: string // requis par le *arr pour create/update, vient tel quel du schema
   protocol: 'torrent' | 'usenet'
   enable: boolean
   priority: number
-  fields?: Array<{ name: string; value?: unknown }>
+  fields: ServarrField[]
 }
 
 export interface ServarrDownloadClientManager {
-  list(
-    kind: ServarrKind,
-    baseUrl: Url,
-    apiKey: ApiKey,
-  ): Promise<Result<DownloadClientRecord[], ConnectionError>>
+  list(kind, baseUrl, apiKey): Promise<Result<DownloadClientRecord[], ConnectionError>>
+  getSchema(kind, baseUrl, apiKey): Promise<Result<DownloadClientRecord[], ConnectionError>>
+  create(kind, baseUrl, apiKey, payload: DownloadClientRecord): Promise<Result<DownloadClientRecord, ConnectionError>>
+  update(kind, baseUrl, apiKey, id, payload: DownloadClientRecord): Promise<Result<DownloadClientRecord, ConnectionError>>
+  delete(kind, baseUrl, apiKey, id): Promise<Result<void, ConnectionError>>
+  test(kind, baseUrl, apiKey, payload: DownloadClientRecord): Promise<Result<void, ConnectionError>>
 }
 ```
 
@@ -133,35 +186,42 @@ export type IndexerRecord = Record<string, unknown> & {
   name: string
   implementation: string
   implementationName?: string
+  configContract: string
   protocol: 'torrent' | 'usenet'
   enableRss: boolean
   enableAutomaticSearch: boolean
   enableInteractiveSearch: boolean
   priority: number
-  fields?: Array<{ name: string; value?: unknown }>
+  fields: ServarrField[]
 }
 
 export interface ServarrIndexerManager {
-  list(
-    kind: ServarrKind,
-    baseUrl: Url,
-    apiKey: ApiKey,
-  ): Promise<Result<IndexerRecord[], ConnectionError>>
+  list(kind, baseUrl, apiKey): Promise<Result<IndexerRecord[], ConnectionError>>
+  getSchema(kind, baseUrl, apiKey): Promise<Result<IndexerRecord[], ConnectionError>>
+  create(kind, baseUrl, apiKey, payload: IndexerRecord): Promise<Result<IndexerRecord, ConnectionError>>
+  update(kind, baseUrl, apiKey, id, payload: IndexerRecord): Promise<Result<IndexerRecord, ConnectionError>>
+  delete(kind, baseUrl, apiKey, id): Promise<Result<void, ConnectionError>>
+  test(kind, baseUrl, apiKey, payload: IndexerRecord): Promise<Result<void, ConnectionError>>
 }
 ```
 
 Implémentations HTTP (`infrastructure/servarr/download-client-manager.ts`,
 `indexer-manager.ts`), mêmes conventions que
-`infrastructure/servarr/quality-profile-manager.ts` :
-`path(kind) = ${apiPathPrefix(kind)}/downloadclient` et `.../indexer`, schéma
-Zod `.passthrough()`, `classifyConnectionError` sur erreur.
+`quality-profile-manager.ts` : `path(kind, suffix) = ${apiPathPrefix(kind)}/downloadclient${suffix}`
+et `.../indexer${suffix}`, schémas Zod `.passthrough()`,
+`classifyConnectionError` sur erreur.
 
 ## Use cases (`application/settings/`)
 
 | Use case | Entrée | Sortie | Notes |
 |---|---|---|---|
-| `ListDownloadClients` | `{ kind }` | `Result<DownloadClientRecord[], ConnectionError \| 'instance_not_found'>` | mirror exact de `ListQualityProfiles` |
-| `ListIndexers` | `{ kind }` | `Result<IndexerRecord[], ConnectionError \| 'instance_not_found'>` | idem |
+| `ListDownloadClients` | `{ kind }` | `Result<DownloadClientRecord[], ConnectionError \| 'instance_not_found'>` | mirror de `ListQualityProfiles` |
+| `GetDownloadClientSchema` | `{ kind }` | `Result<DownloadClientRecord[], ...>` | liste des templates par implémentation |
+| `CreateDownloadClient` | `{ kind, payload }` | `Result<DownloadClientRecord, ...>` | |
+| `UpdateDownloadClient` | `{ kind, id, payload }` | `Result<DownloadClientRecord, ...>` | |
+| `DeleteDownloadClient` | `{ kind, id }` | `Result<void, ...>` | |
+| `TestDownloadClient` | `{ kind, payload }` | `Result<void, ...>` | |
+| `ListIndexers` / `GetIndexerSchema` / `CreateIndexer` / `UpdateIndexer` / `DeleteIndexer` / `TestIndexer` | idem | idem | même forme, ressource `indexer` |
 
 ## Endpoints HTTP
 
@@ -169,14 +229,19 @@ Sous `/api/settings`, groupe `adminOnly`, `:kind ∈ {radarr,sonarr,lidarr}`.
 
 | Méthode | Route | Description |
 |---|---|---|
-| `GET` | `/instances/:kind/download-clients` | Liste les download clients de l'instance |
-| `GET` | `/instances/:kind/indexers` | Liste les indexers de l'instance |
+| `GET` | `/instances/:kind/download-clients` | Liste |
+| `GET` | `/instances/:kind/download-clients/schema` | Templates par implémentation |
+| `POST` | `/instances/:kind/download-clients` | Crée |
+| `PUT` | `/instances/:kind/download-clients/:id` | Édite |
+| `DELETE` | `/instances/:kind/download-clients/:id` | Supprime |
+| `POST` | `/instances/:kind/download-clients/test` | Teste la connexion (payload en body) |
+| `GET`/`POST`/`PUT`/`DELETE`/`POST .../test` | `/instances/:kind/indexers[...]` | Même forme pour les indexers |
 
-DI : `settings.downloadClientManager` / `settings.indexerManager` ajoutés dans
-`backend/providers/settings_provider.ts`, mêmes conventions que
+DI : `settings.downloadClientManager` / `settings.indexerManager` ajoutés
+dans `backend/providers/settings_provider.ts`, mêmes conventions que
 `settings.qualityProfileManager`.
 
-## Fusion côté frontend (pure, testable indépendamment de l'UI)
+## Fusion à l'affichage (pure, testable indépendamment de l'UI)
 
 ```ts
 // domain/settings/merge-servarr-records.ts
@@ -189,62 +254,74 @@ interface MergedRecord<T> {
 }
 
 function computeMergeKey(implementation: string, protocol: string, name: string): string
-
 function mergeByInstance<T extends { implementation: string; protocol: string; name: string }>(
   entries: Array<{ kind: ServarrKind; records: T[] }>,
 ): MergedRecord<T>[]
 ```
 
-Une seule fonction générique réutilisée par les deux pages
-(`mergeByInstance<DownloadClientRecord>` / `mergeByInstance<IndexerRecord>`).
+Fonction générique réutilisée par les deux pages. Une carte = un
+`MergedRecord`, une ligne par entrée de `perInstance` (édition/suppression
+individuelles, cf. décision 4).
 
 ## Frontend
 
-- `domain/settings/download-client-record.ts` / `indexer-record.ts`.
-- Nouvelles méthodes sur `ArrConnector`
-  (`frontend/src/domain/interfaces/arr-connector.ts`) : `listDownloadClients`,
-  `listIndexers` — implémentées dans `http-arr-connector.ts` (zod passthrough,
-  schémas ajoutés à `schemas/settings.schema.ts`) et `fake-arr-connector.ts`
-  (nouvelles fixtures, y compris des cas volontairement dupliqués entre kinds
-  pour exercer la fusion en dev).
-- `application/settings/download-clients.query.ts` (`useDownloadClients(kind)`,
-  clé `['download-clients', kind]`) et `indexers.query.ts`
-  (`useIndexers(kind)`, clé `['indexers', kind]`) — pattern
-  `defineQuery`/`useDomainQuery` identique à `quality-profiles.query.ts`.
+- `domain/settings/download-client-record.ts` / `indexer-record.ts` /
+  `servarr-field.ts`.
+- Nouvelles méthodes sur `ArrConnector` : `listDownloadClients`,
+  `getDownloadClientSchema`, `createDownloadClient`, `updateDownloadClient`,
+  `deleteDownloadClient`, `testDownloadClient` (+ équivalents `Indexer`) —
+  implémentées dans `http-arr-connector.ts` (zod passthrough, schémas dans
+  `schemas/settings.schema.ts`) et `fake-arr-connector.ts` (fixtures,
+  y compris des doublons volontaires entre kinds pour exercer la fusion, et
+  plusieurs templates d'implémentation pour exercer le formulaire générique).
+- `application/settings/download-clients.query.ts`
+  (`useDownloadClients(kind)`, clé `['download-clients', kind]`),
+  `download-client-schema.query.ts` (`useDownloadClientSchema(kind, enabled)`),
+  `create-download-client.mutation.ts`, `update-download-client.mutation.ts`,
+  `delete-download-client.mutation.ts`, `test-download-client.mutation.ts` —
+  pattern identique aux mutations de `instance-profiles`. Même liste côté
+  `indexers.query.ts` / mutations `*-indexer.mutation.ts`.
+- `presentation/shared/dynamic-fields-form.tsx` — **composant partagé**,
+  rend un contrôle par `ServarrField` selon son `type`, gère l'état
+  `fields[]` complet (tableau, pas d'objet à plat) ; utilisé par les deux
+  dialogues ci-dessous.
 - `presentation/download-clients/download-clients-page.tsx` : récupère
-  `useInstances()`, appelle `useDownloadClients(kind)` pour chaque kind
-  configuré, passe le tout à `mergeByInstance`, affiche une carte par entrée
-  fusionnée :
+  `useInstances()`, appelle `useDownloadClients(kind)` par kind configuré,
+  fusionne via `mergeByInstance`, une carte par entrée fusionnée avec :
   - nom + badge implémentation + icône protocole (torrent/usenet) ;
-  - un badge par instance présente (icône Radarr/Sonarr/Lidarr, réutilisant
-    `SERVARR_META` de `profiles-page.tsx`) ;
-  - si `enable`/`priority` diffère selon l'instance, une ligne par instance
-    sous l'en-tête (sinon une seule ligne résumée).
-  - Instance non configurée → même `UnconfiguredInstanceCard` que sur
-    `/profiles`, avec lien vers `/settings`.
+  - une ligne par instance présente : badge instance (icône
+    Radarr/Sonarr/Lidarr, `SERVARR_META`), `enable`/`priority` de cette
+    instance, actions Edit/Delete (mirror de `ProfileRow`) ;
+  - bouton **Clone to &lt;Kind manquant&gt;** si le groupe ne couvre pas les
+    3 instances configurées ;
+  - bouton global "Add download client" (choix implémentation via
+    `getDownloadClientSchema(kind)` d'une instance cible, puis
+    `DynamicFieldsForm`).
+  - Instance non configurée → `UnconfiguredInstanceCard` (comme
+    `/profiles`), lien vers `/settings`.
 - `presentation/indexers/indexers-page.tsx` : même structure, avec
   `enableRss`/`enableAutomaticSearch`/`enableInteractiveSearch` affichés par
   instance au lieu de `enable`.
 - `routes/download-clients/index.tsx`, `routes/indexers/index.tsx` :
   `beforeLoad` = `requireOnboarded` + `requireAdmin`, wrap `AppShell`, mirror
-  exact de `routes/profiles/index.tsx`.
+  de `routes/profiles/index.tsx`.
 - `presentation/shared/app-shell.tsx` : deux nouvelles entrées de nav
   admin-only, "Download Clients" et "Indexers", à côté de "Profiles" et
   "Settings".
 
 ## Hors périmètre / non traité par cette phase
 
-- Toute mutation (create/update/delete/test) sur un download client ou un
-  indexer — reste à faire directement dans le *arr concerné.
+- Édition/suppression groupée propagée à toutes les instances d'une carte
+  fusionnée en un clic (cf. décision 4) — chaque mutation reste par instance ;
+  seul le pré-remplissage "Clone" existe comme raccourci.
 - Vrai multi-instance par kind (toujours bloqué par `unique(kind)` sur
   `servarr_instances`, ADR-0006).
 - Matching de fusion basé sur les champs de connexion (`host`/`baseUrl`
-  extraits de `fields[]`) — le MVP ne matche que sur
-  `implementation` + `protocol` + `name` normalisé. Si le besoin apparaît
-  (ex. deux instances avec des noms différents pour le même client), on
-  pourra étendre `computeMergeKey` sans toucher à l'UI.
+  extraits de `fields[]`) — MVP : `implementation` + `protocol` + `name`
+  normalisé uniquement.
 - Association indexer ↔ download client (`downloadClientId` sur un indexer)
-  — non affichée dans cette phase, uniquement le statut par ressource.
-- Rafraîchissement automatique/polling périodique — même posture que
-  `/profiles` : données rechargées à l'ouverture de page / invalidation
-  manuelle de query, pas de nouveau mécanisme de synchronisation.
+  — non gérée dans le formulaire de cette phase.
+- Types de champs exotiques (`seedCriteria`, `device`, OAuth…) au-delà d'un
+  repli JSON brut non validé dans `DynamicFieldsForm`.
+- Rafraîchissement automatique/polling périodique — données rechargées à
+  l'ouverture de page / invalidation manuelle de query après mutation.
