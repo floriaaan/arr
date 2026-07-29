@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Link } from '@tanstack/react-router'
-import { Clapperboard, Tv, Music, Star, Pencil, Trash2, Plus } from 'lucide-react'
+import { Clapperboard, Tv, Music, Star, Pencil, Trash2, Plus, Gauge } from 'lucide-react'
 import { useInstances } from '#application/settings/instances.query'
 import { useInstanceProfiles } from '#application/settings/instance-profiles.query'
+import { useInstanceCatalog } from '#application/settings/instance-catalog.query'
 import { useDeleteInstanceProfile } from '#application/settings/delete-instance-profile.mutation'
 import { useSetDefaultInstanceProfile } from '#application/settings/set-default-instance-profile.mutation'
 import { InstanceProfileFormDialog } from './instance-profile-form-dialog'
@@ -47,10 +48,12 @@ function invalidateProfiles(
 function ProfileRow({
   kind,
   profile,
+  qualityProfileName,
   onEdit,
 }: {
   kind: ServarrKind
   profile: InstanceProfileDto
+  qualityProfileName?: string
   onEdit: () => void
 }) {
   const queryClient = useQueryClient()
@@ -63,6 +66,12 @@ function ProfileRow({
         <div className="flex items-center gap-2">
           <span className="font-medium">{profile.name}</span>
           {profile.isDefault ? <Badge>Default</Badge> : null}
+          {qualityProfileName ? (
+            <Badge variant="outline" className="gap-1">
+              <Gauge className="size-3" />
+              {qualityProfileName}
+            </Badge>
+          ) : null}
         </div>
         <p className="truncate text-sm text-muted-foreground">{profile.rootFolderPath}</p>
       </div>
@@ -147,7 +156,15 @@ function InstanceProfilesSection({
   const meta = SERVARR_META[kind]
   const Icon = meta.icon
   const profiles = useInstanceProfiles(kind)
+  const catalog = useInstanceCatalog(kind, true)
   const [dialogProfile, setDialogProfile] = useState<InstanceProfileDto | 'new' | null>(null)
+
+  const qualityProfileNameById = new Map(
+    (catalog.data?.ok ? catalog.data.value.qualityProfiles : []).map((qualityProfile) => [
+      qualityProfile.id,
+      qualityProfile.name,
+    ]),
+  )
 
   return (
     <Card>
@@ -171,6 +188,7 @@ function InstanceProfilesSection({
               key={profile.id}
               kind={kind}
               profile={profile}
+              qualityProfileName={qualityProfileNameById.get(profile.qualityProfileId)}
               onEdit={() => setDialogProfile(profile)}
             />
           ))

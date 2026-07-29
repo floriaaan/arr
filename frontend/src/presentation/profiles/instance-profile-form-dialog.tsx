@@ -24,14 +24,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '#presentation/ui/select'
+import { SERVARR_LABEL } from '#presentation/shared/servarr-meta'
 import type { ServarrKind } from '#domain/settings/servarr-instance'
 import type { InstanceProfileDto } from '#domain/settings/instance-profile'
-
-const SERVARR_LABEL: Record<ServarrKind, string> = {
-  radarr: 'Radarr',
-  sonarr: 'Sonarr',
-  lidarr: 'Lidarr',
-}
 
 export function InstanceProfileFormDialog({
   kind,
