@@ -6,6 +6,8 @@ import type { OnboardingStateRepository } from '#domain/settings/interfaces/onbo
 import type { ServarrConnectionTester } from '#domain/settings/interfaces/servarr-connection-tester.interface'
 import type { ServarrProfileCatalog } from '#domain/settings/interfaces/servarr-profile-catalog.interface'
 import type { ServarrQualityProfileManager } from '#domain/settings/interfaces/servarr-quality-profile-manager.interface'
+import type { ServarrDownloadClientManager } from '#domain/settings/interfaces/servarr-download-client-manager.interface'
+import type { ServarrIndexerManager } from '#domain/settings/interfaces/servarr-indexer-manager.interface'
 import type { OidcDiscovery } from '#domain/settings/interfaces/oidc-discovery.interface'
 import type { AuthSettingsProvider } from '#domain/settings/interfaces/auth-settings-provider.interface'
 import type { ServarrRegistry as ServarrRegistryType } from '#infrastructure/servarr/servarr-registry'
@@ -61,6 +63,17 @@ export default class SettingsProvider {
       return new HttpServarrQualityProfileManager()
     })
 
+    this.app.container.singleton('settings.downloadClientManager', async () => {
+      const { HttpServarrDownloadClientManager } =
+        await import('#infrastructure/servarr/download-client-manager')
+      return new HttpServarrDownloadClientManager()
+    })
+
+    this.app.container.singleton('settings.indexerManager', async () => {
+      const { HttpServarrIndexerManager } = await import('#infrastructure/servarr/indexer-manager')
+      return new HttpServarrIndexerManager()
+    })
+
     this.app.container.singleton('settings.oidcDiscovery', async () => {
       const { WellKnownOidcDiscovery } = await import('#infrastructure/auth/oidc-discovery.adapter')
       return new WellKnownOidcDiscovery()
@@ -90,6 +103,8 @@ declare module '@adonisjs/core/types' {
     'settings.connectionTester': ServarrConnectionTester
     'settings.profileCatalog': ServarrProfileCatalog
     'settings.qualityProfileManager': ServarrQualityProfileManager
+    'settings.downloadClientManager': ServarrDownloadClientManager
+    'settings.indexerManager': ServarrIndexerManager
     'settings.oidcDiscovery': OidcDiscovery
     'settings.authSettingsProvider': AuthSettingsProvider
     'servarr.registry': ServarrRegistryType

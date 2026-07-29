@@ -1,0 +1,280 @@
+import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { Loader2, Save, PlugZap } from 'lucide-react'
+import { useIndexerSchema } from '#application/settings/indexer-schema.query'
+import { useCreateIndexer } from '#application/settings/create-indexer.mutation'
+import { useUpdateIndexer } from '#application/settings/update-indexer.mutation'
+import { useTestIndexer } from '#application/settings/test-indexer.mutation'
+import { diffFields, applyDiff } from '#domain/settings/diff-servarr-record'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '#presentation/ui/dialog'
+import { Input } from '#presentation/ui/input'
+import { Label } from '#presentation/ui/label'
+import { Button } from '#presentation/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#presentation/ui/select'
+import { DynamicFieldsForm } from '#presentation/shared/dynamic-fields-form'
+import type { KindMeta } from '#presentation/shared/merged-record-card'
+import type { ServarrKind } from '#domain/settings/servarr-instance'
+import type { IndexerRecord } from '#domain/settings/indexer-record'
+import type { MergedRecord } from '#domain/settings/merge-servarr-records'
+
+export type IndexerFormMode =
+  | { type: 'add' }
+  | { type: 'edit-group'; merged: MergedRecord<IndexerRecord> }
+  | { type: 'edit-instance'; kind: ServarrKind; record: IndexerRecord }
+
+function invalidate(queryClient: ReturnType<typeof useQueryClient>, kind: ServarrKind) {
+  void queryClient.invalidateQueries({ queryKey: ['indexers', kind] })
+}
+
+export function IndexerFormDialog({
+  open,
+  onOpenChange,
+  configuredKinds,
+  kindMeta,
+  mode,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  configuredKinds: ServarrKind[]
+  kindMeta: Record<ServarrKind, KindMeta>
+  mode: IndexerFormMode
+}) {
+  const queryClient = useQueryClient()
+  const referenceKind = configuredKinds[0] ?? 'radarr'
+  const schema = useIndexerSchema(referenceKind, open && mode.type === 'add')
+  const createMutation = useCreateIndexer()
+  const updateMutation = useUpdateIndexer()
+  const testMutation = useTestIndexer()
+
+  const groupKindsPresent =
+    mode.type === 'edit-group' ? mode.merged.perInstance.map(({ kind }) => kind) : []
+
+  const [record, setRecord] = useState<IndexerRecord | null>(
+    mode.type === 'edit-group'
+      ? mode.merged.perInstance[0]!.record
+      : mode.type === 'edit-instance'
+        ? mode.record
+        : null,
+  )
+  const [targetKinds, setTargetKinds] = useState<Set<ServarrKind>>(
+    () =>
+      new Set(
+        mode.type === 'edit-group'
+          ? groupKindsPresent
+          : mode.type === 'add'
+            ? configuredKinds
+            : [],
+      ),
+  )
+  const [pending, setPending] = useState(false)
+
+  const showTargetPicker = mode.type !== 'edit-instance'
+  const title =
+    mode.type === 'add'
+      ? 'Add indexer'
+      : mode.type === 'edit-group'
+        ? `Edit ${mode.merged.name}`
+        : `Edit ${mode.record.name} on ${kindMeta[mode.kind].label}`
+
+  function toggleTarget(kind: ServarrKind) {
+    setTargetKinds((current) => {
+      const next = new Set(current)
+      if (next.has(kind)) next.delete(kind)
+      else next.add(kind)
+      return next
+    })
+  }
+
+  function selectImplementation(implementation: string) {
+    if (!schema.data?.ok) return
+    const template = schema.data.value.find((candidate) => candidate.implementation === implementation)
+    if (template) setRecord(template)
+  }
+
+  async function handleSave() {
+    if (!record) return
+    if (record.name.trim() === '') return toast.error('Name is required.')
+
+    setPending(true)
+    try {
+      if (mode.type === 'edit-instance') {
+        const result = await updateMutation.mutateAsync({
+          kind: mode.kind,
+          id: mode.record.id!,
+          payload: record,
+        })
+        if (!result.ok) {
+          toast.error(`${kindMeta[mode.kind].label}: ${result.error.message}`)
+          return
+        }
+        invalidate(queryClient, mode.kind)
+        toast.success(`${record.name} saved on ${kindMeta[mode.kind].label}.`)
+        onOpenChange(false)
+        return
+      }
+
+      const reference = mode.type === 'edit-group' ? mode.merged.perInstance[0]!.record : record
+      const existingByKind =
+        mode.type === 'edit-group'
+          ? new Map(mode.merged.perInstance.map(({ kind, record: r }) => [kind, r]))
+          : new Map<ServarrKind, IndexerRecord>()
+
+      const results = await Promise.all(
+        [...targetKinds].map(async (kind) => {
+          const existing = existingByKind.get(kind)
+          if (existing) {
+            const diff = diffFields(reference, record)
+            const applied = applyDiff(existing, diff)
+            const result = await updateMutation.mutateAsync({ kind, id: existing.id!, payload: applied })
+            return { kind, result }
+          }
+          const result = await createMutation.mutateAsync({ kind, payload: record })
+          return { kind, result }
+        }),
+      )
+
+      let hasError = false
+      for (const { kind, result } of results) {
+        invalidate(queryClient, kind)
+        if (!result.ok) {
+          hasError = true
+          toast.error(`${kindMeta[kind].label}: ${result.error.message}`)
+        }
+      }
+      if (!hasError) {
+        toast.success(`${record.name} saved.`)
+        onOpenChange(false)
+      }
+    } finally {
+      setPending(false)
+    }
+  }
+
+  async function handleTest() {
+    if (!record) return
+    const kinds = mode.type === 'edit-instance' ? [mode.kind] : [...targetKinds]
+    if (kinds.length === 0) return toast.error('Select at least one instance to test against.')
+
+    for (const kind of kinds) {
+      const result = await testMutation.mutateAsync({ kind, payload: record })
+      if (result.ok) toast.success(`${kindMeta[kind].label}: connection OK.`)
+      else toast.error(`${kindMeta[kind].label}: ${result.error.message}`)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            Creates or edits a real indexer on the target *arr instance(s).
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {mode.type === 'add' && !record ? (
+            schema.isLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+                Loading available implementations…
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Implementation</Label>
+                <Select onValueChange={selectImplementation}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose an implementation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(schema.data?.ok ? schema.data.value : []).map((template) => (
+                      <SelectItem key={template.implementation} value={template.implementation}>
+                        {template.implementationName ?? template.implementation} (
+                        {template.protocol})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )
+          ) : null}
+
+          {record ? (
+            <>
+              <div className="space-y-2">
+                <Label>Name</Label>
+                <Input
+                  value={record.name}
+                  onChange={(event) => setRecord({ ...record, name: event.target.value })}
+                />
+              </div>
+
+              <DynamicFieldsForm
+                fields={record.fields}
+                onChange={(fields) => setRecord({ ...record, fields })}
+              />
+
+              {showTargetPicker ? (
+                <div className="space-y-2">
+                  <Label>Apply to</Label>
+                  <div className="space-y-1 rounded-md border p-2">
+                    {configuredKinds.map((kind) => (
+                      <label
+                        key={kind}
+                        className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
+                      >
+                        <input
+                          type="checkbox"
+                          className="size-4"
+                          checked={targetKinds.has(kind)}
+                          onChange={() => toggleTarget(kind)}
+                        />
+                        {kindMeta[kind].label}
+                        {!groupKindsPresent.includes(kind) && mode.type === 'edit-group' ? (
+                          <span className="text-xs text-muted-foreground">(not configured yet)</span>
+                        ) : null}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Only fields you change are applied to instances that already have this
+                    indexer — other per-instance settings (e.g. categories) are left untouched.
+                  </p>
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleTest} disabled={!record || testMutation.isPending}>
+            {testMutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <PlugZap className="size-4" />
+            )}
+            Test
+          </Button>
+          <Button onClick={handleSave} disabled={!record || pending}>
+            {pending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+            {pending ? 'Saving…' : 'Save'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

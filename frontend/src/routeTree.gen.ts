@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CalendarIndexRouteImport } from './routes/calendar/index'
+import { Route as DownloadClientsIndexRouteImport } from './routes/download-clients/index'
+import { Route as IndexersIndexRouteImport } from './routes/indexers/index'
 import { Route as LibraryIndexRouteImport } from './routes/library/index'
 import { Route as ProfilesIndexRouteImport } from './routes/profiles/index'
 import { Route as RequestsIndexRouteImport } from './routes/requests/index'
@@ -31,6 +33,16 @@ const LoginRoute = LoginRouteImport.update({
 const CalendarIndexRoute = CalendarIndexRouteImport.update({
   id: '/calendar/',
   path: '/calendar/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DownloadClientsIndexRoute = DownloadClientsIndexRouteImport.update({
+  id: '/download-clients/',
+  path: '/download-clients/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexersIndexRoute = IndexersIndexRouteImport.update({
+  id: '/indexers/',
+  path: '/indexers/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LibraryIndexRoute = LibraryIndexRouteImport.update({
@@ -63,6 +75,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/calendar/': typeof CalendarIndexRoute
+  '/download-clients/': typeof DownloadClientsIndexRoute
+  '/indexers/': typeof IndexersIndexRoute
   '/library/': typeof LibraryIndexRoute
   '/profiles/': typeof ProfilesIndexRoute
   '/requests/': typeof RequestsIndexRoute
@@ -73,6 +87,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/calendar': typeof CalendarIndexRoute
+  '/download-clients': typeof DownloadClientsIndexRoute
+  '/indexers': typeof IndexersIndexRoute
   '/library': typeof LibraryIndexRoute
   '/profiles': typeof ProfilesIndexRoute
   '/requests': typeof RequestsIndexRoute
@@ -84,6 +100,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/calendar/': typeof CalendarIndexRoute
+  '/download-clients/': typeof DownloadClientsIndexRoute
+  '/indexers/': typeof IndexersIndexRoute
   '/library/': typeof LibraryIndexRoute
   '/profiles/': typeof ProfilesIndexRoute
   '/requests/': typeof RequestsIndexRoute
@@ -96,6 +114,8 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/calendar/'
+    | '/download-clients/'
+    | '/indexers/'
     | '/library/'
     | '/profiles/'
     | '/requests/'
@@ -106,6 +126,8 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/calendar'
+    | '/download-clients'
+    | '/indexers'
     | '/library'
     | '/profiles'
     | '/requests'
@@ -116,6 +138,8 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/calendar/'
+    | '/download-clients/'
+    | '/indexers/'
     | '/library/'
     | '/profiles/'
     | '/requests/'
@@ -127,6 +151,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   CalendarIndexRoute: typeof CalendarIndexRoute
+  DownloadClientsIndexRoute: typeof DownloadClientsIndexRoute
+  IndexersIndexRoute: typeof IndexersIndexRoute
   LibraryIndexRoute: typeof LibraryIndexRoute
   ProfilesIndexRoute: typeof ProfilesIndexRoute
   RequestsIndexRoute: typeof RequestsIndexRoute
@@ -155,6 +181,20 @@ declare module '@tanstack/react-router' {
       path: '/calendar'
       fullPath: '/calendar/'
       preLoaderRoute: typeof CalendarIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/download-clients/': {
+      id: '/download-clients/'
+      path: '/download-clients'
+      fullPath: '/download-clients/'
+      preLoaderRoute: typeof DownloadClientsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/indexers/': {
+      id: '/indexers/'
+      path: '/indexers'
+      fullPath: '/indexers/'
+      preLoaderRoute: typeof IndexersIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/library/': {
@@ -199,6 +239,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   CalendarIndexRoute: CalendarIndexRoute,
+  DownloadClientsIndexRoute: DownloadClientsIndexRoute,
+  IndexersIndexRoute: IndexersIndexRoute,
   LibraryIndexRoute: LibraryIndexRoute,
   ProfilesIndexRoute: ProfilesIndexRoute,
   RequestsIndexRoute: RequestsIndexRoute,
@@ -208,12 +250,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

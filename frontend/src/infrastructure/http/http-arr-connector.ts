@@ -12,6 +12,8 @@ import {
   instanceProfilesSchema,
   instanceProfileDtoSchema,
   qualityProfileRecordSchema,
+  downloadClientRecordSchema,
+  indexerRecordSchema,
   oidcDiscoverySchema,
   effectiveAuthSettingsSchema,
   savedSsoConfigSchema,
@@ -33,6 +35,8 @@ import type { Session } from '#domain/identity/session'
 import type { ServarrKind } from '#domain/settings/servarr-instance'
 import type { InstanceDraft } from '#domain/settings/instance-draft'
 import type { InstanceProfileDraft } from '#domain/settings/instance-profile'
+import type { DownloadClientRecord } from '#domain/settings/download-client-record'
+import type { IndexerRecord } from '#domain/settings/indexer-record'
 import type { MediaKind } from '#domain/catalog/media-kind'
 import type { ExternalId, ExternalIdScheme } from '#domain/catalog/external-id'
 import type { MediaItem } from '#domain/catalog/media-item'
@@ -287,6 +291,117 @@ export class HttpArrConnector implements ArrConnector {
     if (!response.ok) return { ok: false as const, error: await toApiError(response) }
     const body = (await response.json()) as { qualityProfile: unknown }
     return { ok: true as const, value: qualityProfileRecordSchema.parse(body.qualityProfile) }
+  }
+
+  async listDownloadClients(kind: ServarrKind) {
+    const response = await this.http.get(`/api/settings/instances/${kind}/download-clients`)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { downloadClients: unknown[] }
+    return {
+      ok: true as const,
+      value: body.downloadClients.map((record) => downloadClientRecordSchema.parse(record)),
+    }
+  }
+
+  async getDownloadClientSchema(kind: ServarrKind) {
+    const response = await this.http.get(
+      `/api/settings/instances/${kind}/download-clients/schema`,
+    )
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { downloadClientSchemas: unknown[] }
+    return {
+      ok: true as const,
+      value: body.downloadClientSchemas.map((record) => downloadClientRecordSchema.parse(record)),
+    }
+  }
+
+  async createDownloadClient(kind: ServarrKind, payload: DownloadClientRecord) {
+    const response = await this.http.post(
+      `/api/settings/instances/${kind}/download-clients`,
+      payload,
+    )
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { downloadClient: unknown }
+    return { ok: true as const, value: downloadClientRecordSchema.parse(body.downloadClient) }
+  }
+
+  async updateDownloadClient(kind: ServarrKind, id: number, payload: DownloadClientRecord) {
+    const response = await this.http.put(
+      `/api/settings/instances/${kind}/download-clients/${id}`,
+      payload,
+    )
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { downloadClient: unknown }
+    return { ok: true as const, value: downloadClientRecordSchema.parse(body.downloadClient) }
+  }
+
+  async deleteDownloadClient(kind: ServarrKind, id: number) {
+    const response = await this.http.delete(
+      `/api/settings/instances/${kind}/download-clients/${id}`,
+    )
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    return { ok: true as const, value: undefined }
+  }
+
+  async testDownloadClient(kind: ServarrKind, payload: DownloadClientRecord) {
+    const response = await this.http.post(
+      `/api/settings/instances/${kind}/download-clients/test`,
+      payload,
+    )
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    return { ok: true as const, value: undefined }
+  }
+
+  async listIndexers(kind: ServarrKind) {
+    const response = await this.http.get(`/api/settings/instances/${kind}/indexers`)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { indexers: unknown[] }
+    return {
+      ok: true as const,
+      value: body.indexers.map((record) => indexerRecordSchema.parse(record)),
+    }
+  }
+
+  async getIndexerSchema(kind: ServarrKind) {
+    const response = await this.http.get(`/api/settings/instances/${kind}/indexers/schema`)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { indexerSchemas: unknown[] }
+    return {
+      ok: true as const,
+      value: body.indexerSchemas.map((record) => indexerRecordSchema.parse(record)),
+    }
+  }
+
+  async createIndexer(kind: ServarrKind, payload: IndexerRecord) {
+    const response = await this.http.post(`/api/settings/instances/${kind}/indexers`, payload)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { indexer: unknown }
+    return { ok: true as const, value: indexerRecordSchema.parse(body.indexer) }
+  }
+
+  async updateIndexer(kind: ServarrKind, id: number, payload: IndexerRecord) {
+    const response = await this.http.put(
+      `/api/settings/instances/${kind}/indexers/${id}`,
+      payload,
+    )
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { indexer: unknown }
+    return { ok: true as const, value: indexerRecordSchema.parse(body.indexer) }
+  }
+
+  async deleteIndexer(kind: ServarrKind, id: number) {
+    const response = await this.http.delete(`/api/settings/instances/${kind}/indexers/${id}`)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    return { ok: true as const, value: undefined }
+  }
+
+  async testIndexer(kind: ServarrKind, payload: IndexerRecord) {
+    const response = await this.http.post(
+      `/api/settings/instances/${kind}/indexers/test`,
+      payload,
+    )
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    return { ok: true as const, value: undefined }
   }
 
   async getSso() {

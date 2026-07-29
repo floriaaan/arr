@@ -30,6 +30,38 @@ export const qualityProfileRecordSchema = z
   })
   .passthrough()
 
+const servarrFieldSchema = z.object({ name: z.string() }).passthrough()
+
+export const downloadClientRecordSchema = z
+  .object({
+    id: z.number().optional(),
+    name: z.string(),
+    implementation: z.string(),
+    implementationName: z.string().optional(),
+    configContract: z.string(),
+    protocol: z.enum(['torrent', 'usenet']),
+    enable: z.boolean(),
+    priority: z.number(),
+    fields: z.array(servarrFieldSchema),
+  })
+  .passthrough()
+
+export const indexerRecordSchema = z
+  .object({
+    id: z.number().optional(),
+    name: z.string(),
+    implementation: z.string(),
+    implementationName: z.string().optional(),
+    configContract: z.string(),
+    protocol: z.enum(['torrent', 'usenet']),
+    enableRss: z.boolean(),
+    enableAutomaticSearch: z.boolean(),
+    enableInteractiveSearch: z.boolean(),
+    priority: z.number(),
+    fields: z.array(servarrFieldSchema),
+  })
+  .passthrough()
+
 export const onboardingStatusSchema = z.enum([
   'not_started',
   'admin_created',
