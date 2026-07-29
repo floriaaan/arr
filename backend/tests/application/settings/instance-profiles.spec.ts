@@ -7,6 +7,8 @@ import { ListInstanceProfiles } from '#application/settings/list-instance-profil
 import { ServarrInstance } from '#domain/settings/servarr-instance.aggregate'
 import { Url } from '#domain/settings/url.vo'
 import { ApiKey } from '#domain/settings/api-key.vo'
+import { RootFolderPath } from '#domain/settings/root-folder-path.vo'
+import { QualityProfileId } from '#domain/settings/quality-profile-id.vo'
 import {
   InMemoryServarrInstanceRepository,
   InMemoryInstanceProfileRepository,
@@ -253,7 +255,69 @@ test.group('DeleteInstanceProfile', () => {
     const result = await useCase.execute({ id: secondary.value.id })
 
     assert.isTrue(result.ok)
-    const remaining = await new ListInstanceProfiles(profiles).execute({ instanceId: instance.id })
+    const remaining = await new ListInstanceProfiles(
+      profiles,
+      instances,
+      new SequentialIdGenerator(),
+    ).execute({ instanceId: instance.id })
     assert.lengthOf(remaining, 1)
+  })
+})
+
+test.group('ListInstanceProfiles', () => {
+  test('backfills a "Default" profile for an instance configured before profiles existed', async ({
+    assert,
+  }) => {
+    const instances = new InMemoryServarrInstanceRepository()
+    const profiles = new InMemoryInstanceProfileRepository()
+    const instance = await aRadarrInstance(instances)
+    const rootFolderPath = RootFolderPath.create('/data/movies')
+    const qualityProfileId = QualityProfileId.create(1)
+    if (!rootFolderPath.ok || !qualityProfileId.ok) throw new Error('unreachable')
+    const configured = instance.configure(
+      rootFolderPath.value,
+      qualityProfileId.value,
+      null,
+      null,
+      null,
+      null,
+    )
+    if (!configured.ok) throw new Error('expected success')
+    await instances.save(instance)
+
+    const useCase = new ListInstanceProfiles(profiles, instances, new SequentialIdGenerator())
+    const result = await useCase.execute({ instanceId: instance.id })
+
+    assert.lengthOf(result, 1)
+    assert.equal(result[0]?.name, 'Default')
+    assert.isTrue(result[0]?.isDefault)
+
+    const persisted = await profiles.listByInstance(instance.id)
+    assert.lengthOf(persisted, 1)
+  })
+
+  test('does not backfill an unconfigured instance', async ({ assert }) => {
+    const instances = new InMemoryServarrInstanceRepository()
+    const profiles = new InMemoryInstanceProfileRepository()
+    const instance = await aRadarrInstance(instances)
+
+    const useCase = new ListInstanceProfiles(profiles, instances, new SequentialIdGenerator())
+    const result = await useCase.execute({ instanceId: instance.id })
+
+    assert.lengthOf(result, 0)
+  })
+
+  test('does not backfill when profiles already exist', async ({ assert }) => {
+    const instances = new InMemoryServarrInstanceRepository()
+    const profiles = new InMemoryInstanceProfileRepository()
+    const instance = await aRadarrInstance(instances)
+    await new CreateInstanceProfile(profiles, instances, new SequentialIdGenerator()).execute(
+      validCreateInput(instance.id, { name: 'Default' }),
+    )
+
+    const useCase = new ListInstanceProfiles(profiles, instances, new SequentialIdGenerator())
+    const result = await useCase.execute({ instanceId: instance.id })
+
+    assert.lengthOf(result, 1)
   })
 })

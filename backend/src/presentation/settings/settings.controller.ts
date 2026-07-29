@@ -145,9 +145,12 @@ export default class SettingsController {
     }
 
     const profileRepository = await app.container.make('settings.instanceProfileRepository')
-    const profiles = await new ListInstanceProfiles(profileRepository).execute({
-      instanceId: instance.id,
-    })
+    const idGenerator = await app.container.make('shared.idGenerator')
+    const profiles = await new ListInstanceProfiles(
+      profileRepository,
+      instanceRepository,
+      idGenerator,
+    ).execute({ instanceId: instance.id })
     return ctx.response.json({ profiles: profiles.map(toInstanceProfileDto) })
   }
 
