@@ -8,6 +8,8 @@ import { RootFolderPath } from '#domain/settings/root-folder-path.vo'
 import { QualityProfileId } from '#domain/settings/quality-profile-id.vo'
 import { MetadataProfileId } from '#domain/settings/metadata-profile-id.vo'
 import { LanguageProfileId } from '#domain/settings/language-profile-id.vo'
+import { SeriesType } from '#domain/settings/series-type.vo'
+import { MinimumAvailability } from '#domain/settings/minimum-availability.vo'
 import { InstanceProfile } from '#domain/settings/instance-profile.aggregate'
 
 export interface CreateInstanceProfileInput {
@@ -17,6 +19,8 @@ export interface CreateInstanceProfileInput {
   qualityProfileId: number
   metadataProfileId?: number
   languageProfileId?: number
+  seriesType?: string
+  minimumAvailability?: string
   /** Forced to `true` regardless when this is the instance's first profile. */
   setAsDefault?: boolean
 }
@@ -59,6 +63,20 @@ export class CreateInstanceProfile implements UseCase<
       languageProfileId = result.value
     }
 
+    let seriesType: SeriesType | null = null
+    if (input.seriesType !== undefined) {
+      const result = SeriesType.create(input.seriesType)
+      if (!result.ok) return result
+      seriesType = result.value
+    }
+
+    let minimumAvailability: MinimumAvailability | null = null
+    if (input.minimumAvailability !== undefined) {
+      const result = MinimumAvailability.create(input.minimumAvailability)
+      if (!result.ok) return result
+      minimumAvailability = result.value
+    }
+
     const existing = await this.profiles.listByInstance(instance.id)
     const isDefault = input.setAsDefault === true || existing.length === 0
 
@@ -71,6 +89,8 @@ export class CreateInstanceProfile implements UseCase<
       qualityProfileId.value,
       metadataProfileId,
       languageProfileId,
+      seriesType,
+      minimumAvailability,
       isDefault,
     )
     if (!created.ok) return created
@@ -87,6 +107,8 @@ export class CreateInstanceProfile implements UseCase<
         qualityProfileId.value,
         metadataProfileId,
         languageProfileId,
+        seriesType,
+        minimumAvailability,
       )
       if (!configured.ok) return configured
       await this.instances.save(instance)

@@ -16,6 +16,8 @@ export const servarrInstanceDtoSchema = z.object({
   qualityProfileId: z.number().nullable(),
   metadataProfileId: z.number().nullable(),
   languageProfileId: z.number().nullable(),
+  seriesType: z.enum(['standard', 'daily', 'anime']).nullable(),
+  minimumAvailability: z.enum(['announced', 'inCinemas', 'released', 'preDB']).nullable(),
   enabled: z.boolean(),
 })
 
@@ -34,6 +36,8 @@ export const instanceProfileDtoSchema = z.object({
   qualityProfileId: z.number(),
   metadataProfileId: z.number().nullable(),
   languageProfileId: z.number().nullable(),
+  seriesType: z.enum(['standard', 'daily', 'anime']).nullable(),
+  minimumAvailability: z.enum(['announced', 'inCinemas', 'released', 'preDB']).nullable(),
   isDefault: z.boolean(),
 })
 

@@ -26,6 +26,12 @@ export default class InstanceProfileLucidModel extends BaseModel {
   declare languageProfileId: number | null
 
   @column()
+  declare seriesType: string | null
+
+  @column()
+  declare minimumAvailability: string | null
+
+  @column()
   declare isDefault: boolean
 
   @column.dateTime({ autoCreate: true })

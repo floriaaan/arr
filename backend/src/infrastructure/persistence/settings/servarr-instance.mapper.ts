@@ -11,6 +11,8 @@ import { RootFolderPath } from '#domain/settings/root-folder-path.vo'
 import { QualityProfileId } from '#domain/settings/quality-profile-id.vo'
 import { MetadataProfileId } from '#domain/settings/metadata-profile-id.vo'
 import { LanguageProfileId } from '#domain/settings/language-profile-id.vo'
+import { SeriesType } from '#domain/settings/series-type.vo'
+import { MinimumAvailability } from '#domain/settings/minimum-availability.vo'
 import { HealthCheckResult } from '#domain/settings/health-check-result.vo'
 import { encryptSecret, decryptSecret } from '#infrastructure/shared/encryption'
 
@@ -50,6 +52,10 @@ export function toDomain(row: ServarrInstanceLucidModel): ServarrInstance {
     languageProfileId: row.languageProfileId
       ? okOrThrow(LanguageProfileId.create(row.languageProfileId))
       : null,
+    seriesType: row.seriesType ? okOrThrow(SeriesType.create(row.seriesType)) : null,
+    minimumAvailability: row.minimumAvailability
+      ? okOrThrow(MinimumAvailability.create(row.minimumAvailability))
+      : null,
     enabled: row.enabled,
     lastHealthCheck,
   })
@@ -64,6 +70,8 @@ export function applyToModel(instance: ServarrInstance, model: ServarrInstanceLu
   model.qualityProfileId = instance.qualityProfileId?.value ?? null
   model.metadataProfileId = instance.metadataProfileId?.value ?? null
   model.languageProfileId = instance.languageProfileId?.value ?? null
+  model.seriesType = instance.seriesType?.value ?? null
+  model.minimumAvailability = instance.minimumAvailability?.value ?? null
   model.enabled = instance.enabled
   model.lastHealthCheckAt = instance.lastHealthCheck
     ? DateTime.fromJSDate(instance.lastHealthCheck.checkedAt)

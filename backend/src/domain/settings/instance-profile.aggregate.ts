@@ -6,6 +6,8 @@ import type { RootFolderPath } from './root-folder-path.vo.js'
 import type { QualityProfileId } from './quality-profile-id.vo.js'
 import type { MetadataProfileId } from './metadata-profile-id.vo.js'
 import type { LanguageProfileId } from './language-profile-id.vo.js'
+import type { SeriesType } from './series-type.vo.js'
+import type { MinimumAvailability } from './minimum-availability.vo.js'
 import { validateProfileSelection } from './profile-selection-rules.js'
 
 export interface InstanceProfileProps {
@@ -15,6 +17,8 @@ export interface InstanceProfileProps {
   qualityProfileId: QualityProfileId
   metadataProfileId: MetadataProfileId | null
   languageProfileId: LanguageProfileId | null
+  seriesType: SeriesType | null
+  minimumAvailability: MinimumAvailability | null
   isDefault: boolean
 }
 
@@ -31,9 +35,10 @@ function validateName(name: string): Result<string, ValidationError> {
 
 /**
  * A named preset of the same fields `ServarrInstance` carries inline
- * (root folder / quality profile / metadata / language profile). `kind` is
- * intentionally not stored on this aggregate — it's the owning instance's,
- * passed in by the caller for validation only (cf. docs/phase-3-instance-profiles).
+ * (root folder / quality profile / metadata / language profile / series
+ * type / minimum availability). `kind` is intentionally not stored on this
+ * aggregate — it's the owning instance's, passed in by the caller for
+ * validation only (cf. docs/phase-3-instance-profiles).
  */
 export class InstanceProfile extends AggregateRoot<string> {
   private props: InstanceProfileProps
@@ -52,12 +57,20 @@ export class InstanceProfile extends AggregateRoot<string> {
     qualityProfileId: QualityProfileId,
     metadataProfileId: MetadataProfileId | null,
     languageProfileId: LanguageProfileId | null,
+    seriesType: SeriesType | null,
+    minimumAvailability: MinimumAvailability | null,
     isDefault: boolean,
   ): Result<InstanceProfile, ValidationError> {
     const nameResult = validateName(name)
     if (!nameResult.ok) return nameResult
 
-    const selection = validateProfileSelection(kind, metadataProfileId, languageProfileId)
+    const selection = validateProfileSelection(
+      kind,
+      metadataProfileId,
+      languageProfileId,
+      seriesType,
+      minimumAvailability,
+    )
     if (!selection.ok) return selection
 
     return Result.ok(
@@ -68,6 +81,8 @@ export class InstanceProfile extends AggregateRoot<string> {
         qualityProfileId,
         metadataProfileId,
         languageProfileId,
+        seriesType,
+        minimumAvailability,
         isDefault,
       }),
     )
@@ -102,6 +117,14 @@ export class InstanceProfile extends AggregateRoot<string> {
     return this.props.languageProfileId
   }
 
+  get seriesType(): SeriesType | null {
+    return this.props.seriesType
+  }
+
+  get minimumAvailability(): MinimumAvailability | null {
+    return this.props.minimumAvailability
+  }
+
   get isDefault(): boolean {
     return this.props.isDefault
   }
@@ -119,14 +142,24 @@ export class InstanceProfile extends AggregateRoot<string> {
     qualityProfileId: QualityProfileId,
     metadataProfileId: MetadataProfileId | null,
     languageProfileId: LanguageProfileId | null,
+    seriesType: SeriesType | null,
+    minimumAvailability: MinimumAvailability | null,
   ): Result<void, ValidationError> {
-    const selection = validateProfileSelection(kind, metadataProfileId, languageProfileId)
+    const selection = validateProfileSelection(
+      kind,
+      metadataProfileId,
+      languageProfileId,
+      seriesType,
+      minimumAvailability,
+    )
     if (!selection.ok) return selection
 
     this.props.rootFolderPath = rootFolderPath
     this.props.qualityProfileId = qualityProfileId
     this.props.metadataProfileId = metadataProfileId
     this.props.languageProfileId = languageProfileId
+    this.props.seriesType = seriesType
+    this.props.minimumAvailability = minimumAvailability
     return Result.ok(undefined)
   }
 

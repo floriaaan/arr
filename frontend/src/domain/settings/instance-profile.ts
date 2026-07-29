@@ -6,6 +6,8 @@ export interface InstanceProfileDto {
   qualityProfileId: number
   metadataProfileId: number | null
   languageProfileId: number | null
+  seriesType: string | null
+  minimumAvailability: string | null
   isDefault: boolean
 }
 
@@ -15,5 +17,7 @@ export interface InstanceProfileDraft {
   qualityProfileId: number
   metadataProfileId?: number
   languageProfileId?: number
+  seriesType?: string
+  minimumAvailability?: string
   setAsDefault?: boolean
 }

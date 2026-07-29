@@ -29,6 +29,12 @@ export default class ServarrInstanceLucidModel extends BaseModel {
   declare languageProfileId: number | null
 
   @column()
+  declare seriesType: string | null
+
+  @column()
+  declare minimumAvailability: string | null
+
+  @column()
   declare enabled: boolean
 
   @column.dateTime()

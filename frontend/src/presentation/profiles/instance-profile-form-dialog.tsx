@@ -28,6 +28,19 @@ import { SERVARR_LABEL } from '#presentation/shared/servarr-meta'
 import type { ServarrKind } from '#domain/settings/servarr-instance'
 import type { InstanceProfileDto } from '#domain/settings/instance-profile'
 
+const SERIES_TYPE_OPTIONS = [
+  { value: 'standard', label: 'Standard' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'anime', label: 'Anime' },
+] as const
+
+const MINIMUM_AVAILABILITY_OPTIONS = [
+  { value: 'announced', label: 'Announced' },
+  { value: 'inCinemas', label: 'In cinemas' },
+  { value: 'released', label: 'Released' },
+  { value: 'preDB', label: 'PreDB' },
+] as const
+
 export function InstanceProfileFormDialog({
   kind,
   profile,
@@ -56,6 +69,12 @@ export function InstanceProfileFormDialog({
   )
   const [languageProfileId, setLanguageProfileId] = useState<number | undefined>(
     profile?.languageProfileId ?? undefined,
+  )
+  const [seriesType, setSeriesType] = useState<string | undefined>(
+    profile?.seriesType ?? undefined,
+  )
+  const [minimumAvailability, setMinimumAvailability] = useState<string | undefined>(
+    profile?.minimumAvailability ?? undefined,
   )
 
   const catalogData = catalog.data?.ok ? catalog.data.value : null
@@ -93,6 +112,8 @@ export function InstanceProfileFormDialog({
       qualityProfileId,
       metadataProfileId,
       languageProfileId,
+      seriesType,
+      minimumAvailability,
     }
 
     if (isEdit) {
@@ -210,9 +231,8 @@ export function InstanceProfileFormDialog({
             </div>
           ) : null}
 
-          {catalogData?.metadataProfiles || catalogData?.languageProfiles ? (
-            <div className="grid grid-cols-2 gap-4">
-              {kind === 'lidarr' && catalogData.metadataProfiles ? (
+          <div className="grid grid-cols-2 gap-4">
+              {kind === 'lidarr' && catalogData?.metadataProfiles ? (
                 <div className="space-y-2">
                   <Label>Metadata profile</Label>
                   <Select
@@ -233,7 +253,7 @@ export function InstanceProfileFormDialog({
                 </div>
               ) : null}
 
-              {kind === 'sonarr' && catalogData.languageProfiles ? (
+              {kind === 'sonarr' && catalogData?.languageProfiles ? (
                 <div className="space-y-2">
                   <Label>Language profile</Label>
                   <Select
@@ -253,8 +273,43 @@ export function InstanceProfileFormDialog({
                   </Select>
                 </div>
               ) : null}
+
+              {kind === 'sonarr' ? (
+                <div className="space-y-2">
+                  <Label>Series type</Label>
+                  <Select value={seriesType} onValueChange={setSeriesType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a series type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SERIES_TYPE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+
+              {kind === 'radarr' ? (
+                <div className="space-y-2">
+                  <Label>Minimum availability</Label>
+                  <Select value={minimumAvailability} onValueChange={setMinimumAvailability}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a minimum availability" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MINIMUM_AVAILABILITY_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
             </div>
-          ) : null}
         </div>
 
         <DialogFooter>

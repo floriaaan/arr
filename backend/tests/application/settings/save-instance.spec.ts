@@ -144,4 +144,33 @@ test.group('SaveInstance', () => {
     const all = await profiles.listByInstance(first.value.id)
     assert.lengthOf(all, 1)
   })
+
+  test('accepts a minimum availability for a Radarr instance', async ({ assert }) => {
+    const repository = new InMemoryServarrInstanceRepository()
+    const useCase = new SaveInstance(
+      repository,
+      new FakeServarrConnectionTester(),
+      new SequentialIdGenerator(),
+      new InMemoryInstanceProfileRepository(),
+    )
+
+    const result = await useCase.execute(validInput({ minimumAvailability: 'released' }))
+
+    assert.isTrue(result.ok)
+    assert.equal(result.ok ? result.value.minimumAvailability?.value : undefined, 'released')
+  })
+
+  test('rejects a series type for a non-Sonarr instance', async ({ assert }) => {
+    const repository = new InMemoryServarrInstanceRepository()
+    const useCase = new SaveInstance(
+      repository,
+      new FakeServarrConnectionTester(),
+      new SequentialIdGenerator(),
+      new InMemoryInstanceProfileRepository(),
+    )
+
+    const result = await useCase.execute(validInput({ seriesType: 'anime' }))
+
+    assert.isFalse(result.ok)
+  })
 })

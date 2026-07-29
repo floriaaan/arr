@@ -1,6 +1,8 @@
 import type { ServarrKind } from './servarr-kind.vo.js'
 import type { MetadataProfileId } from './metadata-profile-id.vo.js'
 import type { LanguageProfileId } from './language-profile-id.vo.js'
+import type { SeriesType } from './series-type.vo.js'
+import type { MinimumAvailability } from './minimum-availability.vo.js'
 import type { ValidationError } from '#domain/shared/validation-error'
 import { Result } from '#domain/shared/result'
 
@@ -13,6 +15,8 @@ export function validateProfileSelection(
   kind: ServarrKind,
   metadataProfileId: MetadataProfileId | null,
   languageProfileId: LanguageProfileId | null,
+  seriesType: SeriesType | null,
+  minimumAvailability: MinimumAvailability | null,
 ): Result<void, ValidationError> {
   if (kind === 'lidarr' && !metadataProfileId) {
     return Result.err({
@@ -30,6 +34,18 @@ export function validateProfileSelection(
     return Result.err({
       field: 'languageProfileId',
       message: 'Language profile only applies to Sonarr instances',
+    })
+  }
+  if (kind !== 'sonarr' && seriesType) {
+    return Result.err({
+      field: 'seriesType',
+      message: 'Series type only applies to Sonarr instances',
+    })
+  }
+  if (kind !== 'radarr' && minimumAvailability) {
+    return Result.err({
+      field: 'minimumAvailability',
+      message: 'Minimum availability only applies to Radarr instances',
     })
   }
 

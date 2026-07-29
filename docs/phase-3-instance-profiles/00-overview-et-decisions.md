@@ -207,3 +207,24 @@ interface InstanceProfileDto {
   catalogue live (si un id de quality profile est supprimé côté *arr, on ne
   le détecte qu'au prochain health check / requête en échec — pas de nouveau
   mécanisme ajouté ici).
+
+## Addendum — Series type (Sonarr) et Minimum availability (Radarr)
+
+Deux champs de profil supplémentaires, ajoutés en suivi de la Phase 3 :
+`seriesType` (`standard` | `daily` | `anime`, Sonarr uniquement) et
+`minimumAvailability` (`announced` | `inCinemas` | `released` | `preDB`,
+Radarr uniquement). Mêmes règles que `metadataProfileId`/`languageProfileId` :
+optionnels, valeur interdite si le kind ne correspond pas
+(`validateProfileSelection` étendue), stockés en colonnes `nullable` sur
+`servarr_instances` et `instance_profiles` (migration
+`1785081143200_add_series_type_and_minimum_availability`).
+
+Contrairement aux profils *arr (qualityProfileId, root folder…), ce ne sont
+pas des id résolus depuis un catalogue live — ce sont des enums fixes propres
+à l'API Radarr/Sonarr, donc pas d'appel réseau supplémentaire pour peupler
+leurs selects.
+
+`RadarrAdapter.submit()` et `SonarrAdapter.submit()` les envoient désormais à
+la création (`minimumAvailability`, `seriesType`), avec un défaut
+(`released`, `standard`) si le profil actif ne les précise pas — ces champs
+n'étaient jusque-là jamais transmis à l'API *arr.

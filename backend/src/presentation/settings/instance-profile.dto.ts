@@ -8,6 +8,8 @@ export interface InstanceProfileDto {
   qualityProfileId: number
   metadataProfileId: number | null
   languageProfileId: number | null
+  seriesType: string | null
+  minimumAvailability: string | null
   isDefault: boolean
 }
 
@@ -20,6 +22,8 @@ export function toInstanceProfileDto(profile: InstanceProfile): InstanceProfileD
     qualityProfileId: profile.qualityProfileId.value,
     metadataProfileId: profile.metadataProfileId?.value ?? null,
     languageProfileId: profile.languageProfileId?.value ?? null,
+    seriesType: profile.seriesType?.value ?? null,
+    minimumAvailability: profile.minimumAvailability?.value ?? null,
     isDefault: profile.isDefault,
   }
 }

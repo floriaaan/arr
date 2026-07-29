@@ -6,6 +6,8 @@ import { RootFolderPath } from '#domain/settings/root-folder-path.vo'
 import { QualityProfileId } from '#domain/settings/quality-profile-id.vo'
 import { MetadataProfileId } from '#domain/settings/metadata-profile-id.vo'
 import { LanguageProfileId } from '#domain/settings/language-profile-id.vo'
+import { SeriesType } from '#domain/settings/series-type.vo'
+import { MinimumAvailability } from '#domain/settings/minimum-availability.vo'
 
 function okOrThrow<T>(result: Result<T, ValidationError>): T {
   if (!result.ok) throw new Error(result.error.message)
@@ -24,6 +26,10 @@ export function toDomain(row: InstanceProfileLucidModel): InstanceProfile {
     languageProfileId: row.languageProfileId
       ? okOrThrow(LanguageProfileId.create(row.languageProfileId))
       : null,
+    seriesType: row.seriesType ? okOrThrow(SeriesType.create(row.seriesType)) : null,
+    minimumAvailability: row.minimumAvailability
+      ? okOrThrow(MinimumAvailability.create(row.minimumAvailability))
+      : null,
     isDefault: row.isDefault,
   })
 }
@@ -36,5 +42,7 @@ export function applyToModel(profile: InstanceProfile, model: InstanceProfileLuc
   model.qualityProfileId = profile.qualityProfileId.value
   model.metadataProfileId = profile.metadataProfileId?.value ?? null
   model.languageProfileId = profile.languageProfileId?.value ?? null
+  model.seriesType = profile.seriesType?.value ?? null
+  model.minimumAvailability = profile.minimumAvailability?.value ?? null
   model.isDefault = profile.isDefault
 }

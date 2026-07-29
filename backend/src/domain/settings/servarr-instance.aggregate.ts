@@ -8,6 +8,8 @@ import type { RootFolderPath } from './root-folder-path.vo.js'
 import type { QualityProfileId } from './quality-profile-id.vo.js'
 import type { MetadataProfileId } from './metadata-profile-id.vo.js'
 import type { LanguageProfileId } from './language-profile-id.vo.js'
+import type { SeriesType } from './series-type.vo.js'
+import type { MinimumAvailability } from './minimum-availability.vo.js'
 import type { HealthCheckResult } from './health-check-result.vo.js'
 import { instanceConnected, instanceHealthCheckFailed } from './settings.events.js'
 import { validateProfileSelection } from './profile-selection-rules.js'
@@ -20,6 +22,8 @@ export interface ServarrInstanceProps {
   qualityProfileId: QualityProfileId | null
   metadataProfileId: MetadataProfileId | null
   languageProfileId: LanguageProfileId | null
+  seriesType: SeriesType | null
+  minimumAvailability: MinimumAvailability | null
   enabled: boolean
   lastHealthCheck: HealthCheckResult | null
 }
@@ -41,6 +45,8 @@ export class ServarrInstance extends AggregateRoot<string> {
       qualityProfileId: null,
       metadataProfileId: null,
       languageProfileId: null,
+      seriesType: null,
+      minimumAvailability: null,
       enabled: false,
       lastHealthCheck: null,
     })
@@ -79,6 +85,14 @@ export class ServarrInstance extends AggregateRoot<string> {
     return this.props.languageProfileId
   }
 
+  get seriesType(): SeriesType | null {
+    return this.props.seriesType
+  }
+
+  get minimumAvailability(): MinimumAvailability | null {
+    return this.props.minimumAvailability
+  }
+
   get enabled(): boolean {
     return this.props.enabled
   }
@@ -100,11 +114,15 @@ export class ServarrInstance extends AggregateRoot<string> {
     qualityProfileId: QualityProfileId,
     metadataProfileId: MetadataProfileId | null,
     languageProfileId: LanguageProfileId | null,
+    seriesType: SeriesType | null,
+    minimumAvailability: MinimumAvailability | null,
   ): Result<void, ValidationError> {
     const selection = validateProfileSelection(
       this.props.kind,
       metadataProfileId,
       languageProfileId,
+      seriesType,
+      minimumAvailability,
     )
     if (!selection.ok) return selection
 
@@ -112,6 +130,8 @@ export class ServarrInstance extends AggregateRoot<string> {
     this.props.qualityProfileId = qualityProfileId
     this.props.metadataProfileId = metadataProfileId
     this.props.languageProfileId = languageProfileId
+    this.props.seriesType = seriesType
+    this.props.minimumAvailability = minimumAvailability
     return Result.ok(undefined)
   }
 

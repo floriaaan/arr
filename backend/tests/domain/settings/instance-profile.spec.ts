@@ -4,6 +4,8 @@ import { RootFolderPath } from '#domain/settings/root-folder-path.vo'
 import { QualityProfileId } from '#domain/settings/quality-profile-id.vo'
 import { MetadataProfileId } from '#domain/settings/metadata-profile-id.vo'
 import { LanguageProfileId } from '#domain/settings/language-profile-id.vo'
+import { SeriesType } from '#domain/settings/series-type.vo'
+import { MinimumAvailability } from '#domain/settings/minimum-availability.vo'
 
 function aRootFolderPath() {
   const result = RootFolderPath.create('/data/movies')
@@ -34,6 +36,8 @@ test.group('InstanceProfile', () => {
       aQualityProfileId(),
       null,
       null,
+      null,
+      null,
       false,
     )
     assert.isTrue(result.ok)
@@ -47,6 +51,8 @@ test.group('InstanceProfile', () => {
       '   ',
       aRootFolderPath(),
       aQualityProfileId(),
+      null,
+      null,
       null,
       null,
       false,
@@ -64,6 +70,8 @@ test.group('InstanceProfile', () => {
       aQualityProfileId(),
       aMetadataProfileId(),
       null,
+      null,
+      null,
       false,
     )
     assert.isFalse(result.ok)
@@ -79,6 +87,8 @@ test.group('InstanceProfile', () => {
       aQualityProfileId(),
       null,
       null,
+      null,
+      null,
       false,
     )
     assert.isFalse(result.ok)
@@ -92,6 +102,8 @@ test.group('InstanceProfile', () => {
       '4K',
       aRootFolderPath(),
       aQualityProfileId(),
+      null,
+      null,
       null,
       null,
       false,
@@ -111,6 +123,8 @@ test.group('InstanceProfile', () => {
       '4K',
       aRootFolderPath(),
       aQualityProfileId(),
+      null,
+      null,
       null,
       null,
       false,
@@ -134,6 +148,8 @@ test.group('InstanceProfile', () => {
       aQualityProfileId(),
       null,
       null,
+      null,
+      null,
       false,
     )
     if (!created.ok) throw new Error('unreachable')
@@ -147,7 +163,89 @@ test.group('InstanceProfile', () => {
       aQualityProfileId(),
       null,
       languageProfileIdResult.value,
+      null,
+      null,
     )
     assert.isFalse(result.ok)
+  })
+
+  test('create() rejects a series type for a non-Sonarr instance', ({ assert }) => {
+    const seriesTypeResult = SeriesType.create('anime')
+    if (!seriesTypeResult.ok) throw new Error('unreachable')
+
+    const result = InstanceProfile.create(
+      '1',
+      'radarr',
+      'instance-1',
+      '4K',
+      aRootFolderPath(),
+      aQualityProfileId(),
+      null,
+      null,
+      seriesTypeResult.value,
+      null,
+      false,
+    )
+    assert.isFalse(result.ok)
+  })
+
+  test('create() accepts a series type for a Sonarr instance', ({ assert }) => {
+    const seriesTypeResult = SeriesType.create('anime')
+    if (!seriesTypeResult.ok) throw new Error('unreachable')
+
+    const result = InstanceProfile.create(
+      '1',
+      'sonarr',
+      'instance-1',
+      'Anime',
+      aRootFolderPath(),
+      aQualityProfileId(),
+      null,
+      null,
+      seriesTypeResult.value,
+      null,
+      false,
+    )
+    assert.isTrue(result.ok)
+  })
+
+  test('create() rejects a minimum availability for a non-Radarr instance', ({ assert }) => {
+    const minimumAvailabilityResult = MinimumAvailability.create('released')
+    if (!minimumAvailabilityResult.ok) throw new Error('unreachable')
+
+    const result = InstanceProfile.create(
+      '1',
+      'sonarr',
+      'instance-1',
+      'Standard',
+      aRootFolderPath(),
+      aQualityProfileId(),
+      null,
+      null,
+      null,
+      minimumAvailabilityResult.value,
+      false,
+    )
+    assert.isFalse(result.ok)
+  })
+
+  test('create() accepts a minimum availability for a Radarr instance', ({ assert }) => {
+    const minimumAvailabilityResult = MinimumAvailability.create('released')
+    if (!minimumAvailabilityResult.ok) throw new Error('unreachable')
+
+    const result = InstanceProfile.create(
+      '1',
+      'radarr',
+      'instance-1',
+      'Released',
+      aRootFolderPath(),
+      aQualityProfileId(),
+      null,
+      null,
+      null,
+      minimumAvailabilityResult.value,
+      false,
+    )
+    assert.isTrue(result.ok)
   })
 })

@@ -47,6 +47,8 @@ export class SetDefaultInstanceProfile implements UseCase<
       target.qualityProfileId,
       target.metadataProfileId,
       target.languageProfileId,
+      target.seriesType,
+      target.minimumAvailability,
     )
     if (!configured.ok) return configured
     await this.instances.save(instance)

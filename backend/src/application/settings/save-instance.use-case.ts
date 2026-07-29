@@ -13,6 +13,8 @@ import { RootFolderPath } from '#domain/settings/root-folder-path.vo'
 import { QualityProfileId } from '#domain/settings/quality-profile-id.vo'
 import { MetadataProfileId } from '#domain/settings/metadata-profile-id.vo'
 import { LanguageProfileId } from '#domain/settings/language-profile-id.vo'
+import { SeriesType } from '#domain/settings/series-type.vo'
+import { MinimumAvailability } from '#domain/settings/minimum-availability.vo'
 import { ServarrInstance } from '#domain/settings/servarr-instance.aggregate'
 import { InstanceProfile } from '#domain/settings/instance-profile.aggregate'
 
@@ -24,6 +26,8 @@ export interface SaveInstanceInput {
   qualityProfileId: number
   metadataProfileId?: number
   languageProfileId?: number
+  seriesType?: string
+  minimumAvailability?: string
   enabled: boolean
 }
 
@@ -67,6 +71,20 @@ export class SaveInstance implements UseCase<
       languageProfileId = result.value
     }
 
+    let seriesType: SeriesType | null = null
+    if (input.seriesType !== undefined) {
+      const result = SeriesType.create(input.seriesType)
+      if (!result.ok) return result
+      seriesType = result.value
+    }
+
+    let minimumAvailability: MinimumAvailability | null = null
+    if (input.minimumAvailability !== undefined) {
+      const result = MinimumAvailability.create(input.minimumAvailability)
+      if (!result.ok) return result
+      minimumAvailability = result.value
+    }
+
     const existing = await this.repository.findByKind(input.kind)
     const instance =
       existing ??
@@ -81,6 +99,8 @@ export class SaveInstance implements UseCase<
       qualityProfileId.value,
       metadataProfileId,
       languageProfileId,
+      seriesType,
+      minimumAvailability,
     )
     if (!configured.ok) return configured
 
@@ -95,6 +115,8 @@ export class SaveInstance implements UseCase<
         qualityProfileId.value,
         metadataProfileId,
         languageProfileId,
+        seriesType,
+        minimumAvailability,
         true,
       )
       if (!defaultProfile.ok) return defaultProfile

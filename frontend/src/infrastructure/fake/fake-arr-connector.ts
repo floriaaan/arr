@@ -570,6 +570,8 @@ export class FakeArrConnector implements ArrConnector {
       qualityProfileId: draft.qualityProfileId,
       metadataProfileId: draft.metadataProfileId ?? null,
       languageProfileId: draft.languageProfileId ?? null,
+      seriesType: draft.seriesType ?? null,
+      minimumAvailability: draft.minimumAvailability ?? null,
       enabled: draft.enabled,
     }
     this.instances.set(kind, instance)
@@ -584,6 +586,8 @@ export class FakeArrConnector implements ArrConnector {
           qualityProfileId: draft.qualityProfileId,
           metadataProfileId: draft.metadataProfileId ?? null,
           languageProfileId: draft.languageProfileId ?? null,
+          seriesType: draft.seriesType ?? null,
+          minimumAvailability: draft.minimumAvailability ?? null,
           isDefault: true,
         },
       ])
@@ -601,6 +605,8 @@ export class FakeArrConnector implements ArrConnector {
     instance.qualityProfileId = profile.qualityProfileId
     instance.metadataProfileId = profile.metadataProfileId
     instance.languageProfileId = profile.languageProfileId
+    instance.seriesType = profile.seriesType
+    instance.minimumAvailability = profile.minimumAvailability
   }
 
   async fetchStoredInstanceProfiles(kind: ServarrKind) {
@@ -627,6 +633,8 @@ export class FakeArrConnector implements ArrConnector {
       qualityProfileId: draft.qualityProfileId,
       metadataProfileId: draft.metadataProfileId ?? null,
       languageProfileId: draft.languageProfileId ?? null,
+      seriesType: draft.seriesType ?? null,
+      minimumAvailability: draft.minimumAvailability ?? null,
       isDefault,
     }
 
@@ -653,6 +661,8 @@ export class FakeArrConnector implements ArrConnector {
       qualityProfileId: draft.qualityProfileId,
       metadataProfileId: draft.metadataProfileId ?? null,
       languageProfileId: draft.languageProfileId ?? null,
+      seriesType: draft.seriesType ?? null,
+      minimumAvailability: draft.minimumAvailability ?? null,
     }
 
     this.savedProfiles.set(
