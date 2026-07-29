@@ -51,6 +51,46 @@ function notFound(message: string): ApiError {
   return { type: 'not_found', message, status: 404 }
 }
 
+/** Enough options per kind to exercise the root folder suggestions and the quality profile slider. */
+const FAKE_ROOT_FOLDERS: Record<ServarrKind, { path: string }[]> = {
+  radarr: [{ path: '/data/movies' }, { path: '/data/movies-4k' }, { path: '/data/kids-movies' }],
+  sonarr: [{ path: '/data/tv' }, { path: '/data/anime' }, { path: '/data/tv-4k' }],
+  lidarr: [{ path: '/data/music' }, { path: '/data/music-lossless' }],
+}
+
+const FAKE_QUALITY_PROFILES: Record<ServarrKind, { id: number; name: string }[]> = {
+  radarr: [
+    { id: 1, name: 'SD' },
+    { id: 2, name: 'HD-720p' },
+    { id: 3, name: 'HD-1080p' },
+    { id: 4, name: 'Ultra-HD' },
+    { id: 5, name: 'Any' },
+  ],
+  sonarr: [
+    { id: 1, name: 'SD' },
+    { id: 2, name: 'HD-720p' },
+    { id: 3, name: 'HD-1080p' },
+    { id: 4, name: 'Ultra-HD' },
+  ],
+  lidarr: [
+    { id: 1, name: 'Standard' },
+    { id: 2, name: 'Lossless' },
+    { id: 3, name: 'Any' },
+  ],
+}
+
+const FAKE_METADATA_PROFILES = [
+  { id: 1, name: 'Standard' },
+  { id: 2, name: 'Only Studio Albums' },
+  { id: 3, name: 'Everything' },
+]
+
+const FAKE_LANGUAGE_PROFILES = [
+  { id: 1, name: 'English' },
+  { id: 2, name: 'French' },
+  { id: 3, name: 'Multi (English + French)' },
+]
+
 const ONBOARDING_STORAGE_KEY = 'arr:fake:onboarding'
 
 interface PersistedOnboardingState {
@@ -224,15 +264,10 @@ export class FakeArrConnector implements ArrConnector {
     return {
       ok: true as const,
       value: {
-        rootFolders: [
-          {
-            path:
-              kind === 'lidarr' ? '/data/music' : kind === 'sonarr' ? '/data/tv' : '/data/movies',
-          },
-        ],
-        qualityProfiles: [{ id: 1, name: 'HD-1080p' }],
-        ...(kind === 'lidarr' ? { metadataProfiles: [{ id: 1, name: 'Standard' }] } : {}),
-        ...(kind === 'sonarr' ? { languageProfiles: [{ id: 1, name: 'English' }] } : {}),
+        rootFolders: FAKE_ROOT_FOLDERS[kind],
+        qualityProfiles: FAKE_QUALITY_PROFILES[kind],
+        ...(kind === 'lidarr' ? { metadataProfiles: FAKE_METADATA_PROFILES } : {}),
+        ...(kind === 'sonarr' ? { languageProfiles: FAKE_LANGUAGE_PROFILES } : {}),
       },
     }
   }
