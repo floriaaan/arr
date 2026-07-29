@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { Loader2, Save, CheckCircle2, AlertTriangle } from 'lucide-react'
@@ -16,6 +16,7 @@ import {
 import { Input } from '#presentation/ui/input'
 import { Label } from '#presentation/ui/label'
 import { Button } from '#presentation/ui/button'
+import { Slider } from '#presentation/ui/slider'
 import {
   Select,
   SelectContent,
@@ -69,6 +70,20 @@ export function InstanceProfileFormDialog({
   const knownRootFolders = catalogData?.rootFolders.map((folder) => folder.path) ?? []
   const isKnownRootFolder = knownRootFolders.includes(rootFolderPath)
   const rootFolderListId = `root-folders-${kind}`
+
+  const qualityProfiles = catalogData?.qualityProfiles ?? []
+  const qualityProfileIndex = qualityProfiles.findIndex(
+    (qualityProfile) => qualityProfile.id === qualityProfileId,
+  )
+  const sliderIndex = qualityProfileIndex === -1 ? 0 : qualityProfileIndex
+
+  /** A slider always shows a position — default to the first profile once the catalog loads. */
+  useEffect(() => {
+    const first = qualityProfiles[0]
+    if (qualityProfileId === undefined && first) {
+      setQualityProfileId(first.id)
+    }
+  }, [qualityProfileId, qualityProfiles])
 
   function invalidate() {
     void queryClient.invalidateQueries({ queryKey: ['instance-profiles', kind] })
@@ -174,27 +189,34 @@ export function InstanceProfileFormDialog({
             <p className="text-sm text-destructive">{catalog.data.error.message}</p>
           ) : null}
 
-          {catalogData ? (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+          {catalogData && qualityProfiles.length > 0 ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
                 <Label>Quality profile</Label>
-                <Select
-                  value={qualityProfileId?.toString()}
-                  onValueChange={(value) => setQualityProfileId(Number(value))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a quality profile" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {catalogData.qualityProfiles.map((qualityProfile) => (
-                      <SelectItem key={qualityProfile.id} value={qualityProfile.id.toString()}>
-                        {qualityProfile.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <span className="text-sm font-medium">{qualityProfiles[sliderIndex]?.name}</span>
               </div>
+              <Slider
+                min={0}
+                max={Math.max(qualityProfiles.length - 1, 0)}
+                step={1}
+                value={[sliderIndex]}
+                onValueChange={(values) => {
+                  const selected = values[0] !== undefined ? qualityProfiles[values[0]] : undefined
+                  if (selected) setQualityProfileId(selected.id)
+                }}
+                disabled={qualityProfiles.length <= 1}
+              />
+              {qualityProfiles.length > 1 ? (
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>{qualityProfiles[0]?.name}</span>
+                  <span>{qualityProfiles[qualityProfiles.length - 1]?.name}</span>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
+          {catalogData?.metadataProfiles || catalogData?.languageProfiles ? (
+            <div className="grid grid-cols-2 gap-4">
               {kind === 'lidarr' && catalogData.metadataProfiles ? (
                 <div className="space-y-2">
                   <Label>Metadata profile</Label>
