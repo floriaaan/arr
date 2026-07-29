@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
-import { Loader2, Save } from 'lucide-react'
+import { Loader2, Save, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { useInstanceCatalog } from '#application/settings/instance-catalog.query'
 import { useCreateInstanceProfile } from '#application/settings/create-instance-profile.mutation'
 import { useUpdateInstanceProfile } from '#application/settings/update-instance-profile.mutation'
@@ -25,6 +25,12 @@ import {
 } from '#presentation/ui/select'
 import type { ServarrKind } from '#domain/settings/servarr-instance'
 import type { InstanceProfileDto } from '#domain/settings/instance-profile'
+
+const SERVARR_LABEL: Record<ServarrKind, string> = {
+  radarr: 'Radarr',
+  sonarr: 'Sonarr',
+  lidarr: 'Lidarr',
+}
 
 export function InstanceProfileFormDialog({
   kind,
@@ -59,6 +65,10 @@ export function InstanceProfileFormDialog({
   const catalogData = catalog.data?.ok ? catalog.data.value : null
   const pending = createProfile.isPending || updateProfile.isPending
   const canSave = name.trim() !== '' && rootFolderPath !== '' && qualityProfileId !== undefined
+
+  const knownRootFolders = catalogData?.rootFolders.map((folder) => folder.path) ?? []
+  const isKnownRootFolder = knownRootFolders.includes(rootFolderPath)
+  const rootFolderListId = `root-folders-${kind}`
 
   function invalidate() {
     void queryClient.invalidateQueries({ queryKey: ['instance-profiles', kind] })
@@ -122,6 +132,37 @@ export function InstanceProfileFormDialog({
             />
           </div>
 
+          <div className="space-y-2">
+            <Label>Root folder</Label>
+            <Input
+              list={rootFolderListId}
+              placeholder="/data/movies"
+              value={rootFolderPath}
+              onChange={(event) => setRootFolderPath(event.target.value)}
+            />
+            {catalogData ? (
+              <datalist id={rootFolderListId}>
+                {catalogData.rootFolders.map((folder) => (
+                  <option key={folder.path} value={folder.path} />
+                ))}
+              </datalist>
+            ) : null}
+            {rootFolderPath !== '' && catalogData ? (
+              isKnownRootFolder ? (
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <CheckCircle2 className="size-3.5 text-primary" />
+                  Known root folder on this {SERVARR_LABEL[kind]} instance.
+                </p>
+              ) : (
+                <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-500">
+                  <AlertTriangle className="size-3.5" />
+                  Not one of {SERVARR_LABEL[kind]}&apos;s configured root folders — make sure it
+                  exists there before saving.
+                </p>
+              )
+            ) : null}
+          </div>
+
           {catalog.isLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="size-4 animate-spin" />
@@ -135,21 +176,6 @@ export function InstanceProfileFormDialog({
 
           {catalogData ? (
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Root folder</Label>
-                <Select value={rootFolderPath} onValueChange={setRootFolderPath}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a root folder" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {catalogData.rootFolders.map((folder) => (
-                      <SelectItem key={folder.path} value={folder.path}>
-                        {folder.path}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="space-y-2">
                 <Label>Quality profile</Label>
                 <Select
