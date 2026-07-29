@@ -56,7 +56,7 @@ export function MergedRecordCard<T extends { id?: number }>({
 }) {
   return (
     <Card>
-      <CardHeader className="flex-row items-center gap-3 space-y-0">
+      <CardHeader className="flex flex-row flex-wrap items-center gap-3 space-y-0">
         <div className="min-w-0 flex-1">
           <CardTitle className="flex items-center gap-2">
             {merged.name}
@@ -94,13 +94,15 @@ export function MergedRecordCard<T extends { id?: number }>({
 
         {!demerged ? (
           <>
-            <Button variant="ghost" size="icon" onClick={onEditGroup} aria-label={`Edit ${merged.name}`}>
+            <Button variant="ghost" size="sm" onClick={onEditGroup}>
               <Pencil className="size-4" />
+              Edit
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label={`Delete ${merged.name}`}>
+                <Button variant="ghost" size="sm">
                   <Trash2 className="size-4" />
+                  Delete
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -139,23 +141,16 @@ export function MergedRecordCard<T extends { id?: number }>({
                   {renderInstanceStatus(record)}
                 </div>
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onEditInstance(kind, record)}
-                  aria-label={`Edit on ${kindMeta[kind].label}`}
-                >
+                <Button variant="ghost" size="sm" onClick={() => onEditInstance(kind, record)}>
                   <Pencil className="size-4" />
+                  Edit
                 </Button>
 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Delete on ${kindMeta[kind].label}`}
-                    >
+                    <Button variant="ghost" size="sm">
                       <Trash2 className="size-4" />
+                      Delete
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>

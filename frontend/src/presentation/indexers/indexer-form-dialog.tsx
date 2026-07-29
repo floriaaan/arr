@@ -7,6 +7,7 @@ import { useCreateIndexer } from '#application/settings/create-indexer.mutation'
 import { useUpdateIndexer } from '#application/settings/update-indexer.mutation'
 import { useTestIndexer } from '#application/settings/test-indexer.mutation'
 import { diffFields, applyDiff } from '#domain/settings/diff-servarr-record'
+import { resolveFieldsTemplate } from '#domain/settings/resolve-template'
 import {
   Dialog,
   DialogContent,
@@ -115,7 +116,7 @@ export function IndexerFormDialog({
         const result = await updateMutation.mutateAsync({
           kind: mode.kind,
           id: mode.record.id!,
-          payload: record,
+          payload: { ...record, fields: resolveFieldsTemplate(record.fields, mode.kind) },
         })
         if (!result.ok) {
           toast.error(`${kindMeta[mode.kind].label}: ${result.error.message}`)
@@ -139,10 +140,12 @@ export function IndexerFormDialog({
           if (existing) {
             const diff = diffFields(reference, record)
             const applied = applyDiff(existing, diff)
-            const result = await updateMutation.mutateAsync({ kind, id: existing.id!, payload: applied })
+            const payload = { ...applied, fields: resolveFieldsTemplate(applied.fields, kind) }
+            const result = await updateMutation.mutateAsync({ kind, id: existing.id!, payload })
             return { kind, result }
           }
-          const result = await createMutation.mutateAsync({ kind, payload: record })
+          const payload = { ...record, fields: resolveFieldsTemplate(record.fields, kind) }
+          const result = await createMutation.mutateAsync({ kind, payload })
           return { kind, result }
         }),
       )
@@ -170,7 +173,8 @@ export function IndexerFormDialog({
     if (kinds.length === 0) return toast.error('Select at least one instance to test against.')
 
     for (const kind of kinds) {
-      const result = await testMutation.mutateAsync({ kind, payload: record })
+      const payload = { ...record, fields: resolveFieldsTemplate(record.fields, kind) }
+      const result = await testMutation.mutateAsync({ kind, payload })
       if (result.ok) toast.success(`${kindMeta[kind].label}: connection OK.`)
       else toast.error(`${kindMeta[kind].label}: ${result.error.message}`)
     }
@@ -178,15 +182,15 @@ export function IndexerFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="flex max-h-[85vh] flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             Creates or edits a real indexer on the target *arr instance(s).
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
           {mode.type === 'add' && !record ? (
             schema.isLoading ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -228,6 +232,14 @@ export function IndexerFormDialog({
                 onChange={(fields) => setRecord({ ...record, fields })}
               />
 
+              <p className="text-xs text-muted-foreground">
+                Tip: use <code className="rounded bg-muted px-1 py-0.5">{'{{arr}}'}</code> in a
+                text field (e.g. categories) to insert the target instance automatically —
+                resolves to <code className="rounded bg-muted px-1 py-0.5">radarr</code>,{' '}
+                <code className="rounded bg-muted px-1 py-0.5">sonarr</code> or{' '}
+                <code className="rounded bg-muted px-1 py-0.5">lidarr</code> per instance.
+              </p>
+
               {showTargetPicker ? (
                 <div className="space-y-2">
                   <Label>Apply to</Label>
@@ -260,7 +272,7 @@ export function IndexerFormDialog({
           ) : null}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <Button variant="outline" onClick={handleTest} disabled={!record || testMutation.isPending}>
             {testMutation.isPending ? (
               <Loader2 className="size-4 animate-spin" />

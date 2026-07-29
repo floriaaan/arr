@@ -369,3 +369,45 @@ c'est ce qui garantit qu'un `category` par-instance non touché survit à une
   repli JSON brut non validé dans `DynamicFieldsForm`.
 - Rafraîchissement automatique/polling périodique — données rechargées à
   l'ouverture de page / invalidation manuelle de query après mutation.
+
+## Addendum — Layout des actions, dialogue scrollable, templating `{{arr}}`
+
+Trois ajustements de suivi, en réaction aux premiers essais visuels :
+
+1. **`CardHeader` en `flex` réel.** Le composant shadcn `CardHeader` a par
+   défaut `display: grid` (`grid auto-rows-min grid-rows-[auto_auto] …`,
+   cf. `presentation/ui/card.tsx`). Passer seulement `flex-row` en
+   `className` (comme le fait déjà `profiles-page.tsx`) ne change pas le
+   `display`, donc les boutons d'action finissaient sur une ligne grid
+   implicite sous l'en-tête au lieu d'être alignés à droite. `MergedRecordCard`
+   force `className="flex flex-row flex-wrap items-center gap-3 space-y-0"`
+   (le token `flex` explicite gagne sur `grid` via `tailwind-merge`) — les
+   actions (Demerge/Merge back, Edit, Delete, et les lignes par instance en
+   mode démergé) sont maintenant bien en ligne.
+2. **Labels texte sur Edit/Delete.** Ces boutons étaient icône seule
+   (`size="icon"`, juste un `aria-label`) ; ils portent maintenant un label
+   visible ("Edit", "Delete"), cohérent avec "Demerge"/"Merge back" qui en
+   avaient déjà un.
+3. **Dialogues de formulaire scrollables.** `DialogContent` n'a pas de
+   hauteur maximale par défaut — avec un template à beaucoup de champs
+   (indexers en particulier), le bouton Save pouvait sortir de l'écran.
+   `DownloadClientFormDialog`/`IndexerFormDialog` contraignent maintenant
+   `DialogContent` à `flex max-h-[85vh] flex-col`, avec le header et le
+   footer en `shrink-0` et le corps du formulaire (`DynamicFieldsForm` +
+   sélecteur d'instances) dans un conteneur `flex-1 overflow-y-auto` —
+   header et footer restent visibles, seul le corps défile. Pas de nouveau
+   composant `ScrollArea` ajouté : un simple `overflow-y-auto` borné suffit,
+   cohérent avec le reste de l'UI qui n'a pas ce composant.
+4. **Templating `{{arr}}` dans les champs.** Nouvelle fonction pure
+   `resolveFieldsTemplate(fields, kind)` (`domain/settings/resolve-template.ts`) :
+   remplace `{{arr}}` par le kind cible (`radarr`/`sonarr`/`lidarr`) dans les
+   valeurs texte (et tableaux de texte, pour les champs `tag`) de `fields[]`,
+   juste avant l'appel HTTP create/update/test — après le calcul du diff, pas
+   avant, pour que `diffFields` compare toujours les valeurs brutes saisies
+   par l'utilisateur. Volontairement **jamais appliqué à `name` /
+   `implementation` / `protocol`**, qui alimentent `computeMergeKey` : un nom
+   templaté romprait la fusion visuelle au prochain chargement. Cas d'usage
+   type : taper `{{arr}}-media` une seule fois dans le champ `category` du
+   formulaire groupé, et obtenir `radarr-media`/`sonarr-media`/`lidarr-media`
+   sur les instances respectives en une seule sauvegarde. Un texte d'aide
+   dans chaque dialogue documente la syntaxe.
