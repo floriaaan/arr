@@ -100,10 +100,15 @@ export class CreateInstanceProfile implements UseCase<
       minimumAvailability = result.value
     }
 
-    const remoteProfile = await this.qualityProfiles.create(instance.kind, instance.baseUrl, instance.apiKey, {
-      ...input.qualityProfile,
-      name: input.name,
-    } as QualityProfileRecord)
+    const remoteProfile = await this.qualityProfiles.create(
+      instance.kind,
+      instance.baseUrl,
+      instance.apiKey,
+      {
+        ...input.qualityProfile,
+        name: input.name,
+      } as QualityProfileRecord,
+    )
     if (!remoteProfile.ok) return remoteProfile
 
     const qualityProfileId = QualityProfileId.create(remoteProfile.value.id ?? 0)
