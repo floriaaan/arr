@@ -25,6 +25,8 @@ import {
 } from './instance-profile.validator.js'
 import { testOidcValidator, saveOidcValidator } from './oidc.validator.js'
 import type { ServarrKind } from '#domain/settings/servarr-kind.vo'
+import type { InstanceProfileRepository } from '#domain/settings/interfaces/instance-profile-repository.interface'
+import type { ServarrInstanceRepository } from '#domain/settings/interfaces/servarr-instance-repository.interface'
 
 export default class SettingsController {
   async listInstances(ctx: HttpContext) {
@@ -186,12 +188,19 @@ export default class SettingsController {
   }
 
   async updateSavedProfile(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
     const id = ctx.params.id as string
     const payload = await ctx.request.validateUsing(updateInstanceProfileValidator)
 
     const profileRepository = await app.container.make('settings.instanceProfileRepository')
     const instanceRepository = await app.container.make('settings.instanceRepository')
     const qualityProfileManager = await app.container.make('settings.qualityProfileManager')
+
+    const scoped = await this.requireProfileForKind(profileRepository, instanceRepository, kind, id)
+    if (!scoped.ok) {
+      const { status, body } = serializeError(scoped.error)
+      return ctx.response.status(status).send(body)
+    }
 
     const result = await new UpdateInstanceProfile(
       profileRepository,
@@ -207,10 +216,17 @@ export default class SettingsController {
   }
 
   async deleteSavedProfile(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
     const id = ctx.params.id as string
     const profileRepository = await app.container.make('settings.instanceProfileRepository')
     const instanceRepository = await app.container.make('settings.instanceRepository')
     const qualityProfileManager = await app.container.make('settings.qualityProfileManager')
+
+    const scoped = await this.requireProfileForKind(profileRepository, instanceRepository, kind, id)
+    if (!scoped.ok) {
+      const { status, body } = serializeError(scoped.error)
+      return ctx.response.status(status).send(body)
+    }
 
     const result = await new DeleteInstanceProfile(
       profileRepository,
@@ -227,9 +243,16 @@ export default class SettingsController {
   }
 
   async setDefaultSavedProfile(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
     const id = ctx.params.id as string
     const profileRepository = await app.container.make('settings.instanceProfileRepository')
     const instanceRepository = await app.container.make('settings.instanceRepository')
+
+    const scoped = await this.requireProfileForKind(profileRepository, instanceRepository, kind, id)
+    if (!scoped.ok) {
+      const { status, body } = serializeError(scoped.error)
+      return ctx.response.status(status).send(body)
+    }
 
     const result = await new SetDefaultInstanceProfile(
       profileRepository,
@@ -243,6 +266,28 @@ export default class SettingsController {
     }
 
     return ctx.response.json({ profile: toInstanceProfileDto(result.value) })
+  }
+
+  /**
+   * Routes are scoped under `/instances/:kind/...` — reject an `:id` that
+   * resolves to a profile of a different instance/kind rather than silently
+   * acting on it.
+   */
+  private async requireProfileForKind(
+    profileRepository: InstanceProfileRepository,
+    instanceRepository: ServarrInstanceRepository,
+    kind: ServarrKind,
+    id: string,
+  ): Promise<{ ok: true } | { ok: false; error: 'instance_not_found' | 'profile_not_found' }> {
+    const instance = await instanceRepository.findByKind(kind)
+    if (!instance) return { ok: false, error: 'instance_not_found' }
+
+    const profile = await profileRepository.findById(id)
+    if (!profile || profile.instanceId !== instance.id) {
+      return { ok: false, error: 'profile_not_found' }
+    }
+
+    return { ok: true }
   }
 
   async listQualityProfiles(ctx: HttpContext) {

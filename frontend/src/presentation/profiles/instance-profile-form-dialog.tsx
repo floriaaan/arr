@@ -98,7 +98,11 @@ export function InstanceProfileFormDialog({
   const catalogData = catalog.data?.ok ? catalog.data.value : null
   const pending = createProfile.isPending || updateProfile.isPending
   const canSave =
-    name.trim() !== '' && rootFolderPath !== '' && items !== null && cutoff !== undefined
+    name.trim() !== '' &&
+    rootFolderPath !== '' &&
+    items !== null &&
+    cutoff !== undefined &&
+    (kind !== 'lidarr' || metadataProfileId !== undefined)
 
   const knownRootFolders = catalogData?.rootFolders.map((folder) => folder.path) ?? []
   const isKnownRootFolder = knownRootFolders.includes(rootFolderPath)

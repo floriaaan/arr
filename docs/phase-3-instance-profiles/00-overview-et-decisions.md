@@ -155,7 +155,7 @@ catalogue live *arr existant.
 | `GET` | `/instances/:kind/saved-profiles` | Liste les profils enregistrés de l'instance |
 | `POST` | `/instances/:kind/saved-profiles` | Crée un profil |
 | `PUT` | `/instances/:kind/saved-profiles/:id` | Édite un profil |
-| `DELETE` | `/instances/:kind/saved-profiles/:id` | Supprime un profil (422 si défaut) |
+| `DELETE` | `/instances/:kind/saved-profiles/:id` | Supprime un profil (409 si défaut) |
 | `POST` | `/instances/:kind/saved-profiles/:id/default` | Définit ce profil comme défaut |
 
 DTO de réponse :
