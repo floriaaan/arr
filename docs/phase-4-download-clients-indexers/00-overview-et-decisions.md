@@ -21,12 +21,13 @@ folder, select de cutoff…) ; il doit être **générique**, piloté par le sch
 que le *arr renvoie pour l'implémentation choisie (mêmes objets `fields[]`
 que dans le "Add download client" natif de Radarr/Sonarr/Lidarr).
 
-Second point de la demande, inchangé : si le **même** download client (ou le
-même indexer) est branché sur plusieurs instances, il doit apparaître comme
-**une seule carte fusionnée** listant les instances concernées, plutôt qu'en
-double/triple. La fusion reste un regroupement **d'affichage** — chaque
-mutation (create/update/delete) continue de cibler un enregistrement précis
-sur une instance précise (cf. décision 4 plus bas).
+Second point de la demande : si le **même** download client (ou le même
+indexer) est branché sur plusieurs instances, il doit apparaître comme **une
+seule carte fusionnée** listant les instances concernées, plutôt qu'en
+double/triple — et la carte fusionnée est **fusionnée par défaut** aussi pour
+les actions (edit/delete/create s'appliquent au groupe entier en une seule
+opération), avec une bascule explicite pour "démerger" une carte et gérer ses
+instances indépendamment quand c'est nécessaire (cf. décision 4 plus bas).
 
 ## Portée
 
@@ -78,63 +79,78 @@ sur une instance précise (cf. décision 4 plus bas).
    dynamiques), isolée dans une fonction pure `computeMergeKey` testée
    indépendamment de l'UI.
 
-4. **Toute mutation cible une seule instance à la fois — pas d'édition en
-   masse propagée aux autres instances du groupe fusionné.** Une carte
-   fusionnée affiche une ligne par instance (comme `ProfileRow` dans
-   `profiles-page.tsx`), chacune avec ses propres actions **Edit**/**Delete**
-   qui n'agissent que sur l'enregistrement de cette instance précise
-   (identifié par son `id` distant). Modifier la ligne "Radarr" d'une carte
-   qBittorrent fusionnée ne touche pas l'enregistrement Sonarr. Raison : les
-   trois enregistrements ne sont *pas garantis identiques* au-delà de la clé
-   de fusion (ex. `category` diffère typiquement entre Radarr et Sonarr même
-   pour "le même" client physique) — une propagation automatique risquerait
-   d'écraser une configuration volontairement différente. Ce choix est
-   documenté explicitement pour arbitrage : si l'usage réel montre que
-   l'édition groupée serait plus pratique, elle pourra être ajoutée en phase
-   suivante sans changer le modèle de fusion (affichage) ni les endpoints
-   (déjà par-instance).
+4. **Fusionné par défaut : édition/suppression/création agissent sur le
+   groupe entier, avec une bascule "Demerge" pour repasser en gestion
+   par instance.** Une carte fusionnée est traitée comme une seule entité
+   par défaut :
+   - **Edit** ouvre **un seul formulaire**, pré-rempli à partir de
+     l'enregistrement d'une instance de référence du groupe (la première
+     configurée dans l'ordre radarr → sonarr → lidarr). Des cases à cocher —
+     une par instance **configurée** (pas seulement celles déjà dans le
+     groupe), toutes pré-cochées si déjà présentes dans le groupe —
+     permettent de choisir où appliquer l'enregistrement. À la sauvegarde,
+     seuls les champs **effectivement modifiés** par l'utilisateur (diff
+     entre le formulaire et le snapshot de l'instance de référence) sont
+     appliqués, par-dessus l'enregistrement propre de **chaque** instance
+     cochée : un champ non touché (ex. `category`, souvent différente entre
+     Radarr et Sonarr pour "le même" client) reste tel quel par instance,
+     seul un champ explicitement changé (ex. `host`) est propagé identique
+     partout. Cocher une instance qui n'a pas encore ce client/indexer
+     déclenche une **création** dessus (avec les valeurs du formulaire),
+     cocher une instance déjà dans le groupe déclenche une **mise à jour**
+     diffée comme décrit — un seul formulaire couvre donc aussi bien
+     l'édition que l'ajout aux instances manquantes. Chaque instance cochée
+     reçoit un appel HTTP indépendant ; succès/échec rapportés par instance
+     (toasts individuels), un échec sur une instance n'empêche pas les
+     autres de réussir.
+   - **Delete** sur la carte fusionnée supprime l'enregistrement sur toutes
+     les instances du groupe par défaut (confirmation nommant chaque
+     instance affectée), avec les mêmes cases à décocher pour exclure une
+     instance de la suppression.
+   - **Demerge** : un bouton sur la carte fait basculer son affichage —
+     elle se scinde en une ligne par instance (comme `ProfileRow` dans
+     `profiles-page.tsx`), chacune avec ses propres actions Edit/Delete
+     strictement indépendantes (n'affecte que cette instance). Bascule
+     purement côté client (état de composant, ensemble de `mergeKey`
+     "démergées" pour la session de navigation) — **pas persistée
+     côté backend**, pas de nouvelle table : au rechargement de la page, le
+     regroupement est recalculé depuis `computeMergeKey` et la carte
+     réapparaît fusionnée par défaut, jusqu'à ce que l'utilisateur
+     redémerge. C'est un simple mode d'affichage alternatif pour gérer
+     ponctuellement une instance isolément, pas une exclusion permanente.
+   - **Création depuis zéro** ("Add download client"/"Add indexer") suit le
+     même modèle : cases à cocher pré-cochées pour **toutes** les instances
+     configurées, un seul formulaire, un `POST` indépendant par instance
+     cochée. Décocher toutes sauf une revient à créer sur une seule
+     instance (équivalent de l'ancien mode "démergé" à la création).
 
-5. **"Cloner vers une autre instance" comme pont entre la fusion visuelle et
-   la création.** Sur une carte fusionnée où toutes les instances configurées
-   n'ont pas (encore) ce client/indexer, un bouton **Clone to
-   &lt;Kind&gt;** pré-remplit le formulaire de création avec les valeurs d'une
-   instance existante du groupe (implémentation + champs), sur l'instance
-   manquante — l'utilisateur ajuste (ex. `category`) puis soumet une création
-   normale sur cette instance. Ce n'est jamais un appel réseau multi-instance
-   implicite : juste un pré-remplissage de formulaire, la création reste un
-   `POST` unique explicite.
-
-6. **Test de connexion avant sauvegarde, mêmes conventions que
+5. **Test de connexion avant sauvegarde, mêmes conventions que
    `test-connection` d'instance.** `POST .../downloadclient/test` (et
    `.../indexer/test`) exposé comme port `test(kind, baseUrl, apiKey,
-   payload)`, bouton "Test" dans le dialogue de formulaire. Les échecs de
-   validation renvoyés par le *arr (tableau `{propertyName, errorMessage}`)
-   sont condensés en un seul message d'erreur (même simplification que
+   payload)`, bouton "Test" dans le dialogue de formulaire — testé une fois
+   par instance cochée. Les échecs de validation renvoyés par le *arr
+   (tableau `{propertyName, errorMessage}`) sont condensés en un seul message
+   d'erreur (même simplification que
    `classifyConnectionError`/`testInstanceConnection` existants) plutôt que
    d'introduire un nouveau type d'union d'erreurs de validation par champ —
    limitation MVP assumée.
 
-7. **Suppression par instance, confirmation nommant l'instance ciblée.**
-   `DELETE .../downloadclient/:id` (ou `.../indexer/:id`) sur l'instance de
-   la ligne cliquée uniquement, `AlertDialog` de confirmation précisant quelle
-   instance est affectée (pas "supprimer partout").
-
-8. **Toujours pas de vrai multi-instance par kind (ADR-0006 inchangée).**
+6. **Toujours pas de vrai multi-instance par kind (ADR-0006 inchangée).**
    La fusion regroupe au plus 3 enregistrements (un par kind configuré),
    jamais plusieurs instances du même kind.
 
-9. **Deux pages séparées, pas un écran à onglets.** Cohérent avec le fait que
+7. **Deux pages séparées, pas un écran à onglets.** Cohérent avec le fait que
    ce sont deux ressources *arr distinctes (comme "Indexers" et "Download
    Clients" sont deux onglets séparés dans Radarr/Sonarr/Lidarr eux-mêmes) et
    avec le composant `DynamicFieldsForm` partagé mais instancié séparément
    par page. Deux entrées de nav admin-only, à côté de "Profiles".
 
-10. **Aucun nouvel appel réseau ajouté au socle.** Réutilisation telle quelle
-    de `BaseServarrClient`, `apiPathPrefix(kind)`, `classifyConnectionError`.
-    Payloads *arr en passthrough (`Record<string, unknown> & {...champs
-    connus}`), comme `QualityProfileRecord`.
+8. **Aucun nouvel appel réseau ajouté au socle.** Réutilisation telle quelle
+   de `BaseServarrClient`, `apiPathPrefix(kind)`, `classifyConnectionError`.
+   Payloads *arr en passthrough (`Record<string, unknown> & {...champs
+   connus}`), comme `QualityProfileRecord`.
 
-11. **Pas de masquage additionnel des champs sensibles.** Comme pour les
+9. **Pas de masquage additionnel des champs sensibles.** Comme pour les
     quality profiles, les valeurs de `fields[]` (y compris mots de
     passe/API keys) transitent telles que le *arr les expose, derrière
     `adminOnly()` déjà en place sur tout `/api/settings`.
@@ -260,8 +276,22 @@ function mergeByInstance<T extends { implementation: string; protocol: string; n
 ```
 
 Fonction générique réutilisée par les deux pages. Une carte = un
-`MergedRecord`, une ligne par entrée de `perInstance` (édition/suppression
-individuelles, cf. décision 4).
+`MergedRecord`. Une fonction complémentaire calcule le diff utilisé par
+l'édition groupée (décision 4) :
+
+```ts
+// domain/settings/diff-servarr-record.ts
+/** Champs présents dans `edited` dont la valeur diffère de `reference`. */
+function diffFields<T extends { fields: ServarrField[] }>(reference: T, edited: T): Partial<T>
+
+/** Applique le diff par-dessus l'enregistrement propre de chaque instance ciblée. */
+function applyDiff<T extends { fields: ServarrField[] }>(target: T, diff: Partial<T>): T
+```
+
+`applyDiff` fusionne `fields[]` par `name` (remplace la valeur des champs
+présents dans `diff.fields`, laisse les autres champs de `target` intacts) —
+c'est ce qui garantit qu'un `category` par-instance non touché survit à une
+édition groupée qui ne change que `host`.
 
 ## Frontend
 
@@ -281,24 +311,38 @@ individuelles, cf. décision 4).
   `delete-download-client.mutation.ts`, `test-download-client.mutation.ts` —
   pattern identique aux mutations de `instance-profiles`. Même liste côté
   `indexers.query.ts` / mutations `*-indexer.mutation.ts`.
+- `domain/settings/diff-servarr-record.ts` — `diffFields`/`applyDiff` (cf.
+  ci-dessus), purs, testés indépendamment de l'UI.
 - `presentation/shared/dynamic-fields-form.tsx` — **composant partagé**,
   rend un contrôle par `ServarrField` selon son `type`, gère l'état
   `fields[]` complet (tableau, pas d'objet à plat) ; utilisé par les deux
   dialogues ci-dessous.
+- `presentation/shared/merged-record-card.tsx` — **composant partagé** par
+  les deux pages, deux modes d'affichage pour un `MergedRecord` :
+  - **Fusionné (par défaut)** : un en-tête (nom, badge implémentation, icône
+    protocole) + un badge par instance présente (icône Radarr/Sonarr/Lidarr,
+    `SERVARR_META`) + actions **Edit**/**Delete** groupées ; un lien
+    "Demerge" bascule vers le mode suivant.
+  - **Démergé** : la carte se scinde en une ligne par instance (mirror de
+    `ProfileRow`), actions Edit/Delete strictement par instance ; un lien
+    "Merge back" repasse en mode fusionné (recalcul immédiat, pas d'appel
+    réseau).
+  - État du mode (fusionné/démergé) tenu par `mergeKey` dans un `Set` au
+    niveau de la page — perdu au reload (non persisté, cf. décision 4).
+  - Le dialogue Edit/Add (fusionné) affiche une case à cocher par instance
+    **configurée** (pas seulement celles du groupe), pré-remplit le
+    formulaire depuis l'instance de référence, calcule `diffFields` à la
+    sauvegarde et appelle `createDownloadClient`/`updateDownloadClient` (ou
+    `Indexer`) par instance cochée selon qu'elle est déjà dans le groupe ou
+    non.
 - `presentation/download-clients/download-clients-page.tsx` : récupère
   `useInstances()`, appelle `useDownloadClients(kind)` par kind configuré,
-  fusionne via `mergeByInstance`, une carte par entrée fusionnée avec :
-  - nom + badge implémentation + icône protocole (torrent/usenet) ;
-  - une ligne par instance présente : badge instance (icône
-    Radarr/Sonarr/Lidarr, `SERVARR_META`), `enable`/`priority` de cette
-    instance, actions Edit/Delete (mirror de `ProfileRow`) ;
-  - bouton **Clone to &lt;Kind manquant&gt;** si le groupe ne couvre pas les
-    3 instances configurées ;
-  - bouton global "Add download client" (choix implémentation via
-    `getDownloadClientSchema(kind)` d'une instance cible, puis
-    `DynamicFieldsForm`).
-  - Instance non configurée → `UnconfiguredInstanceCard` (comme
-    `/profiles`), lien vers `/settings`.
+  fusionne via `mergeByInstance`, rend un `MergedRecordCard` par entrée
+  fusionnée, plus un bouton global "Add download client" (choix
+  implémentation via `getDownloadClientSchema(kind)` d'une instance de
+  référence, puis `DynamicFieldsForm` + cases à cocher toutes les instances
+  configurées). Instance non configurée → `UnconfiguredInstanceCard` (comme
+  `/profiles`), lien vers `/settings`.
 - `presentation/indexers/indexers-page.tsx` : même structure, avec
   `enableRss`/`enableAutomaticSearch`/`enableInteractiveSearch` affichés par
   instance au lieu de `enable`.
@@ -311,9 +355,9 @@ individuelles, cf. décision 4).
 
 ## Hors périmètre / non traité par cette phase
 
-- Édition/suppression groupée propagée à toutes les instances d'une carte
-  fusionnée en un clic (cf. décision 4) — chaque mutation reste par instance ;
-  seul le pré-remplissage "Clone" existe comme raccourci.
+- Persistance du mode "démergé" au-delà de la session de navigation (pas de
+  colonne/table pour retenir qu'un utilisateur a choisi de démerger telle
+  carte — recalculé fusionné par défaut à chaque chargement de page).
 - Vrai multi-instance par kind (toujours bloqué par `unique(kind)` sur
   `servarr_instances`, ADR-0006).
 - Matching de fusion basé sur les champs de connexion (`host`/`baseUrl`
