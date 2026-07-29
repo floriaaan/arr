@@ -104,6 +104,22 @@ export class SaveInstance implements UseCase<
     )
     if (!configured.ok) return configured
 
+    if (input.enabled) {
+      const health = await this.tester.test(input.kind, baseUrl.value, apiKey.value)
+      if (!health.ok) return health
+
+      instance.recordHealthCheck(health.value)
+      const enabled = instance.enable()
+      if (!enabled.ok) return enabled
+    } else {
+      instance.disable()
+    }
+
+    // Instance must exist in `servarr_instances` before `instance_profiles`
+    // can reference it — the FK would otherwise reject the auto-created
+    // "Default" profile below for a brand-new instance.
+    await this.repository.save(instance)
+
     const existingProfiles = await this.instanceProfiles.listByInstance(instance.id)
     if (existingProfiles.length === 0) {
       const defaultProfile = InstanceProfile.create(
@@ -123,18 +139,6 @@ export class SaveInstance implements UseCase<
       await this.instanceProfiles.save(defaultProfile.value)
     }
 
-    if (input.enabled) {
-      const health = await this.tester.test(input.kind, baseUrl.value, apiKey.value)
-      if (!health.ok) return health
-
-      instance.recordHealthCheck(health.value)
-      const enabled = instance.enable()
-      if (!enabled.ok) return enabled
-    } else {
-      instance.disable()
-    }
-
-    await this.repository.save(instance)
     return Result.ok(instance)
   }
 }
