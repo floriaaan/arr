@@ -17,6 +17,7 @@ test.group('service provider bindings', () => {
       'settings.onboardingStateRepository',
       'settings.connectionTester',
       'settings.profileCatalog',
+      'settings.qualityProfileManager',
       'settings.oidcDiscovery',
       'settings.authSettingsProvider',
       'servarr.registry',

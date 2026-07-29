@@ -17,6 +17,7 @@ import type { OnboardingStatus } from '#domain/settings/onboarding-state'
 import type { ServarrKind, ServarrInstanceDto } from '#domain/settings/servarr-instance'
 import type { InstanceDraft } from '#domain/settings/instance-draft'
 import type { InstanceProfileDto, InstanceProfileDraft } from '#domain/settings/instance-profile'
+import type { QualityProfileRecord } from '#domain/settings/quality-profile-record'
 import type { MediaKind } from '#domain/catalog/media-kind'
 import type { ExternalId, ExternalIdScheme } from '#domain/catalog/external-id'
 import type { MediaItem } from '#domain/catalog/media-item'
@@ -79,6 +80,27 @@ const FAKE_QUALITY_PROFILES: Record<ServarrKind, { id: number; name: string }[]>
   ],
 }
 
+/**
+ * Simulates real *arr Quality Profiles: profile at index `i` cumulatively
+ * allows every quality up to and including its own (typical "HD-1080p"
+ * style profile), with a cutoff on itself — good enough to exercise the
+ * checkboxes/cutoff select without a real instance.
+ */
+function buildFakeQualityProfiles(kind: ServarrKind): QualityProfileRecord[] {
+  const qualities = FAKE_QUALITY_PROFILES[kind]
+  return qualities.map((profile, index) => ({
+    id: profile.id,
+    name: profile.name,
+    upgradeAllowed: index < qualities.length - 1,
+    cutoff: profile.id,
+    items: qualities.map((quality, qualityIndex) => ({
+      id: quality.id,
+      allowed: qualityIndex <= index,
+      quality: { id: quality.id, name: quality.name },
+    })),
+  }))
+}
+
 const FAKE_METADATA_PROFILES = [
   { id: 1, name: 'Standard' },
   { id: 2, name: 'Only Studio Albums' },
@@ -100,6 +122,8 @@ interface PersistedOnboardingState {
   ssoConfig: (OidcConfigInput & { claimsMapping?: Record<string, string> }) | null
   /** Optional: absent in state persisted before this field existed. */
   savedProfiles?: [ServarrKind, InstanceProfileDto[]][]
+  /** Optional: absent in state persisted before this field existed. */
+  qualityProfiles?: [ServarrKind, QualityProfileRecord[]][]
 }
 
 /**
@@ -116,6 +140,7 @@ export class FakeArrConnector implements ArrConnector {
   private onboardingStatus: OnboardingStatus = 'not_started'
   private readonly instances = new Map<ServarrKind, ServarrInstanceDto & { apiKey: string }>()
   private readonly savedProfiles = new Map<ServarrKind, InstanceProfileDto[]>()
+  private readonly qualityProfiles = new Map<ServarrKind, QualityProfileRecord[]>()
   private ssoConfig: (OidcConfigInput & { claimsMapping?: Record<string, string> }) | null = null
   private readonly requests = new Map<string, MediaRequest>()
   private readonly removedLibraryItems = new Set<string>()
@@ -167,6 +192,9 @@ export class FakeArrConnector implements ArrConnector {
       for (const [kind, instance] of persisted.instances) this.instances.set(kind, instance)
       this.ssoConfig = persisted.ssoConfig
       for (const [kind, profiles] of persisted.savedProfiles ?? []) this.savedProfiles.set(kind, profiles)
+      for (const [kind, profiles] of persisted.qualityProfiles ?? []) {
+        this.qualityProfiles.set(kind, profiles)
+      }
     } catch {
       window.localStorage.removeItem(ONBOARDING_STORAGE_KEY)
     }
@@ -180,6 +208,7 @@ export class FakeArrConnector implements ArrConnector {
       instances: [...this.instances.entries()],
       ssoConfig: this.ssoConfig,
       savedProfiles: [...this.savedProfiles.entries()],
+      qualityProfiles: [...this.qualityProfiles.entries()],
     }
     window.localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(persisted))
   }
@@ -713,6 +742,68 @@ export class FakeArrConnector implements ArrConnector {
     this.persistOnboardingState()
 
     return { ok: true as const, value: updatedTarget }
+  }
+
+  private getQualityProfilesFor(kind: ServarrKind): QualityProfileRecord[] {
+    const existing = this.qualityProfiles.get(kind)
+    if (existing) return existing
+    const seeded = buildFakeQualityProfiles(kind)
+    this.qualityProfiles.set(kind, seeded)
+    return seeded
+  }
+
+  async listQualityProfiles(kind: ServarrKind) {
+    return { ok: true as const, value: this.getQualityProfilesFor(kind) }
+  }
+
+  async getQualityProfileSchema(kind: ServarrKind) {
+    const qualities = FAKE_QUALITY_PROFILES[kind]
+    return {
+      ok: true as const,
+      value: {
+        name: '',
+        upgradeAllowed: false,
+        cutoff: qualities[0]?.id ?? 1,
+        items: qualities.map((quality) => ({
+          id: quality.id,
+          allowed: false,
+          quality: { id: quality.id, name: quality.name },
+        })),
+      } satisfies QualityProfileRecord,
+    }
+  }
+
+  async createQualityProfile(kind: ServarrKind, payload: QualityProfileRecord) {
+    const existing = this.getQualityProfilesFor(kind)
+    const nextId = Math.max(0, ...existing.map((profile) => profile.id ?? 0)) + 1
+    const created: QualityProfileRecord = { ...payload, id: nextId }
+    this.qualityProfiles.set(kind, [...existing, created])
+    this.persistOnboardingState()
+    return { ok: true as const, value: created }
+  }
+
+  async updateQualityProfile(kind: ServarrKind, id: number, payload: QualityProfileRecord) {
+    const existing = this.getQualityProfilesFor(kind)
+    if (!existing.some((profile) => profile.id === id)) {
+      return { ok: false as const, error: notFound('Quality profile not found.') }
+    }
+    const updated: QualityProfileRecord = { ...payload, id }
+    this.qualityProfiles.set(
+      kind,
+      existing.map((profile) => (profile.id === id ? updated : profile)),
+    )
+    this.persistOnboardingState()
+    return { ok: true as const, value: updated }
+  }
+
+  async deleteQualityProfile(kind: ServarrKind, id: number) {
+    const existing = this.getQualityProfilesFor(kind)
+    this.qualityProfiles.set(
+      kind,
+      existing.filter((profile) => profile.id !== id),
+    )
+    this.persistOnboardingState()
+    return { ok: true as const, value: undefined }
   }
 }
 

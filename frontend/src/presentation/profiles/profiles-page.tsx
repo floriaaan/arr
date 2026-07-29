@@ -9,6 +9,7 @@ import { useInstanceCatalog } from '#application/settings/instance-catalog.query
 import { useDeleteInstanceProfile } from '#application/settings/delete-instance-profile.mutation'
 import { useSetDefaultInstanceProfile } from '#application/settings/set-default-instance-profile.mutation'
 import { InstanceProfileFormDialog } from './instance-profile-form-dialog'
+import { QualityProfilesSection } from './quality-profiles-section'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '#presentation/ui/card'
 import { Badge } from '#presentation/ui/badge'
 import { Button } from '#presentation/ui/button'
@@ -241,7 +242,10 @@ export function ProfilesPage() {
       {SERVARR_KINDS.map((kind) => {
         const instance = instances.data?.find((candidate) => candidate.kind === kind)
         return instance ? (
-          <InstanceProfilesSection key={kind} kind={kind} instance={instance} />
+          <div key={kind} className="space-y-4">
+            <InstanceProfilesSection kind={kind} instance={instance} />
+            <QualityProfilesSection kind={kind} />
+          </div>
         ) : (
           <UnconfiguredInstanceCard key={kind} kind={kind} />
         )

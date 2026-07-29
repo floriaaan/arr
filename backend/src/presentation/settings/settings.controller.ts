@@ -10,6 +10,11 @@ import { CreateInstanceProfile } from '#application/settings/create-instance-pro
 import { UpdateInstanceProfile } from '#application/settings/update-instance-profile.use-case'
 import { SetDefaultInstanceProfile } from '#application/settings/set-default-instance-profile.use-case'
 import { DeleteInstanceProfile } from '#application/settings/delete-instance-profile.use-case'
+import { ListQualityProfiles } from '#application/settings/list-quality-profiles.use-case'
+import { GetQualityProfileSchema } from '#application/settings/get-quality-profile-schema.use-case'
+import { CreateQualityProfile } from '#application/settings/create-quality-profile.use-case'
+import { UpdateQualityProfile } from '#application/settings/update-quality-profile.use-case'
+import { DeleteQualityProfile } from '#application/settings/delete-quality-profile.use-case'
 import { TestOidcDiscovery } from '#application/settings/test-oidc-discovery.use-case'
 import { SaveAuthSettings } from '#application/settings/save-auth-settings.use-case'
 import { GetEffectiveAuthSettings } from '#application/settings/get-effective-auth-settings.use-case'
@@ -21,8 +26,10 @@ import {
   createInstanceProfileValidator,
   updateInstanceProfileValidator,
 } from './instance-profile.validator.js'
+import { qualityProfilePayloadValidator } from './quality-profile.validator.js'
 import { testOidcValidator, saveOidcValidator } from './oidc.validator.js'
 import type { ServarrKind } from '#domain/settings/servarr-kind.vo'
+import type { QualityProfileRecord } from '#domain/settings/interfaces/servarr-quality-profile-manager.interface'
 
 export default class SettingsController {
   async listInstances(ctx: HttpContext) {
@@ -231,6 +238,102 @@ export default class SettingsController {
     }
 
     return ctx.response.json({ profile: toInstanceProfileDto(result.value) })
+  }
+
+  async listQualityProfiles(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const instanceRepository = await app.container.make('settings.instanceRepository')
+    const qualityProfileManager = await app.container.make('settings.qualityProfileManager')
+
+    const result = await new ListQualityProfiles(instanceRepository, qualityProfileManager).execute(
+      { kind },
+    )
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    return ctx.response.json({ qualityProfiles: result.value })
+  }
+
+  async qualityProfileSchema(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const instanceRepository = await app.container.make('settings.instanceRepository')
+    const qualityProfileManager = await app.container.make('settings.qualityProfileManager')
+
+    const result = await new GetQualityProfileSchema(
+      instanceRepository,
+      qualityProfileManager,
+    ).execute({ kind })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    return ctx.response.json({ qualityProfile: result.value })
+  }
+
+  async createQualityProfile(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const payload = (await ctx.request.validateUsing(
+      qualityProfilePayloadValidator,
+    )) as QualityProfileRecord
+
+    const instanceRepository = await app.container.make('settings.instanceRepository')
+    const qualityProfileManager = await app.container.make('settings.qualityProfileManager')
+
+    const result = await new CreateQualityProfile(
+      instanceRepository,
+      qualityProfileManager,
+    ).execute({ kind, payload })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    return ctx.response.json({ qualityProfile: result.value })
+  }
+
+  async updateQualityProfile(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const id = Number(ctx.params.id)
+    const payload = (await ctx.request.validateUsing(
+      qualityProfilePayloadValidator,
+    )) as QualityProfileRecord
+
+    const instanceRepository = await app.container.make('settings.instanceRepository')
+    const qualityProfileManager = await app.container.make('settings.qualityProfileManager')
+
+    const result = await new UpdateQualityProfile(
+      instanceRepository,
+      qualityProfileManager,
+    ).execute({ kind, id, payload })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    return ctx.response.json({ qualityProfile: result.value })
+  }
+
+  async deleteQualityProfile(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const id = Number(ctx.params.id)
+
+    const instanceRepository = await app.container.make('settings.instanceRepository')
+    const qualityProfileManager = await app.container.make('settings.qualityProfileManager')
+
+    const result = await new DeleteQualityProfile(
+      instanceRepository,
+      qualityProfileManager,
+    ).execute({ kind, id })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    ctx.response.status(204)
+    return ctx.response.send('')
   }
 
   async getSso(ctx: HttpContext) {

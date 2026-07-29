@@ -7,6 +7,7 @@ import type { OnboardingStatus } from '../settings/onboarding-state'
 import type { ServarrKind, ServarrInstanceDto } from '../settings/servarr-instance'
 import type { InstanceDraft } from '../settings/instance-draft'
 import type { InstanceProfileDto, InstanceProfileDraft } from '../settings/instance-profile'
+import type { QualityProfileRecord } from '../settings/quality-profile-record'
 import type { EffectiveAuthSettings } from '../settings/effective-auth-settings'
 import type { MediaKind } from '../catalog/media-kind'
 import type { ExternalId, ExternalIdScheme } from '../catalog/external-id'
@@ -130,6 +131,21 @@ export interface ArrConnector {
     kind: ServarrKind,
     id: string,
   ) => Promise<Result<InstanceProfileDto, ApiError>>
+
+  // settings — admin panel — live *arr Quality Profiles, CRUD pushed straight
+  // to the instance (no local table, cf. docs/phase-3-instance-profiles/01)
+  listQualityProfiles: (kind: ServarrKind) => Promise<Result<QualityProfileRecord[], ApiError>>
+  getQualityProfileSchema: (kind: ServarrKind) => Promise<Result<QualityProfileRecord, ApiError>>
+  createQualityProfile: (
+    kind: ServarrKind,
+    payload: QualityProfileRecord,
+  ) => Promise<Result<QualityProfileRecord, ApiError>>
+  updateQualityProfile: (
+    kind: ServarrKind,
+    id: number,
+    payload: QualityProfileRecord,
+  ) => Promise<Result<QualityProfileRecord, ApiError>>
+  deleteQualityProfile: (kind: ServarrKind, id: number) => Promise<Result<void, ApiError>>
 
   getSso: () => Promise<{
     issuerUrl: string

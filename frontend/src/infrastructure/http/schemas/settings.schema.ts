@@ -1,4 +1,34 @@
 import { z } from 'zod'
+import type { QualityProfileItem } from '#domain/settings/quality-profile-record'
+
+const qualityProfileItemSchema: z.ZodType<QualityProfileItem> = z.lazy(() =>
+  z
+    .object({
+      id: z.number().optional(),
+      name: z.string().optional(),
+      allowed: z.boolean(),
+      quality: z
+        .object({
+          id: z.number(),
+          name: z.string(),
+          source: z.string().optional(),
+          resolution: z.number().optional(),
+        })
+        .optional(),
+      items: z.array(qualityProfileItemSchema).optional(),
+    })
+    .passthrough(),
+)
+
+export const qualityProfileRecordSchema = z
+  .object({
+    id: z.number().optional(),
+    name: z.string(),
+    upgradeAllowed: z.boolean(),
+    cutoff: z.number(),
+    items: z.array(qualityProfileItemSchema),
+  })
+  .passthrough()
 
 export const onboardingStatusSchema = z.enum([
   'not_started',

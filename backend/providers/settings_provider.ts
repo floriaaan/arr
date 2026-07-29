@@ -5,6 +5,7 @@ import type { AuthSettingsRepository } from '#domain/settings/interfaces/auth-se
 import type { OnboardingStateRepository } from '#domain/settings/interfaces/onboarding-state-repository.interface'
 import type { ServarrConnectionTester } from '#domain/settings/interfaces/servarr-connection-tester.interface'
 import type { ServarrProfileCatalog } from '#domain/settings/interfaces/servarr-profile-catalog.interface'
+import type { ServarrQualityProfileManager } from '#domain/settings/interfaces/servarr-quality-profile-manager.interface'
 import type { OidcDiscovery } from '#domain/settings/interfaces/oidc-discovery.interface'
 import type { AuthSettingsProvider } from '#domain/settings/interfaces/auth-settings-provider.interface'
 import type { ServarrRegistry as ServarrRegistryType } from '#infrastructure/servarr/servarr-registry'
@@ -54,6 +55,12 @@ export default class SettingsProvider {
       return new HttpServarrProfileCatalog()
     })
 
+    this.app.container.singleton('settings.qualityProfileManager', async () => {
+      const { HttpServarrQualityProfileManager } =
+        await import('#infrastructure/servarr/quality-profile-manager')
+      return new HttpServarrQualityProfileManager()
+    })
+
     this.app.container.singleton('settings.oidcDiscovery', async () => {
       const { WellKnownOidcDiscovery } = await import('#infrastructure/auth/oidc-discovery.adapter')
       return new WellKnownOidcDiscovery()
@@ -82,6 +89,7 @@ declare module '@adonisjs/core/types' {
     'settings.onboardingStateRepository': OnboardingStateRepository
     'settings.connectionTester': ServarrConnectionTester
     'settings.profileCatalog': ServarrProfileCatalog
+    'settings.qualityProfileManager': ServarrQualityProfileManager
     'settings.oidcDiscovery': OidcDiscovery
     'settings.authSettingsProvider': AuthSettingsProvider
     'servarr.registry': ServarrRegistryType
