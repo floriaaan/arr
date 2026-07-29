@@ -13,6 +13,6 @@ export const qualityProfilesQuery = defineQuery<
   queryFn: (connector, kind) => connector.listQualityProfiles(kind),
 })
 
-export function useQualityProfiles(kind: ServarrKind) {
-  return useDomainQuery(qualityProfilesQuery, [kind])
+export function useQualityProfiles(kind: ServarrKind, enabled = true) {
+  return useDomainQuery(qualityProfilesQuery, [kind], { enabled })
 }

@@ -5,11 +5,10 @@ import { Link } from '@tanstack/react-router'
 import { Clapperboard, Tv, Music, Star, Pencil, Trash2, Plus, Gauge } from 'lucide-react'
 import { useInstances } from '#application/settings/instances.query'
 import { useInstanceProfiles } from '#application/settings/instance-profiles.query'
-import { useInstanceCatalog } from '#application/settings/instance-catalog.query'
+import { useQualityProfiles } from '#application/settings/quality-profiles.query'
 import { useDeleteInstanceProfile } from '#application/settings/delete-instance-profile.mutation'
 import { useSetDefaultInstanceProfile } from '#application/settings/set-default-instance-profile.mutation'
 import { InstanceProfileFormDialog } from './instance-profile-form-dialog'
-import { QualityProfilesSection } from './quality-profiles-section'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '#presentation/ui/card'
 import { Badge } from '#presentation/ui/badge'
 import { Button } from '#presentation/ui/button'
@@ -119,7 +118,8 @@ function ProfileRow({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete &quot;{profile.name}&quot;?</AlertDialogTitle>
             <AlertDialogDescription>
-              This preset will be removed. This cannot be undone.
+              This also deletes the matching Quality Profile on the {SERVARR_META[kind].label}
+              instance itself. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -157,11 +157,11 @@ function InstanceProfilesSection({
   const meta = SERVARR_META[kind]
   const Icon = meta.icon
   const profiles = useInstanceProfiles(kind)
-  const catalog = useInstanceCatalog(kind, true)
+  const qualityProfiles = useQualityProfiles(kind)
   const [dialogProfile, setDialogProfile] = useState<InstanceProfileDto | 'new' | null>(null)
 
   const qualityProfileNameById = new Map(
-    (catalog.data?.ok ? catalog.data.value.qualityProfiles : []).map((qualityProfile) => [
+    (qualityProfiles.data?.ok ? qualityProfiles.data.value : []).map((qualityProfile) => [
       qualityProfile.id,
       qualityProfile.name,
     ]),
@@ -242,10 +242,7 @@ export function ProfilesPage() {
       {SERVARR_KINDS.map((kind) => {
         const instance = instances.data?.find((candidate) => candidate.kind === kind)
         return instance ? (
-          <div key={kind} className="space-y-4">
-            <InstanceProfilesSection kind={kind} instance={instance} />
-            <QualityProfilesSection kind={kind} />
-          </div>
+          <InstanceProfilesSection key={kind} kind={kind} instance={instance} />
         ) : (
           <UnconfiguredInstanceCard key={kind} kind={kind} />
         )

@@ -46,15 +46,6 @@ router
       SettingsController,
       'qualityProfileSchema',
     ])
-    router.post('/instances/:kind/quality-profiles', [SettingsController, 'createQualityProfile'])
-    router.put('/instances/:kind/quality-profiles/:id', [
-      SettingsController,
-      'updateQualityProfile',
-    ])
-    router.delete('/instances/:kind/quality-profiles/:id', [
-      SettingsController,
-      'deleteQualityProfile',
-    ])
     router.get('/sso', [SettingsController, 'getSso'])
     router.put('/sso', [SettingsController, 'updateSso'])
     router.post('/sso/test', [SettingsController, 'testSso'])

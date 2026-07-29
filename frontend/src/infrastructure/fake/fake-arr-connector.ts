@@ -647,9 +647,17 @@ export class FakeArrConnector implements ArrConnector {
     return this.savedProfiles.get(kind) ?? []
   }
 
+  /** A profile and a Quality Profile are the same thing — creating one creates the other. */
   async createInstanceProfile(kind: ServarrKind, draft: InstanceProfileDraft) {
     const instance = this.instances.get(kind)
     if (!instance) return { ok: false as const, error: notFound('Instance not configured.') }
+
+    const remoteProfile = this.createFakeQualityProfile(kind, {
+      name: draft.name,
+      upgradeAllowed: draft.qualityProfile.upgradeAllowed,
+      cutoff: draft.qualityProfile.cutoff,
+      items: draft.qualityProfile.items,
+    })
 
     const existing = this.savedProfiles.get(kind) ?? []
     const isDefault = draft.setAsDefault === true || existing.length === 0
@@ -659,7 +667,7 @@ export class FakeArrConnector implements ArrConnector {
       instanceId: instance.id,
       name: draft.name,
       rootFolderPath: draft.rootFolderPath,
-      qualityProfileId: draft.qualityProfileId,
+      qualityProfileId: remoteProfile.id!,
       metadataProfileId: draft.metadataProfileId ?? null,
       languageProfileId: draft.languageProfileId ?? null,
       seriesType: draft.seriesType ?? null,
@@ -683,11 +691,17 @@ export class FakeArrConnector implements ArrConnector {
     const current = existing.find((profile) => profile.id === id)
     if (!current) return { ok: false as const, error: notFound('Profile not found.') }
 
+    this.updateFakeQualityProfile(kind, current.qualityProfileId, {
+      name: draft.name,
+      upgradeAllowed: draft.qualityProfile.upgradeAllowed,
+      cutoff: draft.qualityProfile.cutoff,
+      items: draft.qualityProfile.items,
+    })
+
     const updated: InstanceProfileDto = {
       ...current,
       name: draft.name,
       rootFolderPath: draft.rootFolderPath,
-      qualityProfileId: draft.qualityProfileId,
       metadataProfileId: draft.metadataProfileId ?? null,
       languageProfileId: draft.languageProfileId ?? null,
       seriesType: draft.seriesType ?? null,
@@ -719,6 +733,8 @@ export class FakeArrConnector implements ArrConnector {
         },
       }
     }
+
+    this.deleteFakeQualityProfile(kind, target.qualityProfileId)
 
     this.savedProfiles.set(
       kind,
@@ -773,37 +789,37 @@ export class FakeArrConnector implements ArrConnector {
     }
   }
 
-  async createQualityProfile(kind: ServarrKind, payload: QualityProfileRecord) {
+  private createFakeQualityProfile(
+    kind: ServarrKind,
+    payload: QualityProfileRecord,
+  ): QualityProfileRecord {
     const existing = this.getQualityProfilesFor(kind)
     const nextId = Math.max(0, ...existing.map((profile) => profile.id ?? 0)) + 1
     const created: QualityProfileRecord = { ...payload, id: nextId }
     this.qualityProfiles.set(kind, [...existing, created])
-    this.persistOnboardingState()
-    return { ok: true as const, value: created }
+    return created
   }
 
-  async updateQualityProfile(kind: ServarrKind, id: number, payload: QualityProfileRecord) {
+  private updateFakeQualityProfile(
+    kind: ServarrKind,
+    id: number,
+    payload: QualityProfileRecord,
+  ): QualityProfileRecord {
     const existing = this.getQualityProfilesFor(kind)
-    if (!existing.some((profile) => profile.id === id)) {
-      return { ok: false as const, error: notFound('Quality profile not found.') }
-    }
     const updated: QualityProfileRecord = { ...payload, id }
     this.qualityProfiles.set(
       kind,
       existing.map((profile) => (profile.id === id ? updated : profile)),
     )
-    this.persistOnboardingState()
-    return { ok: true as const, value: updated }
+    return updated
   }
 
-  async deleteQualityProfile(kind: ServarrKind, id: number) {
+  private deleteFakeQualityProfile(kind: ServarrKind, id: number): void {
     const existing = this.getQualityProfilesFor(kind)
     this.qualityProfiles.set(
       kind,
       existing.filter((profile) => profile.id !== id),
     )
-    this.persistOnboardingState()
-    return { ok: true as const, value: undefined }
   }
 }
 

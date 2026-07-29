@@ -1,10 +1,15 @@
 import type { UseCase } from '#application/shared/use-case'
 import type { InstanceProfileRepository } from '#domain/settings/interfaces/instance-profile-repository.interface'
 import type { ServarrInstanceRepository } from '#domain/settings/interfaces/servarr-instance-repository.interface'
+import type {
+  QualityProfileItem,
+  QualityProfileRecord,
+  ServarrQualityProfileManager,
+} from '#domain/settings/interfaces/servarr-quality-profile-manager.interface'
 import type { ValidationError } from '#domain/shared/validation-error'
+import type { ConnectionError } from '#domain/settings/connection-error.vo'
 import { Result } from '#domain/shared/result'
 import { RootFolderPath } from '#domain/settings/root-folder-path.vo'
-import { QualityProfileId } from '#domain/settings/quality-profile-id.vo'
 import { MetadataProfileId } from '#domain/settings/metadata-profile-id.vo'
 import { LanguageProfileId } from '#domain/settings/language-profile-id.vo'
 import { SeriesType } from '#domain/settings/series-type.vo'
@@ -15,7 +20,16 @@ export interface UpdateInstanceProfileInput {
   id: string
   name: string
   rootFolderPath: string
-  qualityProfileId: number
+  /**
+   * Pushed straight to the *arr — same Quality Profile id, new content.
+   * Passthrough-typed like `QualityProfileRecord` itself, cf.
+   * `CreateInstanceProfileInput`.
+   */
+  qualityProfile: Record<string, unknown> & {
+    upgradeAllowed: boolean
+    cutoff: number
+    items: QualityProfileItem[]
+  }
   metadataProfileId?: number
   languageProfileId?: number
   seriesType?: string
@@ -23,7 +37,7 @@ export interface UpdateInstanceProfileInput {
 }
 
 export type UpdateInstanceProfileError =
-  ValidationError | 'profile_not_found' | 'instance_not_found'
+  ValidationError | 'profile_not_found' | 'instance_not_found' | ConnectionError
 
 /** Full replace, like `SaveInstance` — not a partial PATCH. */
 export class UpdateInstanceProfile implements UseCase<
@@ -33,6 +47,7 @@ export class UpdateInstanceProfile implements UseCase<
   constructor(
     private readonly profiles: InstanceProfileRepository,
     private readonly instances: ServarrInstanceRepository,
+    private readonly qualityProfiles: ServarrQualityProfileManager,
   ) {}
 
   async execute(
@@ -46,9 +61,6 @@ export class UpdateInstanceProfile implements UseCase<
 
     const rootFolderPath = RootFolderPath.create(input.rootFolderPath)
     if (!rootFolderPath.ok) return rootFolderPath
-
-    const qualityProfileId = QualityProfileId.create(input.qualityProfileId)
-    if (!qualityProfileId.ok) return qualityProfileId
 
     let metadataProfileId: MetadataProfileId | null = null
     if (input.metadataProfileId !== undefined) {
@@ -78,13 +90,22 @@ export class UpdateInstanceProfile implements UseCase<
       minimumAvailability = result.value
     }
 
+    const remoteProfile = await this.qualityProfiles.update(
+      instance.kind,
+      instance.baseUrl,
+      instance.apiKey,
+      profile.qualityProfileId.value,
+      { ...input.qualityProfile, name: input.name } as QualityProfileRecord,
+    )
+    if (!remoteProfile.ok) return remoteProfile
+
     const renamed = profile.rename(input.name)
     if (!renamed.ok) return renamed
 
     const updated = profile.updateSelection(
       instance.kind,
       rootFolderPath.value,
-      qualityProfileId.value,
+      profile.qualityProfileId,
       metadataProfileId,
       languageProfileId,
       seriesType,
@@ -97,7 +118,7 @@ export class UpdateInstanceProfile implements UseCase<
     if (profile.isDefault) {
       const configured = instance.configure(
         rootFolderPath.value,
-        qualityProfileId.value,
+        profile.qualityProfileId,
         metadataProfileId,
         languageProfileId,
         seriesType,

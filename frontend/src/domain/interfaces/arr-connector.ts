@@ -132,20 +132,12 @@ export interface ArrConnector {
     id: string,
   ) => Promise<Result<InstanceProfileDto, ApiError>>
 
-  // settings — admin panel — live *arr Quality Profiles, CRUD pushed straight
-  // to the instance (no local table, cf. docs/phase-3-instance-profiles/01)
+  // settings — admin panel — live *arr Quality Profiles, read-only plumbing used
+  // to render/hydrate the profile form (create/update/delete happen through
+  // createInstanceProfile/updateInstanceProfile/deleteInstanceProfile above —
+  // a profile and a Quality Profile are the same thing, cf. docs/phase-3-instance-profiles/01)
   listQualityProfiles: (kind: ServarrKind) => Promise<Result<QualityProfileRecord[], ApiError>>
   getQualityProfileSchema: (kind: ServarrKind) => Promise<Result<QualityProfileRecord, ApiError>>
-  createQualityProfile: (
-    kind: ServarrKind,
-    payload: QualityProfileRecord,
-  ) => Promise<Result<QualityProfileRecord, ApiError>>
-  updateQualityProfile: (
-    kind: ServarrKind,
-    id: number,
-    payload: QualityProfileRecord,
-  ) => Promise<Result<QualityProfileRecord, ApiError>>
-  deleteQualityProfile: (kind: ServarrKind, id: number) => Promise<Result<void, ApiError>>
 
   getSso: () => Promise<{
     issuerUrl: string

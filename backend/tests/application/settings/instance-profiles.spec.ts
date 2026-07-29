@@ -12,6 +12,7 @@ import { QualityProfileId } from '#domain/settings/quality-profile-id.vo'
 import {
   InMemoryServarrInstanceRepository,
   InMemoryInstanceProfileRepository,
+  FakeServarrQualityProfileManager,
   SequentialIdGenerator,
 } from './fakes.js'
 
@@ -33,40 +34,60 @@ async function aRadarrInstance(repository: InMemoryServarrInstanceRepository) {
   return instance
 }
 
+function aQualityProfileInput(overrides: Record<string, unknown> = {}) {
+  return {
+    upgradeAllowed: true,
+    cutoff: 1,
+    items: [{ id: 1, allowed: true, quality: { id: 1, name: 'HD-1080p' } }],
+    ...overrides,
+  }
+}
+
 function validCreateInput(instanceId: string, overrides: Record<string, unknown> = {}) {
   return {
     instanceId,
     name: '4K',
     rootFolderPath: '/data/movies-4k',
-    qualityProfileId: 2,
+    qualityProfile: aQualityProfileInput(),
     ...overrides,
   }
 }
 
 test.group('CreateInstanceProfile', () => {
-  test('the first profile created for an instance is forced default and syncs the instance', async ({
+  test('the first profile created for an instance is forced default, creates the Quality Profile on the *arr, and syncs the instance', async ({
     assert,
   }) => {
     const instances = new InMemoryServarrInstanceRepository()
     const profiles = new InMemoryInstanceProfileRepository()
     const instance = await aRadarrInstance(instances)
-    const useCase = new CreateInstanceProfile(profiles, instances, new SequentialIdGenerator())
+    const useCase = new CreateInstanceProfile(
+      profiles,
+      instances,
+      new SequentialIdGenerator(),
+      new FakeServarrQualityProfileManager(),
+    )
 
     const result = await useCase.execute(validCreateInput(instance.id))
 
     assert.isTrue(result.ok)
     assert.isTrue(result.ok ? result.value.isDefault : false)
+    assert.equal(result.ok ? result.value.qualityProfileId.value : undefined, 99)
 
     const persistedInstance = await instances.findById(instance.id)
     assert.equal(persistedInstance?.rootFolderPath?.value, '/data/movies-4k')
-    assert.equal(persistedInstance?.qualityProfileId?.value, 2)
+    assert.equal(persistedInstance?.qualityProfileId?.value, 99)
   })
 
   test('a second, non-default profile does not change the instance', async ({ assert }) => {
     const instances = new InMemoryServarrInstanceRepository()
     const profiles = new InMemoryInstanceProfileRepository()
     const instance = await aRadarrInstance(instances)
-    const useCase = new CreateInstanceProfile(profiles, instances, new SequentialIdGenerator())
+    const useCase = new CreateInstanceProfile(
+      profiles,
+      instances,
+      new SequentialIdGenerator(),
+      new FakeServarrQualityProfileManager(),
+    )
 
     await useCase.execute(validCreateInput(instance.id, { name: 'Default' }))
     await useCase.execute(
@@ -85,7 +106,12 @@ test.group('CreateInstanceProfile', () => {
     const instances = new InMemoryServarrInstanceRepository()
     const profiles = new InMemoryInstanceProfileRepository()
     const instance = await aRadarrInstance(instances)
-    const useCase = new CreateInstanceProfile(profiles, instances, new SequentialIdGenerator())
+    const useCase = new CreateInstanceProfile(
+      profiles,
+      instances,
+      new SequentialIdGenerator(),
+      new FakeServarrQualityProfileManager(),
+    )
 
     const first = await useCase.execute(validCreateInput(instance.id, { name: 'Default' }))
     if (!first.ok) throw new Error('expected success')
@@ -110,49 +136,78 @@ test.group('CreateInstanceProfile', () => {
   test('returns instance_not_found for an unknown instance', async ({ assert }) => {
     const instances = new InMemoryServarrInstanceRepository()
     const profiles = new InMemoryInstanceProfileRepository()
-    const useCase = new CreateInstanceProfile(profiles, instances, new SequentialIdGenerator())
+    const useCase = new CreateInstanceProfile(
+      profiles,
+      instances,
+      new SequentialIdGenerator(),
+      new FakeServarrQualityProfileManager(),
+    )
 
     const result = await useCase.execute(validCreateInput('missing'))
 
     assert.isFalse(result.ok)
     assert.equal(result.ok ? undefined : result.error, 'instance_not_found')
   })
+
+  test('propagates a connection error from the *arr', async ({ assert }) => {
+    const instances = new InMemoryServarrInstanceRepository()
+    const profiles = new InMemoryInstanceProfileRepository()
+    const instance = await aRadarrInstance(instances)
+    const qualityProfiles = new FakeServarrQualityProfileManager()
+    qualityProfiles.createResult = { ok: false, error: { type: 'timeout', message: 'timed out' } }
+    const useCase = new CreateInstanceProfile(
+      profiles,
+      instances,
+      new SequentialIdGenerator(),
+      qualityProfiles,
+    )
+
+    const result = await useCase.execute(validCreateInput(instance.id))
+
+    assert.isFalse(result.ok)
+    const remaining = await profiles.listByInstance(instance.id)
+    assert.lengthOf(remaining, 0)
+  })
 })
 
 test.group('UpdateInstanceProfile', () => {
-  test('editing the default profile re-syncs the instance', async ({ assert }) => {
+  test('editing the default profile re-syncs the instance root folder', async ({ assert }) => {
     const instances = new InMemoryServarrInstanceRepository()
     const profiles = new InMemoryInstanceProfileRepository()
+    const qualityProfiles = new FakeServarrQualityProfileManager()
     const instance = await aRadarrInstance(instances)
     const created = await new CreateInstanceProfile(
       profiles,
       instances,
       new SequentialIdGenerator(),
+      qualityProfiles,
     ).execute(validCreateInput(instance.id, { name: 'Default' }))
     if (!created.ok) throw new Error('expected success')
 
-    const useCase = new UpdateInstanceProfile(profiles, instances)
+    const useCase = new UpdateInstanceProfile(profiles, instances, qualityProfiles)
     const result = await useCase.execute({
       id: created.value.id,
       name: 'Default',
       rootFolderPath: '/data/movies-v2',
-      qualityProfileId: 3,
+      qualityProfile: aQualityProfileInput(),
     })
 
     assert.isTrue(result.ok)
     const persistedInstance = await instances.findById(instance.id)
     assert.equal(persistedInstance?.rootFolderPath?.value, '/data/movies-v2')
-    assert.equal(persistedInstance?.qualityProfileId?.value, 3)
+    assert.equal(persistedInstance?.qualityProfileId?.value, created.value.qualityProfileId.value)
   })
 
   test('editing a non-default profile leaves the instance untouched', async ({ assert }) => {
     const instances = new InMemoryServarrInstanceRepository()
     const profiles = new InMemoryInstanceProfileRepository()
+    const qualityProfiles = new FakeServarrQualityProfileManager()
     const instance = await aRadarrInstance(instances)
     const createUseCase = new CreateInstanceProfile(
       profiles,
       instances,
       new SequentialIdGenerator(),
+      qualityProfiles,
     )
     await createUseCase.execute(validCreateInput(instance.id, { name: 'Default' }))
     const secondary = await createUseCase.execute(
@@ -160,12 +215,12 @@ test.group('UpdateInstanceProfile', () => {
     )
     if (!secondary.ok) throw new Error('expected success')
 
-    const useCase = new UpdateInstanceProfile(profiles, instances)
+    const useCase = new UpdateInstanceProfile(profiles, instances, qualityProfiles)
     await useCase.execute({
       id: secondary.value.id,
       name: 'Anime',
       rootFolderPath: '/data/anime-v2',
-      qualityProfileId: 5,
+      qualityProfile: aQualityProfileInput(),
     })
 
     const persistedInstance = await instances.findById(instance.id)
@@ -175,13 +230,17 @@ test.group('UpdateInstanceProfile', () => {
   test('returns profile_not_found for an unknown profile', async ({ assert }) => {
     const instances = new InMemoryServarrInstanceRepository()
     const profiles = new InMemoryInstanceProfileRepository()
-    const useCase = new UpdateInstanceProfile(profiles, instances)
+    const useCase = new UpdateInstanceProfile(
+      profiles,
+      instances,
+      new FakeServarrQualityProfileManager(),
+    )
 
     const result = await useCase.execute({
       id: 'missing',
       name: 'Default',
       rootFolderPath: '/data',
-      qualityProfileId: 1,
+      qualityProfile: aQualityProfileInput(),
     })
 
     assert.isFalse(result.ok)
@@ -198,6 +257,7 @@ test.group('SetDefaultInstanceProfile', () => {
       profiles,
       instances,
       new SequentialIdGenerator(),
+      new FakeServarrQualityProfileManager(),
     )
     const first = await createUseCase.execute(validCreateInput(instance.id, { name: 'Default' }))
     const second = await createUseCase.execute(
@@ -221,29 +281,33 @@ test.group('DeleteInstanceProfile', () => {
   test('refuses to delete the default profile', async ({ assert }) => {
     const instances = new InMemoryServarrInstanceRepository()
     const profiles = new InMemoryInstanceProfileRepository()
+    const qualityProfiles = new FakeServarrQualityProfileManager()
     const instance = await aRadarrInstance(instances)
     const created = await new CreateInstanceProfile(
       profiles,
       instances,
       new SequentialIdGenerator(),
+      qualityProfiles,
     ).execute(validCreateInput(instance.id, { name: 'Default' }))
     if (!created.ok) throw new Error('expected success')
 
-    const useCase = new DeleteInstanceProfile(profiles)
+    const useCase = new DeleteInstanceProfile(profiles, instances, qualityProfiles)
     const result = await useCase.execute({ id: created.value.id })
 
     assert.isFalse(result.ok)
     assert.equal(result.ok ? undefined : result.error, 'default_profile_delete_forbidden')
   })
 
-  test('deletes a non-default profile', async ({ assert }) => {
+  test('deletes a non-default profile and its Quality Profile on the *arr', async ({ assert }) => {
     const instances = new InMemoryServarrInstanceRepository()
     const profiles = new InMemoryInstanceProfileRepository()
+    const qualityProfiles = new FakeServarrQualityProfileManager()
     const instance = await aRadarrInstance(instances)
     const createUseCase = new CreateInstanceProfile(
       profiles,
       instances,
       new SequentialIdGenerator(),
+      qualityProfiles,
     )
     await createUseCase.execute(validCreateInput(instance.id, { name: 'Default' }))
     const secondary = await createUseCase.execute(
@@ -251,7 +315,7 @@ test.group('DeleteInstanceProfile', () => {
     )
     if (!secondary.ok) throw new Error('expected success')
 
-    const useCase = new DeleteInstanceProfile(profiles)
+    const useCase = new DeleteInstanceProfile(profiles, instances, qualityProfiles)
     const result = await useCase.execute({ id: secondary.value.id })
 
     assert.isTrue(result.ok)
@@ -261,6 +325,32 @@ test.group('DeleteInstanceProfile', () => {
       new SequentialIdGenerator(),
     ).execute({ instanceId: instance.id })
     assert.lengthOf(remaining, 1)
+  })
+
+  test('does not delete the local row when the *arr rejects the deletion', async ({ assert }) => {
+    const instances = new InMemoryServarrInstanceRepository()
+    const profiles = new InMemoryInstanceProfileRepository()
+    const qualityProfiles = new FakeServarrQualityProfileManager()
+    const instance = await aRadarrInstance(instances)
+    const createUseCase = new CreateInstanceProfile(
+      profiles,
+      instances,
+      new SequentialIdGenerator(),
+      qualityProfiles,
+    )
+    await createUseCase.execute(validCreateInput(instance.id, { name: 'Default' }))
+    const secondary = await createUseCase.execute(
+      validCreateInput(instance.id, { name: 'Anime', rootFolderPath: '/data/anime' }),
+    )
+    if (!secondary.ok) throw new Error('expected success')
+
+    qualityProfiles.deleteResult = { ok: false, error: { type: 'timeout', message: 'timed out' } }
+    const useCase = new DeleteInstanceProfile(profiles, instances, qualityProfiles)
+    const result = await useCase.execute({ id: secondary.value.id })
+
+    assert.isFalse(result.ok)
+    const remaining = await profiles.listByInstance(instance.id)
+    assert.lengthOf(remaining, 2)
   })
 })
 
@@ -311,9 +401,12 @@ test.group('ListInstanceProfiles', () => {
     const instances = new InMemoryServarrInstanceRepository()
     const profiles = new InMemoryInstanceProfileRepository()
     const instance = await aRadarrInstance(instances)
-    await new CreateInstanceProfile(profiles, instances, new SequentialIdGenerator()).execute(
-      validCreateInput(instance.id, { name: 'Default' }),
-    )
+    await new CreateInstanceProfile(
+      profiles,
+      instances,
+      new SequentialIdGenerator(),
+      new FakeServarrQualityProfileManager(),
+    ).execute(validCreateInput(instance.id, { name: 'Default' }))
 
     const useCase = new ListInstanceProfiles(profiles, instances, new SequentialIdGenerator())
     const result = await useCase.execute({ instanceId: instance.id })

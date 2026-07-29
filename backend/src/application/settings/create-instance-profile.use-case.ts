@@ -1,8 +1,14 @@
 import type { UseCase } from '#application/shared/use-case'
 import type { InstanceProfileRepository } from '#domain/settings/interfaces/instance-profile-repository.interface'
 import type { ServarrInstanceRepository } from '#domain/settings/interfaces/servarr-instance-repository.interface'
+import type {
+  QualityProfileItem,
+  QualityProfileRecord,
+  ServarrQualityProfileManager,
+} from '#domain/settings/interfaces/servarr-quality-profile-manager.interface'
 import type { IdGenerator } from '#domain/shared/id-generator.interface'
 import type { ValidationError } from '#domain/shared/validation-error'
+import type { ConnectionError } from '#domain/settings/connection-error.vo'
 import { Result } from '#domain/shared/result'
 import { RootFolderPath } from '#domain/settings/root-folder-path.vo'
 import { QualityProfileId } from '#domain/settings/quality-profile-id.vo'
@@ -16,7 +22,18 @@ export interface CreateInstanceProfileInput {
   instanceId: string
   name: string
   rootFolderPath: string
-  qualityProfileId: number
+  /**
+   * Pushed straight to the *arr as a brand-new Quality Profile — no
+   * pre-existing id involved. Passthrough-typed like `QualityProfileRecord`
+   * itself: the client round-trips whatever extra fields the *arr's schema
+   * template carried (formatItems, language…) rather than this app
+   * reconstructing them.
+   */
+  qualityProfile: Record<string, unknown> & {
+    upgradeAllowed: boolean
+    cutoff: number
+    items: QualityProfileItem[]
+  }
   metadataProfileId?: number
   languageProfileId?: number
   seriesType?: string
@@ -25,8 +42,16 @@ export interface CreateInstanceProfileInput {
   setAsDefault?: boolean
 }
 
-export type CreateInstanceProfileError = ValidationError | 'instance_not_found'
+export type CreateInstanceProfileError = ValidationError | 'instance_not_found' | ConnectionError
 
+/**
+ * A "profile" and a *arr Quality Profile are now the same thing from the
+ * admin's point of view — creating one here creates a real Quality Profile
+ * on the instance (via `ServarrQualityProfileManager`) and wraps its id in
+ * the local `InstanceProfile` alongside the fields the *arr doesn't have
+ * (root folder, language/metadata profile, series type, minimum
+ * availability). Cf. docs/phase-3-instance-profiles/01-live-quality-profiles.md.
+ */
 export class CreateInstanceProfile implements UseCase<
   CreateInstanceProfileInput,
   Result<InstanceProfile, CreateInstanceProfileError>
@@ -35,6 +60,7 @@ export class CreateInstanceProfile implements UseCase<
     private readonly profiles: InstanceProfileRepository,
     private readonly instances: ServarrInstanceRepository,
     private readonly idGenerator: IdGenerator,
+    private readonly qualityProfiles: ServarrQualityProfileManager,
   ) {}
 
   async execute(
@@ -45,9 +71,6 @@ export class CreateInstanceProfile implements UseCase<
 
     const rootFolderPath = RootFolderPath.create(input.rootFolderPath)
     if (!rootFolderPath.ok) return rootFolderPath
-
-    const qualityProfileId = QualityProfileId.create(input.qualityProfileId)
-    if (!qualityProfileId.ok) return qualityProfileId
 
     let metadataProfileId: MetadataProfileId | null = null
     if (input.metadataProfileId !== undefined) {
@@ -76,6 +99,15 @@ export class CreateInstanceProfile implements UseCase<
       if (!result.ok) return result
       minimumAvailability = result.value
     }
+
+    const remoteProfile = await this.qualityProfiles.create(instance.kind, instance.baseUrl, instance.apiKey, {
+      ...input.qualityProfile,
+      name: input.name,
+    } as QualityProfileRecord)
+    if (!remoteProfile.ok) return remoteProfile
+
+    const qualityProfileId = QualityProfileId.create(remoteProfile.value.id ?? 0)
+    if (!qualityProfileId.ok) return qualityProfileId
 
     const existing = await this.profiles.listByInstance(instance.id)
     const isDefault = input.setAsDefault === true || existing.length === 0
