@@ -51,13 +51,22 @@ test.group('ServarrInstance', () => {
       aQualityProfileId(),
       aMetadataProfileId(),
       null,
+      null,
+      null,
     )
     assert.isFalse(result.ok)
   })
 
   test('configure() requires a metadata profile for a Lidarr instance', ({ assert }) => {
     const instance = ServarrInstance.draft('1', 'lidarr', aUrl(), anApiKey())
-    const result = instance.configure(aRootFolderPath(), aQualityProfileId(), null, null)
+    const result = instance.configure(
+      aRootFolderPath(),
+      aQualityProfileId(),
+      null,
+      null,
+      null,
+      null,
+    )
     assert.isFalse(result.ok)
   })
 
@@ -71,13 +80,22 @@ test.group('ServarrInstance', () => {
       aQualityProfileId(),
       null,
       languageProfileIdResult.value,
+      null,
+      null,
     )
     assert.isFalse(result.ok)
   })
 
   test('configure() succeeds for a well-formed Radarr instance', ({ assert }) => {
     const instance = ServarrInstance.draft('1', 'radarr', aUrl(), anApiKey())
-    const result = instance.configure(aRootFolderPath(), aQualityProfileId(), null, null)
+    const result = instance.configure(
+      aRootFolderPath(),
+      aQualityProfileId(),
+      null,
+      null,
+      null,
+      null,
+    )
     assert.isTrue(result.ok)
   })
 
@@ -89,7 +107,7 @@ test.group('ServarrInstance', () => {
 
   test('enable() refuses an instance that never had a health check', ({ assert }) => {
     const instance = ServarrInstance.draft('1', 'radarr', aUrl(), anApiKey())
-    instance.configure(aRootFolderPath(), aQualityProfileId(), null, null)
+    instance.configure(aRootFolderPath(), aQualityProfileId(), null, null, null, null)
 
     const result = instance.enable()
     assert.isFalse(result.ok)
@@ -97,7 +115,7 @@ test.group('ServarrInstance', () => {
 
   test('enable() refuses an instance whose last health check failed', ({ assert }) => {
     const instance = ServarrInstance.draft('1', 'radarr', aUrl(), anApiKey())
-    instance.configure(aRootFolderPath(), aQualityProfileId(), null, null)
+    instance.configure(aRootFolderPath(), aQualityProfileId(), null, null, null, null)
     instance.recordHealthCheck(
       HealthCheckResult.unhealthy(new Date(), { type: 'timeout', message: 'timed out' }),
     )
@@ -108,7 +126,7 @@ test.group('ServarrInstance', () => {
 
   test('enable() succeeds once configured and healthy', ({ assert }) => {
     const instance = ServarrInstance.draft('1', 'radarr', aUrl(), anApiKey())
-    instance.configure(aRootFolderPath(), aQualityProfileId(), null, null)
+    instance.configure(aRootFolderPath(), aQualityProfileId(), null, null, null, null)
     instance.recordHealthCheck(HealthCheckResult.healthy(new Date(), '5.14.0'))
 
     const result = instance.enable()
@@ -119,7 +137,7 @@ test.group('ServarrInstance', () => {
 
   test('recordHealthCheck() disables a previously-enabled instance on failure', ({ assert }) => {
     const instance = ServarrInstance.draft('1', 'radarr', aUrl(), anApiKey())
-    instance.configure(aRootFolderPath(), aQualityProfileId(), null, null)
+    instance.configure(aRootFolderPath(), aQualityProfileId(), null, null, null, null)
     instance.recordHealthCheck(HealthCheckResult.healthy(new Date(), '5.14.0'))
     instance.enable()
 
@@ -152,7 +170,7 @@ test.group('ServarrInstance', () => {
 
   test('updateConnection() resets the health check and disables the instance', ({ assert }) => {
     const instance = ServarrInstance.draft('1', 'radarr', aUrl(), anApiKey())
-    instance.configure(aRootFolderPath(), aQualityProfileId(), null, null)
+    instance.configure(aRootFolderPath(), aQualityProfileId(), null, null, null, null)
     instance.recordHealthCheck(HealthCheckResult.healthy(new Date(), '5.14.0'))
     instance.enable()
 

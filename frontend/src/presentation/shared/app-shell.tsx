@@ -9,6 +9,7 @@ import {
   ListChecks,
   LibraryBig,
   CalendarDays,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { Button } from '#presentation/ui/button'
 import { Badge } from '#presentation/ui/badge'
@@ -74,6 +75,21 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             )
           })}
+
+          {isAdmin ? (
+            <Link
+              to="/profiles"
+              className={cn(
+                'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                location.pathname.startsWith('/profiles')
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+              )}
+            >
+              <SlidersHorizontal className="size-4" />
+              Profiles
+            </Link>
+          ) : null}
 
           {isAdmin ? (
             <Link

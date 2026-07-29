@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CalendarIndexRouteImport } from './routes/calendar/index'
 import { Route as LibraryIndexRouteImport } from './routes/library/index'
+import { Route as ProfilesIndexRouteImport } from './routes/profiles/index'
 import { Route as RequestsIndexRouteImport } from './routes/requests/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as SetupIndexRouteImport } from './routes/setup/index'
@@ -37,6 +38,11 @@ const LibraryIndexRoute = LibraryIndexRouteImport.update({
   path: '/library/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfilesIndexRoute = ProfilesIndexRouteImport.update({
+  id: '/profiles/',
+  path: '/profiles/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RequestsIndexRoute = RequestsIndexRouteImport.update({
   id: '/requests/',
   path: '/requests/',
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/calendar/': typeof CalendarIndexRoute
   '/library/': typeof LibraryIndexRoute
+  '/profiles/': typeof ProfilesIndexRoute
   '/requests/': typeof RequestsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/setup/': typeof SetupIndexRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/calendar': typeof CalendarIndexRoute
   '/library': typeof LibraryIndexRoute
+  '/profiles': typeof ProfilesIndexRoute
   '/requests': typeof RequestsIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/setup': typeof SetupIndexRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/calendar/': typeof CalendarIndexRoute
   '/library/': typeof LibraryIndexRoute
+  '/profiles/': typeof ProfilesIndexRoute
   '/requests/': typeof RequestsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/setup/': typeof SetupIndexRoute
@@ -88,6 +97,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/calendar/'
     | '/library/'
+    | '/profiles/'
     | '/requests/'
     | '/settings/'
     | '/setup/'
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/calendar'
     | '/library'
+    | '/profiles'
     | '/requests'
     | '/settings'
     | '/setup'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/calendar/'
     | '/library/'
+    | '/profiles/'
     | '/requests/'
     | '/settings/'
     | '/setup/'
@@ -116,6 +128,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   CalendarIndexRoute: typeof CalendarIndexRoute
   LibraryIndexRoute: typeof LibraryIndexRoute
+  ProfilesIndexRoute: typeof ProfilesIndexRoute
   RequestsIndexRoute: typeof RequestsIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
   SetupIndexRoute: typeof SetupIndexRoute
@@ -151,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LibraryIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profiles/': {
+      id: '/profiles/'
+      path: '/profiles'
+      fullPath: '/profiles/'
+      preLoaderRoute: typeof ProfilesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/requests/': {
       id: '/requests/'
       path: '/requests'
@@ -180,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   CalendarIndexRoute: CalendarIndexRoute,
   LibraryIndexRoute: LibraryIndexRoute,
+  ProfilesIndexRoute: ProfilesIndexRoute,
   RequestsIndexRoute: RequestsIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
   SetupIndexRoute: SetupIndexRoute,

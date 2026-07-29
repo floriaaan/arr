@@ -30,6 +30,10 @@ export const saveInstanceValidator = vine.compile(
     qualityProfileId: vine.number(),
     metadataProfileId: vine.number().optional(),
     languageProfileId: vine.number().optional(),
+    seriesType: vine.enum(['standard', 'daily', 'anime'] as const).optional(),
+    minimumAvailability: vine
+      .enum(['announced', 'inCinemas', 'released', 'preDB'] as const)
+      .optional(),
     enabled: vine.boolean(),
   }),
 )

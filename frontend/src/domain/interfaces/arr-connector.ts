@@ -6,6 +6,8 @@ import type { Session } from '../identity/session'
 import type { OnboardingStatus } from '../settings/onboarding-state'
 import type { ServarrKind, ServarrInstanceDto } from '../settings/servarr-instance'
 import type { InstanceDraft } from '../settings/instance-draft'
+import type { InstanceProfileDto, InstanceProfileDraft } from '../settings/instance-profile'
+import type { QualityProfileRecord } from '../settings/quality-profile-record'
 import type { EffectiveAuthSettings } from '../settings/effective-auth-settings'
 import type { MediaKind } from '../catalog/media-kind'
 import type { ExternalId, ExternalIdScheme } from '../catalog/external-id'
@@ -111,6 +113,32 @@ export interface ArrConnector {
     baseUrl: string,
     apiKey: string,
   ) => Promise<Result<InstanceProfiles, ApiError>>
+  // settings — admin panel — saved instance profiles (cf. docs/phase-3-instance-profiles)
+  /** Live *arr catalog for an already-saved instance, using its stored credentials. */
+  fetchStoredInstanceProfiles: (kind: ServarrKind) => Promise<Result<InstanceProfiles, ApiError>>
+  listInstanceProfiles: (kind: ServarrKind) => Promise<InstanceProfileDto[]>
+  createInstanceProfile: (
+    kind: ServarrKind,
+    draft: InstanceProfileDraft,
+  ) => Promise<Result<InstanceProfileDto, ApiError>>
+  updateInstanceProfile: (
+    kind: ServarrKind,
+    id: string,
+    draft: InstanceProfileDraft,
+  ) => Promise<Result<InstanceProfileDto, ApiError>>
+  deleteInstanceProfile: (kind: ServarrKind, id: string) => Promise<Result<void, ApiError>>
+  setDefaultInstanceProfile: (
+    kind: ServarrKind,
+    id: string,
+  ) => Promise<Result<InstanceProfileDto, ApiError>>
+
+  // settings — admin panel — live *arr Quality Profiles, read-only plumbing used
+  // to render/hydrate the profile form (create/update/delete happen through
+  // createInstanceProfile/updateInstanceProfile/deleteInstanceProfile above —
+  // a profile and a Quality Profile are the same thing, cf. docs/phase-3-instance-profiles/01)
+  listQualityProfiles: (kind: ServarrKind) => Promise<Result<QualityProfileRecord[], ApiError>>
+  getQualityProfileSchema: (kind: ServarrKind) => Promise<Result<QualityProfileRecord, ApiError>>
+
   getSso: () => Promise<{
     issuerUrl: string
     clientId: string

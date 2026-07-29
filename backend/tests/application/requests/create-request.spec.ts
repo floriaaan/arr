@@ -46,7 +46,7 @@ async function anActiveRadarrInstance(repository: InMemoryServarrInstanceReposit
     throw new Error('unreachable')
 
   const instance = ServarrInstance.draft('instance-1', 'radarr', baseUrl.value, apiKey.value)
-  instance.configure(rootFolderPath.value, qualityProfileId.value, null, null)
+  instance.configure(rootFolderPath.value, qualityProfileId.value, null, null, null, null)
   instance.recordHealthCheck(HealthCheckResult.healthy(new Date(), '5.14.0'))
   instance.enable()
   await repository.save(instance)

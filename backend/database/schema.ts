@@ -79,6 +79,48 @@ export class AuthSettingSchema extends BaseModel {
   declare updatedAt: DateTime
 }
 
+export class InstanceProfileSchema extends BaseModel {
+  static $columns = [
+    'createdAt',
+    'id',
+    'instanceId',
+    'isDefault',
+    'languageProfileId',
+    'metadataProfileId',
+    'minimumAvailability',
+    'name',
+    'qualityProfileId',
+    'rootFolderPath',
+    'seriesType',
+    'updatedAt',
+  ] as const
+  $columns = InstanceProfileSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare instanceId: string
+  @column()
+  declare isDefault: boolean
+  @column()
+  declare languageProfileId: number | null
+  @column()
+  declare metadataProfileId: number | null
+  @column()
+  declare minimumAvailability: string | null
+  @column()
+  declare name: string
+  @column()
+  declare qualityProfileId: number
+  @column()
+  declare rootFolderPath: string
+  @column()
+  declare seriesType: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
 export class MediaRequestSchema extends BaseModel {
   static $columns = [
     'createdAt',
@@ -175,8 +217,10 @@ export class ServarrInstanceSchema extends BaseModel {
     'lastHealthCheckErrorType',
     'lastHealthCheckOk',
     'metadataProfileId',
+    'minimumAvailability',
     'qualityProfileId',
     'rootFolderPath',
+    'seriesType',
     'updatedAt',
   ] as const
   $columns = ServarrInstanceSchema.$columns
@@ -207,9 +251,13 @@ export class ServarrInstanceSchema extends BaseModel {
   @column()
   declare metadataProfileId: number | null
   @column()
+  declare minimumAvailability: string | null
+  @column()
   declare qualityProfileId: number | null
   @column()
   declare rootFolderPath: string | null
+  @column()
+  declare seriesType: string | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 }

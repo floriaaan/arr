@@ -21,6 +21,8 @@ import { useMediaDetail } from '#application/catalog/media-detail.query'
 import { useCreateRequest } from '#application/requests/create-request.mutation'
 import { useRemoveLibraryItem } from '#application/library/remove-library-item.mutation'
 import { useSession } from '#application/identity/session.query'
+import { useInstances } from '#application/settings/instances.query'
+import { useInstanceCatalog } from '#application/settings/instance-catalog.query'
 import {
   Dialog,
   DialogContent,
@@ -43,6 +45,7 @@ import { Badge } from '#presentation/ui/badge'
 import { Skeleton } from '#presentation/ui/skeleton'
 import { MEDIA_KIND_ICONS } from '#presentation/shared/media-kind-icons'
 import { formatSize } from '#presentation/shared/format-size'
+import { SERVARR_LABEL } from '#presentation/shared/servarr-meta'
 import type { MediaKind } from '#domain/catalog/media-kind'
 import type { ExternalId } from '#domain/catalog/external-id'
 import type { LibraryItem } from '#domain/library/library-item'
@@ -81,9 +84,23 @@ export function MediaDetailDrawer({
   const removeLibraryItem = useRemoveLibraryItem()
   const session = useSession()
   const queryClient = useQueryClient()
+  const instances = useInstances()
 
   const isOpen = externalId !== null
   const isAdmin = session.data?.user?.role === 'admin'
+
+  const managedBy = detail.data?.ok ? detail.data.value.managedBy : undefined
+  const managedInstance = managedBy
+    ? instances.data?.find((instance) => instance.id === managedBy.instanceId)
+    : undefined
+  const catalog = useInstanceCatalog(managedInstance?.kind ?? 'radarr', Boolean(managedInstance))
+  const qualityProfileName = managedBy
+    ? catalog.data?.ok
+      ? catalog.data.value.qualityProfiles.find(
+          (qualityProfile) => qualityProfile.id === managedBy.qualityProfileId,
+        )?.name
+      : undefined
+    : undefined
 
   function handleRequest() {
     if (!externalId) return
@@ -195,7 +212,11 @@ export function MediaDetailDrawer({
                           <MetaRow
                             icon={Server}
                             label="Instance"
-                            value={value.managedBy.instanceId}
+                            value={
+                              managedInstance
+                                ? `${SERVARR_LABEL[managedInstance.kind]} · ${managedInstance.baseUrl}`
+                                : value.managedBy.instanceId
+                            }
                           />
                           <MetaRow
                             icon={Folder}
@@ -205,7 +226,11 @@ export function MediaDetailDrawer({
                           <MetaRow
                             icon={Gauge}
                             label="Quality profile"
-                            value={value.managedBy.qualityProfileId}
+                            value={
+                              catalog.isLoading
+                                ? 'Loading…'
+                                : (qualityProfileName ?? value.managedBy.qualityProfileId)
+                            }
                           />
                           {libraryItem ? (
                             <>

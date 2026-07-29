@@ -5,6 +5,7 @@ import { Result } from '#domain/shared/result'
 import {
   FakeServarrConnectionTester,
   InMemoryServarrInstanceRepository,
+  InMemoryInstanceProfileRepository,
   SequentialIdGenerator,
 } from './fakes.js'
 
@@ -24,7 +25,12 @@ test.group('SaveInstance', () => {
   test('saves a disabled draft without testing the connection', async ({ assert }) => {
     const repository = new InMemoryServarrInstanceRepository()
     const tester = new FakeServarrConnectionTester()
-    const useCase = new SaveInstance(repository, tester, new SequentialIdGenerator())
+    const useCase = new SaveInstance(
+      repository,
+      tester,
+      new SequentialIdGenerator(),
+      new InMemoryInstanceProfileRepository(),
+    )
 
     const result = await useCase.execute(validInput())
 
@@ -35,7 +41,12 @@ test.group('SaveInstance', () => {
   test('rejects a metadata profile for a non-Lidarr instance', async ({ assert }) => {
     const repository = new InMemoryServarrInstanceRepository()
     const tester = new FakeServarrConnectionTester()
-    const useCase = new SaveInstance(repository, tester, new SequentialIdGenerator())
+    const useCase = new SaveInstance(
+      repository,
+      tester,
+      new SequentialIdGenerator(),
+      new InMemoryInstanceProfileRepository(),
+    )
 
     const result = await useCase.execute(validInput({ metadataProfileId: 1 }))
 
@@ -48,7 +59,12 @@ test.group('SaveInstance', () => {
     const repository = new InMemoryServarrInstanceRepository()
     const tester = new FakeServarrConnectionTester()
     tester.nextResult = Result.ok(HealthCheckResult.healthy(new Date(), '5.14.0'))
-    const useCase = new SaveInstance(repository, tester, new SequentialIdGenerator())
+    const useCase = new SaveInstance(
+      repository,
+      tester,
+      new SequentialIdGenerator(),
+      new InMemoryInstanceProfileRepository(),
+    )
 
     const result = await useCase.execute(validInput({ enabled: true }))
 
@@ -60,7 +76,12 @@ test.group('SaveInstance', () => {
     const repository = new InMemoryServarrInstanceRepository()
     const tester = new FakeServarrConnectionTester()
     tester.nextResult = Result.err({ type: 'unauthorized', message: 'invalid api key' })
-    const useCase = new SaveInstance(repository, tester, new SequentialIdGenerator())
+    const useCase = new SaveInstance(
+      repository,
+      tester,
+      new SequentialIdGenerator(),
+      new InMemoryInstanceProfileRepository(),
+    )
 
     const result = await useCase.execute(validInput({ enabled: true }))
 
@@ -72,7 +93,12 @@ test.group('SaveInstance', () => {
   }) => {
     const repository = new InMemoryServarrInstanceRepository()
     const tester = new FakeServarrConnectionTester()
-    const useCase = new SaveInstance(repository, tester, new SequentialIdGenerator())
+    const useCase = new SaveInstance(
+      repository,
+      tester,
+      new SequentialIdGenerator(),
+      new InMemoryInstanceProfileRepository(),
+    )
 
     await useCase.execute(validInput({ rootFolderPath: '/data/movies-v1' }))
     await useCase.execute(validInput({ rootFolderPath: '/data/movies-v2' }))
@@ -80,5 +106,71 @@ test.group('SaveInstance', () => {
     const all = await repository.findAll()
     assert.lengthOf(all, 1)
     assert.equal(all[0]?.rootFolderPath?.value, '/data/movies-v2')
+  })
+
+  test('auto-creates a default "Default" profile on first configuration', async ({ assert }) => {
+    const repository = new InMemoryServarrInstanceRepository()
+    const profiles = new InMemoryInstanceProfileRepository()
+    const useCase = new SaveInstance(
+      repository,
+      new FakeServarrConnectionTester(),
+      new SequentialIdGenerator(),
+      profiles,
+    )
+
+    const result = await useCase.execute(validInput())
+    if (!result.ok) throw new Error('expected success')
+
+    const created = await profiles.listByInstance(result.value.id)
+    assert.lengthOf(created, 1)
+    assert.equal(created[0]?.name, 'Default')
+    assert.isTrue(created[0]?.isDefault)
+  })
+
+  test('does not create a second profile on a subsequent save', async ({ assert }) => {
+    const repository = new InMemoryServarrInstanceRepository()
+    const profiles = new InMemoryInstanceProfileRepository()
+    const useCase = new SaveInstance(
+      repository,
+      new FakeServarrConnectionTester(),
+      new SequentialIdGenerator(),
+      profiles,
+    )
+
+    const first = await useCase.execute(validInput())
+    if (!first.ok) throw new Error('expected success')
+    await useCase.execute(validInput({ rootFolderPath: '/data/movies-v2' }))
+
+    const all = await profiles.listByInstance(first.value.id)
+    assert.lengthOf(all, 1)
+  })
+
+  test('accepts a minimum availability for a Radarr instance', async ({ assert }) => {
+    const repository = new InMemoryServarrInstanceRepository()
+    const useCase = new SaveInstance(
+      repository,
+      new FakeServarrConnectionTester(),
+      new SequentialIdGenerator(),
+      new InMemoryInstanceProfileRepository(),
+    )
+
+    const result = await useCase.execute(validInput({ minimumAvailability: 'released' }))
+
+    assert.isTrue(result.ok)
+    assert.equal(result.ok ? result.value.minimumAvailability?.value : undefined, 'released')
+  })
+
+  test('rejects a series type for a non-Sonarr instance', async ({ assert }) => {
+    const repository = new InMemoryServarrInstanceRepository()
+    const useCase = new SaveInstance(
+      repository,
+      new FakeServarrConnectionTester(),
+      new SequentialIdGenerator(),
+      new InMemoryInstanceProfileRepository(),
+    )
+
+    const result = await useCase.execute(validInput({ seriesType: 'anime' }))
+
+    assert.isFalse(result.ok)
   })
 })

@@ -71,6 +71,7 @@ export class RadarrAdapter implements ServarrKindAdapter {
           qualityProfileId: this.instance.qualityProfileId.value,
           rootFolderPath: this.instance.rootFolderPath.value,
           monitored: true,
+          minimumAvailability: this.instance.minimumAvailability?.value ?? 'released',
           addOptions: { searchForMovie: true },
         },
       })

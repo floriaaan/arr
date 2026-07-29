@@ -113,7 +113,7 @@ function anActiveRadarrInstance(): ServarrInstance {
   }
 
   const instance = ServarrInstance.draft('1', 'radarr', baseUrl.value, apiKey.value)
-  instance.configure(rootFolderPath.value, qualityProfileId.value, null, null)
+  instance.configure(rootFolderPath.value, qualityProfileId.value, null, null, null, null)
   instance.recordHealthCheck(HealthCheckResult.healthy(new Date(), '5.14.0'))
   instance.enable()
   return instance

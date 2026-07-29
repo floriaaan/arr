@@ -21,6 +21,8 @@ const STRING_ERROR_STATUS: Record<string, number> = {
   account_disabled: 403,
   not_found: 404,
   instance_not_found: 404,
+  profile_not_found: 404,
+  default_profile_delete_forbidden: 409,
   already_requested: 409,
   already_managed: 409,
   no_active_instance: 409,
@@ -35,6 +37,9 @@ const STRING_ERROR_MESSAGES: Record<string, string> = {
   account_disabled: 'This account has been disabled.',
   not_found: 'The requested resource was not found.',
   instance_not_found: 'The requested Servarr instance was not found.',
+  profile_not_found: 'The requested instance profile was not found.',
+  default_profile_delete_forbidden:
+    'The default profile cannot be deleted. Set another profile as default first.',
   already_requested: 'This media has already been requested.',
   already_managed: 'This media is already managed by an active request.',
   no_active_instance: 'No active instance is configured for this media kind.',

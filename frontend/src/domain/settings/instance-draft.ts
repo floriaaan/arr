@@ -5,5 +5,7 @@ export interface InstanceDraft {
   qualityProfileId: number
   metadataProfileId?: number
   languageProfileId?: number
+  seriesType?: string
+  minimumAvailability?: string
   enabled: boolean
 }

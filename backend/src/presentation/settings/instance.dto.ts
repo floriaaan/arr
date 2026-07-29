@@ -9,6 +9,8 @@ export interface ServarrInstanceDto {
   qualityProfileId: number | null
   metadataProfileId: number | null
   languageProfileId: number | null
+  seriesType: string | null
+  minimumAvailability: string | null
   enabled: boolean
 }
 
@@ -23,6 +25,8 @@ export function toServarrInstanceDto(instance: ServarrInstance): ServarrInstance
     qualityProfileId: instance.qualityProfileId?.value ?? null,
     metadataProfileId: instance.metadataProfileId?.value ?? null,
     languageProfileId: instance.languageProfileId?.value ?? null,
+    seriesType: instance.seriesType?.value ?? null,
+    minimumAvailability: instance.minimumAvailability?.value ?? null,
     enabled: instance.enabled,
   }
 }

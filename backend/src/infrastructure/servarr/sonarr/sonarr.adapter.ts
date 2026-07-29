@@ -70,6 +70,7 @@ export class SonarrAdapter implements ServarrKindAdapter {
           rootFolderPath: this.instance.rootFolderPath.value,
           monitored: true,
           seasonFolder: true,
+          seriesType: this.instance.seriesType?.value ?? 'standard',
           addOptions: { searchForMissingEpisodes: true },
         },
       })

@@ -12,8 +12,14 @@ import type {
   RootFolderOption,
   ServarrProfileCatalog,
 } from '#domain/settings/interfaces/servarr-profile-catalog.interface'
+import type {
+  QualityProfileRecord,
+  ServarrQualityProfileManager,
+} from '#domain/settings/interfaces/servarr-quality-profile-manager.interface'
 import type { ServarrInstanceRepository } from '#domain/settings/interfaces/servarr-instance-repository.interface'
 import type { ServarrInstance } from '#domain/settings/servarr-instance.aggregate'
+import type { InstanceProfileRepository } from '#domain/settings/interfaces/instance-profile-repository.interface'
+import type { InstanceProfile } from '#domain/settings/instance-profile.aggregate'
 import type {
   OidcDiscovery,
   OidcDiscoveryInfo,
@@ -93,6 +99,50 @@ export class FakeServarrProfileCatalog implements ServarrProfileCatalog {
   }
 }
 
+export class FakeServarrQualityProfileManager implements ServarrQualityProfileManager {
+  listResult: Result<QualityProfileRecord[], ConnectionError> = Result.ok([])
+  schemaResult: Result<QualityProfileRecord, ConnectionError> = Result.ok({
+    name: '',
+    upgradeAllowed: false,
+    cutoff: 1,
+    items: [{ id: 1, allowed: false, quality: { id: 1, name: 'SD' } }],
+  })
+  createResult: Result<QualityProfileRecord, ConnectionError> | null = null
+  updateResult: Result<QualityProfileRecord, ConnectionError> | null = null
+  deleteResult: Result<void, ConnectionError> = Result.ok(undefined)
+
+  async list(): Promise<Result<QualityProfileRecord[], ConnectionError>> {
+    return this.listResult
+  }
+
+  async getSchema(): Promise<Result<QualityProfileRecord, ConnectionError>> {
+    return this.schemaResult
+  }
+
+  async create(
+    _kind: ServarrKind,
+    _baseUrl: Url,
+    _apiKey: ApiKey,
+    payload: QualityProfileRecord,
+  ): Promise<Result<QualityProfileRecord, ConnectionError>> {
+    return this.createResult ?? Result.ok({ ...payload, id: 99 })
+  }
+
+  async update(
+    _kind: ServarrKind,
+    _baseUrl: Url,
+    _apiKey: ApiKey,
+    id: number,
+    payload: QualityProfileRecord,
+  ): Promise<Result<QualityProfileRecord, ConnectionError>> {
+    return this.updateResult ?? Result.ok({ ...payload, id })
+  }
+
+  async delete(): Promise<Result<void, ConnectionError>> {
+    return this.deleteResult
+  }
+}
+
 export class InMemoryServarrInstanceRepository implements ServarrInstanceRepository {
   private byId = new Map<string, ServarrInstance>()
 
@@ -114,6 +164,26 @@ export class InMemoryServarrInstanceRepository implements ServarrInstanceReposit
 
   async save(instance: ServarrInstance): Promise<void> {
     this.byId.set(instance.id, instance)
+  }
+
+  async delete(id: string): Promise<void> {
+    this.byId.delete(id)
+  }
+}
+
+export class InMemoryInstanceProfileRepository implements InstanceProfileRepository {
+  private byId = new Map<string, InstanceProfile>()
+
+  async listByInstance(instanceId: string): Promise<InstanceProfile[]> {
+    return [...this.byId.values()].filter((profile) => profile.instanceId === instanceId)
+  }
+
+  async findById(id: string): Promise<InstanceProfile | null> {
+    return this.byId.get(id) ?? null
+  }
+
+  async save(profile: InstanceProfile): Promise<void> {
+    this.byId.set(profile.id, profile)
   }
 
   async delete(id: string): Promise<void> {

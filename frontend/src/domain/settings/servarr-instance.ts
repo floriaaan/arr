@@ -9,5 +9,7 @@ export interface ServarrInstanceDto {
   qualityProfileId: number | null
   metadataProfileId: number | null
   languageProfileId: number | null
+  seriesType: string | null
+  minimumAvailability: string | null
   enabled: boolean
 }

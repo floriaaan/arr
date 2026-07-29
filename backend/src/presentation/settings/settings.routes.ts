@@ -32,6 +32,20 @@ router
     router.delete('/instances/:kind', [SettingsController, 'deleteInstance'])
     router.post('/instances/:kind/test-connection', [SettingsController, 'testInstanceConnection'])
     router.post('/instances/:kind/profiles', [SettingsController, 'instanceProfiles'])
+    router.get('/instances/:kind/catalog', [SettingsController, 'catalogForInstance'])
+    router.get('/instances/:kind/saved-profiles', [SettingsController, 'listSavedProfiles'])
+    router.post('/instances/:kind/saved-profiles', [SettingsController, 'createSavedProfile'])
+    router.put('/instances/:kind/saved-profiles/:id', [SettingsController, 'updateSavedProfile'])
+    router.delete('/instances/:kind/saved-profiles/:id', [SettingsController, 'deleteSavedProfile'])
+    router.post('/instances/:kind/saved-profiles/:id/default', [
+      SettingsController,
+      'setDefaultSavedProfile',
+    ])
+    router.get('/instances/:kind/quality-profiles', [SettingsController, 'listQualityProfiles'])
+    router.get('/instances/:kind/quality-profiles/schema', [
+      SettingsController,
+      'qualityProfileSchema',
+    ])
     router.get('/sso', [SettingsController, 'getSso'])
     router.put('/sso', [SettingsController, 'updateSso'])
     router.post('/sso/test', [SettingsController, 'testSso'])

@@ -10,6 +10,8 @@ import {
   onboardingStatusSchema,
   servarrInstanceDtoSchema,
   instanceProfilesSchema,
+  instanceProfileDtoSchema,
+  qualityProfileRecordSchema,
   oidcDiscoverySchema,
   effectiveAuthSettingsSchema,
   savedSsoConfigSchema,
@@ -30,6 +32,7 @@ import type { UserAccount } from '#domain/identity/user-account'
 import type { Session } from '#domain/identity/session'
 import type { ServarrKind } from '#domain/settings/servarr-instance'
 import type { InstanceDraft } from '#domain/settings/instance-draft'
+import type { InstanceProfileDraft } from '#domain/settings/instance-profile'
 import type { MediaKind } from '#domain/catalog/media-kind'
 import type { ExternalId, ExternalIdScheme } from '#domain/catalog/external-id'
 import type { MediaItem } from '#domain/catalog/media-item'
@@ -221,6 +224,69 @@ export class HttpArrConnector implements ArrConnector {
     })
     if (!response.ok) return { ok: false as const, error: await toApiError(response) }
     return { ok: true as const, value: instanceProfilesSchema.parse(await response.json()) }
+  }
+
+  async fetchStoredInstanceProfiles(kind: ServarrKind) {
+    const response = await this.http.get(`/api/settings/instances/${kind}/catalog`)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    return { ok: true as const, value: instanceProfilesSchema.parse(await response.json()) }
+  }
+
+  async listInstanceProfiles(kind: ServarrKind) {
+    const response = await this.http.get(`/api/settings/instances/${kind}/saved-profiles`)
+    const body = (await response.json()) as { profiles: unknown[] }
+    return body.profiles.map((profile) => instanceProfileDtoSchema.parse(profile))
+  }
+
+  async createInstanceProfile(kind: ServarrKind, draft: InstanceProfileDraft) {
+    const response = await this.http.post(`/api/settings/instances/${kind}/saved-profiles`, draft)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { profile: unknown }
+    return { ok: true as const, value: instanceProfileDtoSchema.parse(body.profile) }
+  }
+
+  async updateInstanceProfile(kind: ServarrKind, id: string, draft: InstanceProfileDraft) {
+    const response = await this.http.put(
+      `/api/settings/instances/${kind}/saved-profiles/${id}`,
+      draft,
+    )
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { profile: unknown }
+    return { ok: true as const, value: instanceProfileDtoSchema.parse(body.profile) }
+  }
+
+  async deleteInstanceProfile(kind: ServarrKind, id: string) {
+    const response = await this.http.delete(`/api/settings/instances/${kind}/saved-profiles/${id}`)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    return { ok: true as const, value: undefined }
+  }
+
+  async setDefaultInstanceProfile(kind: ServarrKind, id: string) {
+    const response = await this.http.post(
+      `/api/settings/instances/${kind}/saved-profiles/${id}/default`,
+    )
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { profile: unknown }
+    return { ok: true as const, value: instanceProfileDtoSchema.parse(body.profile) }
+  }
+
+  async listQualityProfiles(kind: ServarrKind) {
+    const response = await this.http.get(`/api/settings/instances/${kind}/quality-profiles`)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { qualityProfiles: unknown[] }
+    return {
+      ok: true as const,
+      value: body.qualityProfiles.map((profile) => qualityProfileRecordSchema.parse(profile)),
+    }
+  }
+
+  async getQualityProfileSchema(kind: ServarrKind) {
+    const response = await this.http.get(
+      `/api/settings/instances/${kind}/quality-profiles/schema`,
+    )
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { qualityProfile: unknown }
+    return { ok: true as const, value: qualityProfileRecordSchema.parse(body.qualityProfile) }
   }
 
   async getSso() {
