@@ -12,6 +12,18 @@ import { SetDefaultInstanceProfile } from '#application/settings/set-default-ins
 import { DeleteInstanceProfile } from '#application/settings/delete-instance-profile.use-case'
 import { ListQualityProfiles } from '#application/settings/list-quality-profiles.use-case'
 import { GetQualityProfileSchema } from '#application/settings/get-quality-profile-schema.use-case'
+import { ListDownloadClients } from '#application/settings/list-download-clients.use-case'
+import { GetDownloadClientSchema } from '#application/settings/get-download-client-schema.use-case'
+import { CreateDownloadClient } from '#application/settings/create-download-client.use-case'
+import { UpdateDownloadClient } from '#application/settings/update-download-client.use-case'
+import { DeleteDownloadClient } from '#application/settings/delete-download-client.use-case'
+import { TestDownloadClient } from '#application/settings/test-download-client.use-case'
+import { ListIndexers } from '#application/settings/list-indexers.use-case'
+import { GetIndexerSchema } from '#application/settings/get-indexer-schema.use-case'
+import { CreateIndexer } from '#application/settings/create-indexer.use-case'
+import { UpdateIndexer } from '#application/settings/update-indexer.use-case'
+import { DeleteIndexer } from '#application/settings/delete-indexer.use-case'
+import { TestIndexer } from '#application/settings/test-indexer.use-case'
 import { TestOidcDiscovery } from '#application/settings/test-oidc-discovery.use-case'
 import { SaveAuthSettings } from '#application/settings/save-auth-settings.use-case'
 import { GetEffectiveAuthSettings } from '#application/settings/get-effective-auth-settings.use-case'
@@ -23,10 +35,14 @@ import {
   createInstanceProfileValidator,
   updateInstanceProfileValidator,
 } from './instance-profile.validator.js'
+import { downloadClientPayloadValidator } from './download-client.validator.js'
+import { indexerPayloadValidator } from './indexer.validator.js'
 import { testOidcValidator, saveOidcValidator } from './oidc.validator.js'
 import type { ServarrKind } from '#domain/settings/servarr-kind.vo'
 import type { InstanceProfileRepository } from '#domain/settings/interfaces/instance-profile-repository.interface'
 import type { ServarrInstanceRepository } from '#domain/settings/interfaces/servarr-instance-repository.interface'
+import type { DownloadClientRecord } from '#domain/settings/interfaces/servarr-download-client-manager.interface'
+import type { IndexerRecord } from '#domain/settings/interfaces/servarr-indexer-manager.interface'
 
 export default class SettingsController {
   async listInstances(ctx: HttpContext) {
@@ -321,6 +337,222 @@ export default class SettingsController {
     }
 
     return ctx.response.json({ qualityProfile: result.value })
+  }
+
+  async listDownloadClients(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const instanceRepository = await app.container.make('settings.instanceRepository')
+    const manager = await app.container.make('settings.downloadClientManager')
+
+    const result = await new ListDownloadClients(instanceRepository, manager).execute({ kind })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    return ctx.response.json({ downloadClients: result.value })
+  }
+
+  async downloadClientSchema(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const instanceRepository = await app.container.make('settings.instanceRepository')
+    const manager = await app.container.make('settings.downloadClientManager')
+
+    const result = await new GetDownloadClientSchema(instanceRepository, manager).execute({ kind })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    return ctx.response.json({ downloadClientSchemas: result.value })
+  }
+
+  async createDownloadClient(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const payload = (await ctx.request.validateUsing(
+      downloadClientPayloadValidator,
+    )) as DownloadClientRecord
+    const instanceRepository = await app.container.make('settings.instanceRepository')
+    const manager = await app.container.make('settings.downloadClientManager')
+
+    const result = await new CreateDownloadClient(instanceRepository, manager).execute({
+      kind,
+      payload,
+    })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    return ctx.response.json({ downloadClient: result.value })
+  }
+
+  async updateDownloadClient(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const id = Number(ctx.params.id)
+    if (!Number.isFinite(id)) {
+      const { status, body } = serializeError('invalid_id')
+      return ctx.response.status(status).send(body)
+    }
+    const payload = (await ctx.request.validateUsing(
+      downloadClientPayloadValidator,
+    )) as DownloadClientRecord
+    const instanceRepository = await app.container.make('settings.instanceRepository')
+    const manager = await app.container.make('settings.downloadClientManager')
+
+    const result = await new UpdateDownloadClient(instanceRepository, manager).execute({
+      kind,
+      id,
+      payload,
+    })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    return ctx.response.json({ downloadClient: result.value })
+  }
+
+  async deleteDownloadClient(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const id = Number(ctx.params.id)
+    if (!Number.isFinite(id)) {
+      const { status, body } = serializeError('invalid_id')
+      return ctx.response.status(status).send(body)
+    }
+    const instanceRepository = await app.container.make('settings.instanceRepository')
+    const manager = await app.container.make('settings.downloadClientManager')
+
+    const result = await new DeleteDownloadClient(instanceRepository, manager).execute({ kind, id })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    ctx.response.status(204)
+    return ctx.response.send('')
+  }
+
+  async testDownloadClient(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const payload = (await ctx.request.validateUsing(
+      downloadClientPayloadValidator,
+    )) as DownloadClientRecord
+    const instanceRepository = await app.container.make('settings.instanceRepository')
+    const manager = await app.container.make('settings.downloadClientManager')
+
+    const result = await new TestDownloadClient(instanceRepository, manager).execute({
+      kind,
+      payload,
+    })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    return ctx.response.json({ ok: true })
+  }
+
+  async listIndexers(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const instanceRepository = await app.container.make('settings.instanceRepository')
+    const manager = await app.container.make('settings.indexerManager')
+
+    const result = await new ListIndexers(instanceRepository, manager).execute({ kind })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    return ctx.response.json({ indexers: result.value })
+  }
+
+  async indexerSchema(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const instanceRepository = await app.container.make('settings.instanceRepository')
+    const manager = await app.container.make('settings.indexerManager')
+
+    const result = await new GetIndexerSchema(instanceRepository, manager).execute({ kind })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    return ctx.response.json({ indexerSchemas: result.value })
+  }
+
+  async createIndexer(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const payload = (await ctx.request.validateUsing(indexerPayloadValidator)) as IndexerRecord
+    const instanceRepository = await app.container.make('settings.instanceRepository')
+    const manager = await app.container.make('settings.indexerManager')
+
+    const result = await new CreateIndexer(instanceRepository, manager).execute({ kind, payload })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    return ctx.response.json({ indexer: result.value })
+  }
+
+  async updateIndexer(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const id = Number(ctx.params.id)
+    if (!Number.isFinite(id)) {
+      const { status, body } = serializeError('invalid_id')
+      return ctx.response.status(status).send(body)
+    }
+    const payload = (await ctx.request.validateUsing(indexerPayloadValidator)) as IndexerRecord
+    const instanceRepository = await app.container.make('settings.instanceRepository')
+    const manager = await app.container.make('settings.indexerManager')
+
+    const result = await new UpdateIndexer(instanceRepository, manager).execute({
+      kind,
+      id,
+      payload,
+    })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    return ctx.response.json({ indexer: result.value })
+  }
+
+  async deleteIndexer(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const id = Number(ctx.params.id)
+    if (!Number.isFinite(id)) {
+      const { status, body } = serializeError('invalid_id')
+      return ctx.response.status(status).send(body)
+    }
+    const instanceRepository = await app.container.make('settings.instanceRepository')
+    const manager = await app.container.make('settings.indexerManager')
+
+    const result = await new DeleteIndexer(instanceRepository, manager).execute({ kind, id })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    ctx.response.status(204)
+    return ctx.response.send('')
+  }
+
+  async testIndexer(ctx: HttpContext) {
+    const kind = ctx.params.kind as ServarrKind
+    const payload = (await ctx.request.validateUsing(indexerPayloadValidator)) as IndexerRecord
+    const instanceRepository = await app.container.make('settings.instanceRepository')
+    const manager = await app.container.make('settings.indexerManager')
+
+    const result = await new TestIndexer(instanceRepository, manager).execute({ kind, payload })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    return ctx.response.json({ ok: true })
   }
 
   async getSso(ctx: HttpContext) {

@@ -8,6 +8,8 @@ import type { ServarrKind, ServarrInstanceDto } from '../settings/servarr-instan
 import type { InstanceDraft } from '../settings/instance-draft'
 import type { InstanceProfileDto, InstanceProfileDraft } from '../settings/instance-profile'
 import type { QualityProfileRecord } from '../settings/quality-profile-record'
+import type { DownloadClientRecord } from '../settings/download-client-record'
+import type { IndexerRecord } from '../settings/indexer-record'
 import type { EffectiveAuthSettings } from '../settings/effective-auth-settings'
 import type { MediaKind } from '../catalog/media-kind'
 import type { ExternalId, ExternalIdScheme } from '../catalog/external-id'
@@ -138,6 +140,40 @@ export interface ArrConnector {
   // a profile and a Quality Profile are the same thing, cf. docs/phase-3-instance-profiles/01)
   listQualityProfiles: (kind: ServarrKind) => Promise<Result<QualityProfileRecord[], ApiError>>
   getQualityProfileSchema: (kind: ServarrKind) => Promise<Result<QualityProfileRecord, ApiError>>
+
+  // settings — admin panel — download clients (cf. docs/phase-4-download-clients-indexers)
+  // Full CRUD passthrough to the *arr — there is no local table to keep in sync.
+  listDownloadClients: (kind: ServarrKind) => Promise<Result<DownloadClientRecord[], ApiError>>
+  getDownloadClientSchema: (kind: ServarrKind) => Promise<Result<DownloadClientRecord[], ApiError>>
+  createDownloadClient: (
+    kind: ServarrKind,
+    payload: DownloadClientRecord,
+  ) => Promise<Result<DownloadClientRecord, ApiError>>
+  updateDownloadClient: (
+    kind: ServarrKind,
+    id: number,
+    payload: DownloadClientRecord,
+  ) => Promise<Result<DownloadClientRecord, ApiError>>
+  deleteDownloadClient: (kind: ServarrKind, id: number) => Promise<Result<void, ApiError>>
+  testDownloadClient: (
+    kind: ServarrKind,
+    payload: DownloadClientRecord,
+  ) => Promise<Result<void, ApiError>>
+
+  // settings — admin panel — indexers (cf. docs/phase-4-download-clients-indexers)
+  listIndexers: (kind: ServarrKind) => Promise<Result<IndexerRecord[], ApiError>>
+  getIndexerSchema: (kind: ServarrKind) => Promise<Result<IndexerRecord[], ApiError>>
+  createIndexer: (
+    kind: ServarrKind,
+    payload: IndexerRecord,
+  ) => Promise<Result<IndexerRecord, ApiError>>
+  updateIndexer: (
+    kind: ServarrKind,
+    id: number,
+    payload: IndexerRecord,
+  ) => Promise<Result<IndexerRecord, ApiError>>
+  deleteIndexer: (kind: ServarrKind, id: number) => Promise<Result<void, ApiError>>
+  testIndexer: (kind: ServarrKind, payload: IndexerRecord) => Promise<Result<void, ApiError>>
 
   getSso: () => Promise<{
     issuerUrl: string

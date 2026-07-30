@@ -46,6 +46,30 @@ router
       SettingsController,
       'qualityProfileSchema',
     ])
+    router.get('/instances/:kind/download-clients', [SettingsController, 'listDownloadClients'])
+    router.get('/instances/:kind/download-clients/schema', [
+      SettingsController,
+      'downloadClientSchema',
+    ])
+    router.post('/instances/:kind/download-clients', [SettingsController, 'createDownloadClient'])
+    router.put('/instances/:kind/download-clients/:id', [
+      SettingsController,
+      'updateDownloadClient',
+    ])
+    router.delete('/instances/:kind/download-clients/:id', [
+      SettingsController,
+      'deleteDownloadClient',
+    ])
+    router.post('/instances/:kind/download-clients/test', [
+      SettingsController,
+      'testDownloadClient',
+    ])
+    router.get('/instances/:kind/indexers', [SettingsController, 'listIndexers'])
+    router.get('/instances/:kind/indexers/schema', [SettingsController, 'indexerSchema'])
+    router.post('/instances/:kind/indexers', [SettingsController, 'createIndexer'])
+    router.put('/instances/:kind/indexers/:id', [SettingsController, 'updateIndexer'])
+    router.delete('/instances/:kind/indexers/:id', [SettingsController, 'deleteIndexer'])
+    router.post('/instances/:kind/indexers/test', [SettingsController, 'testIndexer'])
     router.get('/sso', [SettingsController, 'getSso'])
     router.put('/sso', [SettingsController, 'updateSso'])
     router.post('/sso/test', [SettingsController, 'testSso'])

@@ -10,6 +10,8 @@ import {
   LibraryBig,
   CalendarDays,
   SlidersHorizontal,
+  Download,
+  Radar,
 } from 'lucide-react'
 import { Button } from '#presentation/ui/button'
 import { Badge } from '#presentation/ui/badge'
@@ -88,6 +90,36 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <SlidersHorizontal className="size-4" />
               Profiles
+            </Link>
+          ) : null}
+
+          {isAdmin ? (
+            <Link
+              to="/download-clients"
+              className={cn(
+                'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                location.pathname.startsWith('/download-clients')
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+              )}
+            >
+              <Download className="size-4" />
+              Download Clients
+            </Link>
+          ) : null}
+
+          {isAdmin ? (
+            <Link
+              to="/indexers"
+              className={cn(
+                'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                location.pathname.startsWith('/indexers')
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+              )}
+            >
+              <Radar className="size-4" />
+              Indexers
             </Link>
           ) : null}
 

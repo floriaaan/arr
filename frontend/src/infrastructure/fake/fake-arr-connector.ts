@@ -18,6 +18,8 @@ import type { ServarrKind, ServarrInstanceDto } from '#domain/settings/servarr-i
 import type { InstanceDraft } from '#domain/settings/instance-draft'
 import type { InstanceProfileDto, InstanceProfileDraft } from '#domain/settings/instance-profile'
 import type { QualityProfileRecord } from '#domain/settings/quality-profile-record'
+import type { DownloadClientRecord } from '#domain/settings/download-client-record'
+import type { IndexerRecord } from '#domain/settings/indexer-record'
 import type { MediaKind } from '#domain/catalog/media-kind'
 import type { ExternalId, ExternalIdScheme } from '#domain/catalog/external-id'
 import type { MediaItem } from '#domain/catalog/media-item'
@@ -113,6 +115,237 @@ const FAKE_LANGUAGE_PROFILES = [
   { id: 3, name: 'Multi (English + French)' },
 ]
 
+/**
+ * Seeded so that "QBittorrent" ends up configured on all 3 kinds (exercises
+ * a fully-merged card) while "SABnzbd" is only on radarr/sonarr (exercises
+ * the "missing instance" checkbox in the grouped edit dialog) — cf.
+ * docs/phase-4-download-clients-indexers.
+ */
+function seedDownloadClients(kind: ServarrKind): DownloadClientRecord[] {
+  const category = kind === 'radarr' ? 'movies' : kind === 'sonarr' ? 'tv' : 'music'
+  const clients: DownloadClientRecord[] = [
+    {
+      id: 1,
+      name: 'QBittorrent',
+      implementation: 'QBittorrent',
+      implementationName: 'qBittorrent',
+      configContract: 'QBittorrentSettings',
+      protocol: 'torrent',
+      enable: true,
+      priority: 1,
+      fields: [
+        { name: 'host', label: 'Host', type: 'textbox', value: 'localhost' },
+        { name: 'port', label: 'Port', type: 'number', value: 8080 },
+        { name: 'username', label: 'Username', type: 'textbox', value: 'admin' },
+        { name: 'password', label: 'Password', type: 'password', privacy: 'password', value: '' },
+        { name: 'category', label: 'Category', type: 'textbox', value: category },
+        { name: 'useSsl', label: 'Use SSL', type: 'checkbox', value: false },
+      ],
+    },
+  ]
+
+  if (kind !== 'lidarr') {
+    clients.push({
+      id: 2,
+      name: 'SABnzbd',
+      implementation: 'Sabnzbd',
+      implementationName: 'SABnzbd',
+      configContract: 'SabnzbdSettings',
+      protocol: 'usenet',
+      enable: true,
+      priority: 1,
+      fields: [
+        { name: 'host', label: 'Host', type: 'textbox', value: 'localhost' },
+        { name: 'port', label: 'Port', type: 'number', value: 8085 },
+        {
+          name: 'apiKey',
+          label: 'API Key',
+          type: 'password',
+          privacy: 'apiKey',
+          value: 'fake-sabnzbd-key',
+        },
+        { name: 'category', label: 'Category', type: 'textbox', value: category },
+      ],
+    })
+  }
+
+  return clients
+}
+
+/**
+ * "1337x" (radarr+sonarr) and "DrunkenSlug" (sonarr+lidarr) each cover 2 of
+ * 3 kinds with a different missing instance, to exercise a couple of
+ * partial-coverage combinations for the merged card.
+ */
+function seedIndexers(kind: ServarrKind): IndexerRecord[] {
+  const indexers: IndexerRecord[] = []
+
+  if (kind === 'radarr' || kind === 'sonarr') {
+    indexers.push({
+      id: 1,
+      name: '1337x',
+      implementation: 'Torznab',
+      implementationName: 'Torznab',
+      configContract: 'TorznabSettings',
+      protocol: 'torrent',
+      enableRss: true,
+      enableAutomaticSearch: true,
+      enableInteractiveSearch: true,
+      priority: 25,
+      fields: [
+        { name: 'baseUrl', label: 'URL', type: 'textbox', value: 'https://1337x.example.test' },
+        { name: 'apiPath', label: 'API Path', type: 'textbox', value: '/api' },
+        {
+          name: 'apiKey',
+          label: 'API Key',
+          type: 'password',
+          privacy: 'apiKey',
+          value: 'fake-1337x-key',
+        },
+        { name: 'categories', label: 'Categories', type: 'tag', value: [2000, 2010] },
+      ],
+    })
+  }
+
+  if (kind === 'sonarr' || kind === 'lidarr') {
+    indexers.push({
+      id: 2,
+      name: 'DrunkenSlug',
+      implementation: 'Newznab',
+      implementationName: 'Newznab',
+      configContract: 'NewznabSettings',
+      protocol: 'usenet',
+      enableRss: true,
+      enableAutomaticSearch: true,
+      enableInteractiveSearch: true,
+      priority: 25,
+      fields: [
+        {
+          name: 'baseUrl',
+          label: 'URL',
+          type: 'textbox',
+          value: 'https://drunkenslug.example.test',
+        },
+        {
+          name: 'apiKey',
+          label: 'API Key',
+          type: 'password',
+          privacy: 'apiKey',
+          value: 'fake-drunkenslug-key',
+        },
+        { name: 'categories', label: 'Categories', type: 'tag', value: [5000, 5030] },
+      ],
+    })
+  }
+
+  return indexers
+}
+
+/** Templates for the "Add download client" dialog — one per implementation, no `id`. */
+const FAKE_DOWNLOAD_CLIENT_SCHEMAS: DownloadClientRecord[] = [
+  {
+    name: '',
+    implementation: 'QBittorrent',
+    implementationName: 'qBittorrent',
+    configContract: 'QBittorrentSettings',
+    protocol: 'torrent',
+    enable: true,
+    priority: 1,
+    fields: [
+      { name: 'host', label: 'Host', type: 'textbox', value: 'localhost' },
+      { name: 'port', label: 'Port', type: 'number', value: 8080 },
+      { name: 'username', label: 'Username', type: 'textbox', value: '' },
+      { name: 'password', label: 'Password', type: 'password', privacy: 'password', value: '' },
+      { name: 'category', label: 'Category', type: 'textbox', value: '' },
+      { name: 'useSsl', label: 'Use SSL', type: 'checkbox', value: false },
+    ],
+  },
+  {
+    name: '',
+    implementation: 'Transmission',
+    implementationName: 'Transmission',
+    configContract: 'TransmissionSettings',
+    protocol: 'torrent',
+    enable: true,
+    priority: 1,
+    fields: [
+      { name: 'host', label: 'Host', type: 'textbox', value: 'localhost' },
+      { name: 'port', label: 'Port', type: 'number', value: 9091 },
+      { name: 'username', label: 'Username', type: 'textbox', value: '' },
+      { name: 'password', label: 'Password', type: 'password', privacy: 'password', value: '' },
+      { name: 'category', label: 'Category', type: 'textbox', value: '' },
+    ],
+  },
+  {
+    name: '',
+    implementation: 'Sabnzbd',
+    implementationName: 'SABnzbd',
+    configContract: 'SabnzbdSettings',
+    protocol: 'usenet',
+    enable: true,
+    priority: 1,
+    fields: [
+      { name: 'host', label: 'Host', type: 'textbox', value: 'localhost' },
+      { name: 'port', label: 'Port', type: 'number', value: 8085 },
+      { name: 'apiKey', label: 'API Key', type: 'password', privacy: 'apiKey', value: '' },
+      { name: 'category', label: 'Category', type: 'textbox', value: '' },
+    ],
+  },
+  {
+    name: '',
+    implementation: 'NzbGet',
+    implementationName: 'NZBGet',
+    configContract: 'NzbgetSettings',
+    protocol: 'usenet',
+    enable: true,
+    priority: 1,
+    fields: [
+      { name: 'host', label: 'Host', type: 'textbox', value: 'localhost' },
+      { name: 'port', label: 'Port', type: 'number', value: 6789 },
+      { name: 'username', label: 'Username', type: 'textbox', value: 'nzbget' },
+      { name: 'password', label: 'Password', type: 'password', privacy: 'password', value: '' },
+      { name: 'category', label: 'Category', type: 'textbox', value: '' },
+    ],
+  },
+]
+
+/** Templates for the "Add indexer" dialog — one per implementation, no `id`. */
+const FAKE_INDEXER_SCHEMAS: IndexerRecord[] = [
+  {
+    name: '',
+    implementation: 'Torznab',
+    implementationName: 'Torznab',
+    configContract: 'TorznabSettings',
+    protocol: 'torrent',
+    enableRss: true,
+    enableAutomaticSearch: true,
+    enableInteractiveSearch: true,
+    priority: 25,
+    fields: [
+      { name: 'baseUrl', label: 'URL', type: 'textbox', value: '' },
+      { name: 'apiPath', label: 'API Path', type: 'textbox', value: '/api' },
+      { name: 'apiKey', label: 'API Key', type: 'password', privacy: 'apiKey', value: '' },
+      { name: 'categories', label: 'Categories', type: 'tag', value: [] },
+    ],
+  },
+  {
+    name: '',
+    implementation: 'Newznab',
+    implementationName: 'Newznab',
+    configContract: 'NewznabSettings',
+    protocol: 'usenet',
+    enableRss: true,
+    enableAutomaticSearch: true,
+    enableInteractiveSearch: true,
+    priority: 25,
+    fields: [
+      { name: 'baseUrl', label: 'URL', type: 'textbox', value: '' },
+      { name: 'apiKey', label: 'API Key', type: 'password', privacy: 'apiKey', value: '' },
+      { name: 'categories', label: 'Categories', type: 'tag', value: [] },
+    ],
+  },
+]
+
 const ONBOARDING_STORAGE_KEY = 'arr:fake:onboarding'
 
 interface PersistedOnboardingState {
@@ -141,6 +374,8 @@ export class FakeArrConnector implements ArrConnector {
   private readonly instances = new Map<ServarrKind, ServarrInstanceDto & { apiKey: string }>()
   private readonly savedProfiles = new Map<ServarrKind, InstanceProfileDto[]>()
   private readonly qualityProfiles = new Map<ServarrKind, QualityProfileRecord[]>()
+  private readonly downloadClients = new Map<ServarrKind, DownloadClientRecord[]>()
+  private readonly indexers = new Map<ServarrKind, IndexerRecord[]>()
   private ssoConfig: (OidcConfigInput & { claimsMapping?: Record<string, string> }) | null = null
   private readonly requests = new Map<string, MediaRequest>()
   private readonly removedLibraryItems = new Set<string>()
@@ -820,6 +1055,100 @@ export class FakeArrConnector implements ArrConnector {
       kind,
       existing.filter((profile) => profile.id !== id),
     )
+  }
+
+  private getDownloadClientsFor(kind: ServarrKind): DownloadClientRecord[] {
+    const existing = this.downloadClients.get(kind)
+    if (existing) return existing
+    const seeded = seedDownloadClients(kind)
+    this.downloadClients.set(kind, seeded)
+    return seeded
+  }
+
+  async listDownloadClients(kind: ServarrKind) {
+    return { ok: true as const, value: this.getDownloadClientsFor(kind) }
+  }
+
+  async getDownloadClientSchema(_kind: ServarrKind) {
+    return { ok: true as const, value: FAKE_DOWNLOAD_CLIENT_SCHEMAS }
+  }
+
+  async createDownloadClient(kind: ServarrKind, payload: DownloadClientRecord) {
+    const existing = this.getDownloadClientsFor(kind)
+    const nextId = Math.max(0, ...existing.map((client) => client.id ?? 0)) + 1
+    const created: DownloadClientRecord = { ...payload, id: nextId }
+    this.downloadClients.set(kind, [...existing, created])
+    return { ok: true as const, value: created }
+  }
+
+  async updateDownloadClient(kind: ServarrKind, id: number, payload: DownloadClientRecord) {
+    const existing = this.getDownloadClientsFor(kind)
+    const updated: DownloadClientRecord = { ...payload, id }
+    this.downloadClients.set(
+      kind,
+      existing.map((client) => (client.id === id ? updated : client)),
+    )
+    return { ok: true as const, value: updated }
+  }
+
+  async deleteDownloadClient(kind: ServarrKind, id: number) {
+    const existing = this.getDownloadClientsFor(kind)
+    this.downloadClients.set(
+      kind,
+      existing.filter((client) => client.id !== id),
+    )
+    return { ok: true as const, value: undefined }
+  }
+
+  async testDownloadClient(_kind: ServarrKind, _payload: DownloadClientRecord) {
+    return { ok: true as const, value: undefined }
+  }
+
+  private getIndexersFor(kind: ServarrKind): IndexerRecord[] {
+    const existing = this.indexers.get(kind)
+    if (existing) return existing
+    const seeded = seedIndexers(kind)
+    this.indexers.set(kind, seeded)
+    return seeded
+  }
+
+  async listIndexers(kind: ServarrKind) {
+    return { ok: true as const, value: this.getIndexersFor(kind) }
+  }
+
+  async getIndexerSchema(_kind: ServarrKind) {
+    return { ok: true as const, value: FAKE_INDEXER_SCHEMAS }
+  }
+
+  async createIndexer(kind: ServarrKind, payload: IndexerRecord) {
+    const existing = this.getIndexersFor(kind)
+    const nextId = Math.max(0, ...existing.map((indexer) => indexer.id ?? 0)) + 1
+    const created: IndexerRecord = { ...payload, id: nextId }
+    this.indexers.set(kind, [...existing, created])
+    return { ok: true as const, value: created }
+  }
+
+  async updateIndexer(kind: ServarrKind, id: number, payload: IndexerRecord) {
+    const existing = this.getIndexersFor(kind)
+    const updated: IndexerRecord = { ...payload, id }
+    this.indexers.set(
+      kind,
+      existing.map((indexer) => (indexer.id === id ? updated : indexer)),
+    )
+    return { ok: true as const, value: updated }
+  }
+
+  async deleteIndexer(kind: ServarrKind, id: number) {
+    const existing = this.getIndexersFor(kind)
+    this.indexers.set(
+      kind,
+      existing.filter((indexer) => indexer.id !== id),
+    )
+    return { ok: true as const, value: undefined }
+  }
+
+  async testIndexer(_kind: ServarrKind, _payload: IndexerRecord) {
+    return { ok: true as const, value: undefined }
   }
 }
 
