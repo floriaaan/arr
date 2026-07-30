@@ -101,9 +101,13 @@ export function IndexersPage() {
         deleteMutation.mutateAsync({ kind, id: record.id! }).then((result) => {
           void queryClient.invalidateQueries({ queryKey: ['indexers', kind] })
           if (!result.ok) toast.error(`${SERVARR_META[kind].label}: ${result.error.message}`)
+          return result.ok
         }),
       ),
-    ).then(() => toast.success(`${group.name} deleted.`))
+    ).then((results) => {
+      if (results.every(Boolean)) toast.success(`${group.name} deleted.`)
+      else if (results.some(Boolean)) toast.warning(`${group.name} deleted on some instances only.`)
+    })
   }
 
   function handleDeleteInstance(kind: ServarrKind, record: IndexerRecord) {

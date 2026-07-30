@@ -25,7 +25,7 @@ export interface KindMeta {
 
 /**
  * Shared by the download-clients and indexers pages — a `MergedRecord<T>`
- * displays fusioned by default (one card, group Edit/Delete), with a
+ * displays merged by default (one card, group Edit/Delete), with a
  * "Demerge" toggle that splits it into one row per instance with
  * independent actions (cf. docs/phase-4-download-clients-indexers
  * decision 4). The toggle is purely client state owned by the caller — it

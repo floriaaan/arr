@@ -390,6 +390,10 @@ export default class SettingsController {
   async updateDownloadClient(ctx: HttpContext) {
     const kind = ctx.params.kind as ServarrKind
     const id = Number(ctx.params.id)
+    if (!Number.isFinite(id)) {
+      const { status, body } = serializeError('invalid_id')
+      return ctx.response.status(status).send(body)
+    }
     const payload = (await ctx.request.validateUsing(
       downloadClientPayloadValidator,
     )) as DownloadClientRecord
@@ -412,6 +416,10 @@ export default class SettingsController {
   async deleteDownloadClient(ctx: HttpContext) {
     const kind = ctx.params.kind as ServarrKind
     const id = Number(ctx.params.id)
+    if (!Number.isFinite(id)) {
+      const { status, body } = serializeError('invalid_id')
+      return ctx.response.status(status).send(body)
+    }
     const instanceRepository = await app.container.make('settings.instanceRepository')
     const manager = await app.container.make('settings.downloadClientManager')
 
@@ -491,6 +499,10 @@ export default class SettingsController {
   async updateIndexer(ctx: HttpContext) {
     const kind = ctx.params.kind as ServarrKind
     const id = Number(ctx.params.id)
+    if (!Number.isFinite(id)) {
+      const { status, body } = serializeError('invalid_id')
+      return ctx.response.status(status).send(body)
+    }
     const payload = (await ctx.request.validateUsing(indexerPayloadValidator)) as IndexerRecord
     const instanceRepository = await app.container.make('settings.instanceRepository')
     const manager = await app.container.make('settings.indexerManager')
@@ -511,6 +523,10 @@ export default class SettingsController {
   async deleteIndexer(ctx: HttpContext) {
     const kind = ctx.params.kind as ServarrKind
     const id = Number(ctx.params.id)
+    if (!Number.isFinite(id)) {
+      const { status, body } = serializeError('invalid_id')
+      return ctx.response.status(status).send(body)
+    }
     const instanceRepository = await app.container.make('settings.instanceRepository')
     const manager = await app.container.make('settings.indexerManager')
 

@@ -133,12 +133,12 @@ export function DynamicFieldsForm({
             <Input
               type={isSensitive(field) ? 'password' : field.type === 'number' ? 'number' : 'text'}
               value={field.value === undefined || field.value === null ? '' : String(field.value)}
-              onChange={(event) =>
-                updateField(
-                  field.name,
-                  field.type === 'number' ? Number(event.target.value) : event.target.value,
-                )
-              }
+              onChange={(event) => {
+                if (field.type !== 'number') return updateField(field.name, event.target.value)
+                const raw = event.target.value
+                const parsed = raw === '' ? undefined : Number(raw)
+                updateField(field.name, parsed === undefined || Number.isNaN(parsed) ? undefined : parsed)
+              }}
             />
             {field.helpText ? (
               <p className="text-xs text-muted-foreground">{field.helpText}</p>

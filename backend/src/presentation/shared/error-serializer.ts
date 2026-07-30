@@ -26,6 +26,7 @@ const STRING_ERROR_STATUS: Record<string, number> = {
   already_requested: 409,
   already_managed: 409,
   no_active_instance: 409,
+  invalid_id: 400,
 }
 
 const STRING_ERROR_MESSAGES: Record<string, string> = {
@@ -43,6 +44,7 @@ const STRING_ERROR_MESSAGES: Record<string, string> = {
   already_requested: 'This media has already been requested.',
   already_managed: 'This media is already managed by an active request.',
   no_active_instance: 'No active instance is configured for this media kind.',
+  invalid_id: 'The provided id is not a valid number.',
 }
 
 const TYPED_ERROR_STATUS: Record<string, number> = {
