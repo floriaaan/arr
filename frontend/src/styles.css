@@ -7,6 +7,10 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* Makes native controls (scrollbars, date pickers, autofill) follow the
+     theme — without it a dark page keeps light scrollbars. */
+  color-scheme: light;
+
   --sea-ink: #173a40;
   --sea-ink-soft: #416166;
   --lagoon: #4fb8b2;
@@ -26,6 +30,16 @@
   --link-bg-hover: rgba(255, 255, 255, 0.9);
   --hero-a: rgba(79, 184, 178, 0.36);
   --hero-b: rgba(47, 106, 74, 0.2);
+  --hero-c: rgba(79, 184, 178, 0.1);
+  --link-hover: #246f76;
+  /* Consumed by body::before / body::after, which used to hardcode white
+     overlays that washed the page out under a dark palette. */
+  --glow-a: rgba(255, 255, 255, 0.8);
+  --glow-b: rgba(79, 184, 178, 0.2);
+  --glow-c: rgba(47, 106, 74, 0.14);
+  --glow-opacity: 0.28;
+  --grid-line: rgba(255, 255, 255, 0.07);
+  --grid-opacity: 0.14;
 
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);
@@ -63,6 +77,8 @@
 }
 
 .dark {
+  color-scheme: dark;
+
   --sea-ink: #d7ece8;
   --sea-ink-soft: #afcdc8;
   --lagoon: #60d7cf;
@@ -82,6 +98,14 @@
   --link-bg-hover: rgba(24, 44, 49, 0.8);
   --hero-a: rgba(96, 215, 207, 0.18);
   --hero-b: rgba(110, 200, 154, 0.12);
+  --hero-c: rgba(96, 215, 207, 0.07);
+  --link-hover: #a8ece2;
+  --glow-a: rgba(141, 229, 219, 0.12);
+  --glow-b: rgba(96, 215, 207, 0.1);
+  --glow-c: rgba(110, 200, 154, 0.08);
+  --glow-opacity: 0.5;
+  --grid-line: rgba(141, 229, 219, 0.06);
+  --grid-opacity: 0.28;
 
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0 0);
@@ -171,7 +195,7 @@ body {
   background:
     radial-gradient(1100px 620px at -8% -10%, var(--hero-a), transparent 58%),
     radial-gradient(1050px 620px at 112% -12%, var(--hero-b), transparent 62%),
-    radial-gradient(720px 380px at 50% 115%, rgba(79, 184, 178, 0.1), transparent 68%),
+    radial-gradient(720px 380px at 50% 115%, var(--hero-c), transparent 68%),
     linear-gradient(
       180deg,
       color-mix(in oklab, var(--sand) 68%, white) 0%,
@@ -189,11 +213,11 @@ body::before {
   inset: 0;
   pointer-events: none;
   z-index: -1;
-  opacity: 0.28;
+  opacity: var(--glow-opacity);
   background:
-    radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.8), transparent 34%),
-    radial-gradient(circle at 78% 26%, rgba(79, 184, 178, 0.2), transparent 42%),
-    radial-gradient(circle at 42% 82%, rgba(47, 106, 74, 0.14), transparent 36%);
+    radial-gradient(circle at 20% 15%, var(--glow-a), transparent 34%),
+    radial-gradient(circle at 78% 26%, var(--glow-b), transparent 42%),
+    radial-gradient(circle at 42% 82%, var(--glow-c), transparent 36%);
 }
 
 body::after {
@@ -202,10 +226,10 @@ body::after {
   inset: 0;
   pointer-events: none;
   z-index: -1;
-  opacity: 0.14;
+  opacity: var(--grid-opacity);
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 28px 28px;
   mask-image: radial-gradient(circle at 50% 30%, black, transparent 78%);
 }
@@ -218,7 +242,7 @@ a {
 }
 
 a:hover {
-  color: #246f76;
+  color: var(--link-hover);
 }
 
 code {
@@ -289,6 +313,38 @@ a {
     color 180ms ease,
     border-color 180ms ease,
     transform 180ms ease;
+}
+
+/**
+ * Micro-feedback on clickable elements. Kept as one utility rather than
+ * `hover:scale-*` sprinkled per component so the amplitude stays tunable in
+ * a single place (cf. docs/phase-5-quality-of-life, chantier 3). `transform`
+ * is already part of the shared transition above.
+ */
+.tap-scale {
+  transition:
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease;
+}
+
+.tap-scale:hover:not(:disabled):not([aria-disabled='true']) {
+  transform: scale(1.02);
+}
+
+.tap-scale:active:not(:disabled):not([aria-disabled='true']) {
+  transform: scale(0.97);
+}
+
+/* A pointer-driven animation has no business overriding this preference. */
+@media (prefers-reduced-motion: reduce) {
+  .tap-scale,
+  .tap-scale:hover,
+  .tap-scale:active {
+    transform: none;
+    transition: none;
+  }
 }
 
 .island-kicker {

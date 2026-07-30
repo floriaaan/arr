@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import {
@@ -16,6 +16,7 @@ import {
 import { Button } from '#presentation/ui/button'
 import { Badge } from '#presentation/ui/badge'
 import { CommandPalette } from './command-palette'
+import { ThemeToggle } from './theme-toggle'
 import { useSession } from '#application/identity/session.query'
 import { useSignOut } from '#application/identity/sign-out.mutation'
 import { useQueryClient } from '@tanstack/react-query'
@@ -36,6 +37,23 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const isAdmin = session.data?.user?.role === 'admin'
 
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'k' || !(event.metaKey || event.ctrlKey)) return
+      // Let ⌘K through when the user is typing somewhere — some inputs and
+      // rich editors bind it themselves.
+      const target = event.target as HTMLElement | null
+      if (target?.isContentEditable) return
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return
+
+      event.preventDefault()
+      setSearchOpen((open) => !open)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <aside className="flex h-full w-60 shrink-0 flex-col overflow-y-auto border-r bg-sidebar text-sidebar-foreground">
@@ -55,6 +73,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <Search className="size-4" />
             Search catalog
+            <kbd className="ml-auto rounded border bg-muted px-1.5 py-0.5 font-sans text-[10px] font-medium text-muted-foreground">
+              ⌘K
+            </kbd>
           </Button>
         </div>
 
@@ -139,7 +160,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           ) : null}
         </nav>
 
-        <div className="border-t px-3 py-3">
+        <div className="space-y-3 border-t px-3 py-3">
+          <ThemeToggle />
           <div className="flex items-center justify-between gap-2 px-1">
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{session.data?.user?.email}</p>

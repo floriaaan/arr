@@ -228,7 +228,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
 
     const servers = await connector.listMediaServers()
     expect(servers).toHaveLength(1)
-    expect(servers[0].baseUrl).toBe('http://plex.local:32400')
+    expect(servers[0]?.baseUrl).toBe('http://plex.local:32400')
   })
 
   test('deleting a media server removes it from the list', async () => {

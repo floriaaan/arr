@@ -8,6 +8,7 @@ import { MediaServersStep } from '#presentation/settings/onboarding/media-server
 import { SsoStep } from '#presentation/settings/onboarding/sso-step'
 import { SummaryStep } from '#presentation/settings/onboarding/summary-step'
 import { Card, CardContent } from '#presentation/ui/card'
+import { ThemeToggle } from '#presentation/shared/theme-toggle'
 import { cn } from '#presentation/shared/utils'
 
 export const Route = createFileRoute('/setup/')({
@@ -45,6 +46,9 @@ function SetupRoute() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="fixed top-4 right-4 z-10 w-32">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-lg space-y-6">
         <div className="text-center">
           <div className="display-title text-xl font-semibold tracking-tight">arr</div>

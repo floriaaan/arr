@@ -16,7 +16,7 @@ export function PosterCard({
       type="button"
       onClick={() => onSelect?.(item)}
       className={cn(
-        'group flex flex-col gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'tap-scale group flex flex-col gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         className,
       )}
     >

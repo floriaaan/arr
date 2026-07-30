@@ -76,7 +76,7 @@ function ServiceCard({
       <button
         type="button"
         onClick={() => setExpanded((value) => !value)}
-        className="flex w-full items-center gap-4 px-6 py-4 text-left"
+        className="tap-scale flex w-full items-center gap-4 px-6 py-4 text-left"
       >
         <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
           <Icon className="size-4.5" />
@@ -170,7 +170,7 @@ function MediaServerCard({
       <button
         type="button"
         onClick={() => setExpanded((value) => !value)}
-        className="flex w-full items-center gap-4 px-6 py-4 text-left"
+        className="tap-scale flex w-full items-center gap-4 px-6 py-4 text-left"
       >
         <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
           <Icon className="size-4.5" />
