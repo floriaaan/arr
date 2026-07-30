@@ -189,7 +189,7 @@ function MediaServerCard({
             )}
           </div>
           <CardDescription className="truncate">
-            {existing?.baseUrl ?? `Link your ${meta.description.toLowerCase()}`}
+            {existing?.baseUrl ?? `Link your ${meta.description}`}
           </CardDescription>
         </div>
         <ChevronDown

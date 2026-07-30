@@ -2,11 +2,13 @@ import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Clapperboard, ListChecks, Music, Tv } from 'lucide-react'
 import { useCalendar } from '#application/calendar/calendar.query'
 import { Button } from '#presentation/ui/button'
+import { Badge } from '#presentation/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '#presentation/ui/tabs'
 import { Skeleton } from '#presentation/ui/skeleton'
 import { ErrorState } from '#presentation/shared/error-state'
 import { cn } from '#presentation/shared/utils'
 import { MediaDetailDrawer } from '#presentation/catalog/media-detail-drawer'
+import { CalendarTimeline } from './calendar-timeline'
 import type { CalendarEntry, CalendarEntryKind } from '#domain/calendar/calendar-entry'
 import type { MediaKind } from '#domain/catalog/media-kind'
 import type { ExternalId } from '#domain/catalog/external-id'
@@ -64,19 +66,30 @@ export function CalendarGrid() {
   const gridDays = useMemo(() => getMonthGridDays(currentMonth), [currentMonth])
   const startDate = toDateKey(gridDays[0] ?? currentMonth)
   const endDate = toDateKey(gridDays.at(-1) ?? currentMonth)
+  const todayKey = toDateKey(new Date())
 
   const { data, isLoading, isError, refetch } = useCalendar(startDate, endDate)
 
+  /** Shared by the grid and the timeline below it — one filter, one fetch. */
+  const visibleEntries = useMemo(
+    () => (data ?? []).filter((entry) => kindTab === 'all' || entry.kind === kindTab),
+    [data, kindTab],
+  )
+
   const entriesByDay = useMemo(() => {
     const map = new Map<string, CalendarEntry[]>()
-    for (const entry of data ?? []) {
-      if (kindTab !== 'all' && entry.kind !== kindTab) continue
+    for (const entry of visibleEntries) {
       const list = map.get(entry.releaseDate) ?? []
       list.push(entry)
       map.set(entry.releaseDate, list)
     }
     return map
-  }, [data, kindTab])
+  }, [visibleEntries])
+
+  function selectEntry(entry: CalendarEntry) {
+    if (!entry.externalId) return
+    setSelected({ externalId: entry.externalId, kind: toMediaKind(entry.kind) })
+  }
 
   function goToPreviousMonth() {
     setCurrentMonth((month) => new Date(month.getFullYear(), month.getMonth() - 1, 1))
@@ -133,6 +146,8 @@ export function CalendarGrid() {
               const isCurrentMonth = day.getMonth() === currentMonth.getMonth()
               const entries = entriesByDay.get(dateKey) ?? []
 
+              const isToday = dateKey === todayKey
+
               return (
                 <div
                   key={dateKey}
@@ -141,14 +156,25 @@ export function CalendarGrid() {
                     !isCurrentMonth && 'bg-muted/30',
                   )}
                 >
-                  <p
-                    className={cn(
-                      'text-xs',
-                      isCurrentMonth ? 'text-foreground' : 'text-muted-foreground',
-                    )}
-                  >
-                    {day.getDate()}
-                  </p>
+                  <div className="flex items-center justify-between gap-1">
+                    <span
+                      className={cn(
+                        'flex size-5 items-center justify-center rounded-full text-xs',
+                        isToday && 'bg-primary font-semibold text-primary-foreground',
+                        !isToday && (isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'),
+                      )}
+                    >
+                      {day.getDate()}
+                    </span>
+                    {entries.length > 0 ? (
+                      <Badge
+                        variant="secondary"
+                        className="px-1.5 py-0 text-[10px] leading-4 tabular-nums"
+                      >
+                        {entries.length}
+                      </Badge>
+                    ) : null}
+                  </div>
                   <div className="space-y-1">
                     {entries.slice(0, 3).map((entry) => {
                       const Icon = ENTRY_ICON[entry.kind]
@@ -157,14 +183,8 @@ export function CalendarGrid() {
                           key={entry.id}
                           type="button"
                           disabled={!entry.externalId}
-                          onClick={() =>
-                            entry.externalId &&
-                            setSelected({
-                              externalId: entry.externalId,
-                              kind: toMediaKind(entry.kind),
-                            })
-                          }
-                          className="flex w-full items-center gap-1 truncate rounded bg-secondary px-1.5 py-0.5 text-left text-[11px] text-secondary-foreground disabled:cursor-default disabled:opacity-70 enabled:hover:bg-secondary/70"
+                          onClick={() => selectEntry(entry)}
+                          className="tap-scale flex w-full items-center gap-1 truncate rounded bg-secondary px-1.5 py-0.5 text-left text-[11px] text-secondary-foreground disabled:cursor-default disabled:opacity-70 enabled:hover:bg-secondary/70"
                           title={
                             entry.subtitle ? `${entry.title} — ${entry.subtitle}` : entry.title
                           }
@@ -177,11 +197,6 @@ export function CalendarGrid() {
                         </button>
                       )
                     })}
-                    {entries.length > 3 ? (
-                      <p className="text-[11px] text-muted-foreground">
-                        +{entries.length - 3} more
-                      </p>
-                    ) : null}
                   </div>
                 </div>
               )
@@ -189,6 +204,24 @@ export function CalendarGrid() {
           </div>
         </div>
       )}
+
+      {isLoading ? (
+        <Skeleton className="h-64 w-full" />
+      ) : (
+        <section className="space-y-3 pt-2">
+          <div>
+            <h2 className="text-sm font-semibold tracking-tight">
+              {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} in
+              detail
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Every release of the displayed range, including the ones the grid had to truncate.
+            </p>
+          </div>
+          <CalendarTimeline entries={visibleEntries} onSelect={selectEntry} />
+        </section>
+      )}
+
       <MediaDetailDrawer
         externalId={selected?.externalId ?? null}
         kind={selected?.kind ?? 'movie'}
