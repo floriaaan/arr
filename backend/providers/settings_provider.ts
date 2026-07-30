@@ -1,6 +1,7 @@
 import type { ApplicationService } from '@adonisjs/core/types'
 import type { ServarrInstanceRepository } from '#domain/settings/interfaces/servarr-instance-repository.interface'
 import type { InstanceProfileRepository } from '#domain/settings/interfaces/instance-profile-repository.interface'
+import type { MediaServerRepository } from '#domain/settings/interfaces/media-server-repository.interface'
 import type { AuthSettingsRepository } from '#domain/settings/interfaces/auth-settings-repository.interface'
 import type { OnboardingStateRepository } from '#domain/settings/interfaces/onboarding-state-repository.interface'
 import type { ServarrConnectionTester } from '#domain/settings/interfaces/servarr-connection-tester.interface'
@@ -32,6 +33,12 @@ export default class SettingsProvider {
       const { LucidInstanceProfileRepository } =
         await import('#infrastructure/persistence/settings/instance-profile.repository')
       return new LucidInstanceProfileRepository()
+    })
+
+    this.app.container.singleton('settings.mediaServerRepository', async () => {
+      const { LucidMediaServerRepository } =
+        await import('#infrastructure/persistence/settings/media-server.repository')
+      return new LucidMediaServerRepository()
     })
 
     this.app.container.singleton('settings.authSettingsRepository', async () => {
@@ -98,6 +105,7 @@ declare module '@adonisjs/core/types' {
   interface ContainerBindings {
     'settings.instanceRepository': ServarrInstanceRepository
     'settings.instanceProfileRepository': InstanceProfileRepository
+    'settings.mediaServerRepository': MediaServerRepository
     'settings.authSettingsRepository': AuthSettingsRepository
     'settings.onboardingStateRepository': OnboardingStateRepository
     'settings.connectionTester': ServarrConnectionTester

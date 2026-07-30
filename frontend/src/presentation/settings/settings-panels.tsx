@@ -13,14 +13,18 @@ import {
   Save,
   ShieldOff,
   Users,
+  MonitorPlay,
 } from 'lucide-react'
 import { useInstances } from '#application/settings/instances.query'
 import { useDeleteInstance } from '#application/settings/delete-instance.mutation'
 import { useSso } from '#application/settings/sso.query'
 import { useSaveOidc } from '#application/settings/save-oidc.mutation'
 import { useEffectiveAuthSettings } from '#application/settings/auth-settings.query'
+import { useMediaServers } from '#application/settings/media-servers.query'
 import { ServiceInstanceForm } from './service-instance-form'
+import { MediaServerForm } from './media-server-form'
 import { UsersPanel } from './users-panel'
+import { MEDIA_SERVER_META } from '#presentation/shared/media-server-meta'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '#presentation/ui/tabs'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '#presentation/ui/card'
 import { Button } from '#presentation/ui/button'
@@ -28,7 +32,9 @@ import { Input } from '#presentation/ui/input'
 import { Label } from '#presentation/ui/label'
 import { Badge } from '#presentation/ui/badge'
 import { cn } from '#presentation/shared/utils'
+import { MEDIA_SERVER_KINDS } from '#domain/settings/media-server'
 import type { ServarrKind, ServarrInstanceDto } from '#domain/settings/servarr-instance'
+import type { MediaServerDto, MediaServerKind } from '#domain/settings/media-server'
 
 const SERVARR_META: Record<
   ServarrKind,
@@ -141,6 +147,101 @@ function ServicesPanel() {
             />
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+function MediaServerCard({
+  kind,
+  existing,
+  onChanged,
+}: {
+  kind: MediaServerKind
+  existing?: MediaServerDto
+  onChanged: () => void
+}) {
+  const [expanded, setExpanded] = useState(!existing)
+  const meta = MEDIA_SERVER_META[kind]
+  const Icon = meta.icon
+
+  return (
+    <Card className="py-0">
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        className="flex w-full items-center gap-4 px-6 py-4 text-left"
+      >
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+          <Icon className="size-4.5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <CardTitle>{meta.label}</CardTitle>
+            {existing ? (
+              existing.enabled ? (
+                <Badge>Linked</Badge>
+              ) : (
+                <Badge variant="secondary">Hidden</Badge>
+              )
+            ) : (
+              <Badge variant="outline">Not configured</Badge>
+            )}
+          </div>
+          <CardDescription className="truncate">
+            {existing?.baseUrl ?? `Link your ${meta.description.toLowerCase()}`}
+          </CardDescription>
+        </div>
+        <ChevronDown
+          className={cn(
+            'size-4 shrink-0 text-muted-foreground transition-transform',
+            expanded && 'rotate-180',
+          )}
+        />
+      </button>
+
+      {expanded ? (
+        <CardContent className="space-y-4 border-t py-6">
+          <MediaServerForm
+            kind={kind}
+            existing={existing}
+            duringOnboarding={false}
+            onSaved={onChanged}
+            onRemoved={onChanged}
+          />
+        </CardContent>
+      ) : null}
+    </Card>
+  )
+}
+
+function MediaServersPanel() {
+  const queryClient = useQueryClient()
+  const mediaServers = useMediaServers()
+
+  function invalidate() {
+    void queryClient.invalidateQueries({ queryKey: ['media-servers'] })
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight">Media servers</h2>
+        <p className="text-sm text-muted-foreground">
+          Declare where you watch. Each linked server adds an "open in…" button on the detail of
+          every title already in your library. No API key is stored, and nothing is ever sent to
+          them — these are plain links.
+        </p>
+      </div>
+      <div className="space-y-3">
+        {MEDIA_SERVER_KINDS.map((kind) => (
+          <MediaServerCard
+            key={kind}
+            kind={kind}
+            existing={mediaServers.data?.find((server) => server.kind === kind)}
+            onChanged={invalidate}
+          />
+        ))}
       </div>
     </div>
   )
@@ -300,6 +401,10 @@ export function SettingsPanels() {
           <Clapperboard className="size-4" />
           Services
         </TabsTrigger>
+        <TabsTrigger value="media-servers">
+          <MonitorPlay className="size-4" />
+          Media servers
+        </TabsTrigger>
         <TabsTrigger value="sso">
           <KeyRound className="size-4" />
           Single sign-on
@@ -315,6 +420,9 @@ export function SettingsPanels() {
       </TabsList>
       <TabsContent value="services" className="min-w-0">
         <ServicesPanel />
+      </TabsContent>
+      <TabsContent value="media-servers" className="min-w-0">
+        <MediaServersPanel />
       </TabsContent>
       <TabsContent value="sso" className="min-w-0">
         <SsoPanel />

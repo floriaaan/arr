@@ -7,6 +7,7 @@ import type { OnboardingStatus } from '../settings/onboarding-state'
 import type { ServarrKind, ServarrInstanceDto } from '../settings/servarr-instance'
 import type { InstanceDraft } from '../settings/instance-draft'
 import type { InstanceProfileDto, InstanceProfileDraft } from '../settings/instance-profile'
+import type { MediaServerDraft, MediaServerDto, MediaServerKind } from '../settings/media-server'
 import type { QualityProfileRecord } from '../settings/quality-profile-record'
 import type { DownloadClientRecord } from '../settings/download-client-record'
 import type { IndexerRecord } from '../settings/indexer-record'
@@ -88,6 +89,10 @@ export interface ArrConnector {
     kind: ServarrKind,
     draft: InstanceDraft,
   ) => Promise<Result<ServarrInstanceDto, ApiError>>
+  saveOnboardingMediaServer: (
+    kind: MediaServerKind,
+    draft: MediaServerDraft,
+  ) => Promise<Result<MediaServerDto, ApiError>>
   testOidcDiscovery: (
     issuerUrl: string,
     clientId: string,
@@ -174,6 +179,16 @@ export interface ArrConnector {
   ) => Promise<Result<IndexerRecord, ApiError>>
   deleteIndexer: (kind: ServarrKind, id: number) => Promise<Result<void, ApiError>>
   testIndexer: (kind: ServarrKind, payload: IndexerRecord) => Promise<Result<void, ApiError>>
+
+  // settings — media servers (cf. docs/phase-5-quality-of-life)
+  // Reading is open to every signed-in user (the media detail drawer links to
+  // them); only the writes are admin-gated, backend-side.
+  listMediaServers: () => Promise<MediaServerDto[]>
+  saveMediaServer: (
+    kind: MediaServerKind,
+    draft: MediaServerDraft,
+  ) => Promise<Result<MediaServerDto, ApiError>>
+  deleteMediaServer: (kind: MediaServerKind) => Promise<void>
 
   getSso: () => Promise<{
     issuerUrl: string

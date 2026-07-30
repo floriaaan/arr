@@ -83,6 +83,13 @@ export const servarrInstanceDtoSchema = z.object({
   enabled: z.boolean(),
 })
 
+export const mediaServerDtoSchema = z.object({
+  id: z.string(),
+  kind: z.enum(['plex', 'jellyfin', 'emby']),
+  baseUrl: z.string(),
+  enabled: z.boolean(),
+})
+
 export const instanceProfilesSchema = z.object({
   rootFolders: z.array(z.object({ path: z.string() })),
   qualityProfiles: z.array(z.object({ id: z.number(), name: z.string() })),

@@ -11,6 +11,7 @@ import {
   servarrInstanceDtoSchema,
   instanceProfilesSchema,
   instanceProfileDtoSchema,
+  mediaServerDtoSchema,
   qualityProfileRecordSchema,
   downloadClientRecordSchema,
   indexerRecordSchema,
@@ -35,6 +36,7 @@ import type { Session } from '#domain/identity/session'
 import type { ServarrKind } from '#domain/settings/servarr-instance'
 import type { InstanceDraft } from '#domain/settings/instance-draft'
 import type { InstanceProfileDraft } from '#domain/settings/instance-profile'
+import type { MediaServerDraft, MediaServerKind } from '#domain/settings/media-server'
 import type { DownloadClientRecord } from '#domain/settings/download-client-record'
 import type { IndexerRecord } from '#domain/settings/indexer-record'
 import type { MediaKind } from '#domain/catalog/media-kind'
@@ -165,6 +167,13 @@ export class HttpArrConnector implements ArrConnector {
     if (!response.ok) return { ok: false as const, error: await toApiError(response) }
     const body = (await response.json()) as { instance: unknown }
     return { ok: true as const, value: servarrInstanceDtoSchema.parse(body.instance) }
+  }
+
+  async saveOnboardingMediaServer(kind: MediaServerKind, draft: MediaServerDraft) {
+    const response = await this.http.put(`/api/onboarding/media-servers/${kind}`, draft)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { mediaServer: unknown }
+    return { ok: true as const, value: mediaServerDtoSchema.parse(body.mediaServer) }
   }
 
   async testOidcDiscovery(
@@ -402,6 +411,24 @@ export class HttpArrConnector implements ArrConnector {
     )
     if (!response.ok) return { ok: false as const, error: await toApiError(response) }
     return { ok: true as const, value: undefined }
+  }
+
+  /** `/api/media-servers`, not `/api/settings/*` — readable by every signed-in user. */
+  async listMediaServers() {
+    const response = await this.http.get('/api/media-servers')
+    const body = (await response.json()) as { mediaServers: unknown[] }
+    return body.mediaServers.map((server) => mediaServerDtoSchema.parse(server))
+  }
+
+  async saveMediaServer(kind: MediaServerKind, draft: MediaServerDraft) {
+    const response = await this.http.put(`/api/settings/media-servers/${kind}`, draft)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { mediaServer: unknown }
+    return { ok: true as const, value: mediaServerDtoSchema.parse(body.mediaServer) }
+  }
+
+  async deleteMediaServer(kind: MediaServerKind): Promise<void> {
+    await this.http.delete(`/api/settings/media-servers/${kind}`)
   }
 
   async getSso() {

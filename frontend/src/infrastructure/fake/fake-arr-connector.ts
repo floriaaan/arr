@@ -17,6 +17,11 @@ import type { OnboardingStatus } from '#domain/settings/onboarding-state'
 import type { ServarrKind, ServarrInstanceDto } from '#domain/settings/servarr-instance'
 import type { InstanceDraft } from '#domain/settings/instance-draft'
 import type { InstanceProfileDto, InstanceProfileDraft } from '#domain/settings/instance-profile'
+import type {
+  MediaServerDraft,
+  MediaServerDto,
+  MediaServerKind,
+} from '#domain/settings/media-server'
 import type { QualityProfileRecord } from '#domain/settings/quality-profile-record'
 import type { DownloadClientRecord } from '#domain/settings/download-client-record'
 import type { IndexerRecord } from '#domain/settings/indexer-record'
@@ -357,6 +362,8 @@ interface PersistedOnboardingState {
   savedProfiles?: [ServarrKind, InstanceProfileDto[]][]
   /** Optional: absent in state persisted before this field existed. */
   qualityProfiles?: [ServarrKind, QualityProfileRecord[]][]
+  /** Optional: absent in state persisted before this field existed. */
+  mediaServers?: [MediaServerKind, MediaServerDto][]
 }
 
 /**
@@ -376,6 +383,7 @@ export class FakeArrConnector implements ArrConnector {
   private readonly qualityProfiles = new Map<ServarrKind, QualityProfileRecord[]>()
   private readonly downloadClients = new Map<ServarrKind, DownloadClientRecord[]>()
   private readonly indexers = new Map<ServarrKind, IndexerRecord[]>()
+  private readonly mediaServers = new Map<MediaServerKind, MediaServerDto>()
   private ssoConfig: (OidcConfigInput & { claimsMapping?: Record<string, string> }) | null = null
   private readonly requests = new Map<string, MediaRequest>()
   private readonly removedLibraryItems = new Set<string>()
@@ -430,6 +438,7 @@ export class FakeArrConnector implements ArrConnector {
       for (const [kind, profiles] of persisted.qualityProfiles ?? []) {
         this.qualityProfiles.set(kind, profiles)
       }
+      for (const [kind, server] of persisted.mediaServers ?? []) this.mediaServers.set(kind, server)
     } catch {
       window.localStorage.removeItem(ONBOARDING_STORAGE_KEY)
     }
@@ -444,6 +453,7 @@ export class FakeArrConnector implements ArrConnector {
       ssoConfig: this.ssoConfig,
       savedProfiles: [...this.savedProfiles.entries()],
       qualityProfiles: [...this.qualityProfiles.entries()],
+      mediaServers: [...this.mediaServers.entries()],
     }
     window.localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(persisted))
   }
@@ -607,6 +617,43 @@ export class FakeArrConnector implements ArrConnector {
     apiKey: string,
   ): Promise<ConnectionTestResult> {
     return this.testInstanceConnection(kind, baseUrl, apiKey)
+  }
+
+  async saveOnboardingMediaServer(kind: MediaServerKind, draft: MediaServerDraft) {
+    return this.saveMediaServer(kind, draft)
+  }
+
+  async listMediaServers(): Promise<MediaServerDto[]> {
+    return [...this.mediaServers.values()]
+  }
+
+  async saveMediaServer(kind: MediaServerKind, draft: MediaServerDraft) {
+    if (!/^https?:\/\//.test(draft.baseUrl)) {
+      return {
+        ok: false as const,
+        error: {
+          type: 'validation_failed',
+          message: `"${draft.baseUrl}" is not a valid URL`,
+          status: 400,
+        },
+      }
+    }
+
+    const existing = this.mediaServers.get(kind)
+    const server: MediaServerDto = {
+      id: existing?.id ?? crypto.randomUUID(),
+      kind,
+      baseUrl: draft.baseUrl.replace(/\/+$/, ''),
+      enabled: draft.enabled,
+    }
+    this.mediaServers.set(kind, server)
+    this.persistOnboardingState()
+    return { ok: true as const, value: server }
+  }
+
+  async deleteMediaServer(kind: MediaServerKind): Promise<void> {
+    this.mediaServers.delete(kind)
+    this.persistOnboardingState()
   }
 
   async fetchSettingsInstanceProfiles(kind: ServarrKind) {

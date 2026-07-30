@@ -44,6 +44,13 @@ HTTP approprié (`400` validation, `401` non authentifié, `403` non autorisé, 
   - 200 → `{ instance: ServarrInstanceDto }` (`apiKey` jamais renvoyé en clair,
     seulement `hasApiKey: true`)
 
+- `PUT /api/onboarding/media-servers/:kind` (`:kind ∈ {plex, jellyfin, emby}`)
+  - body : `{ baseUrl: string; enabled: boolean }`
+  - 200 → `{ mediaServer: MediaServerDto }`
+  - Contrairement à `PUT /api/onboarding/instances/:kind`, ne fait **pas**
+    avancer `OnboardingState` : un serveur média est un simple lien de confort
+    (cf. [phase 5](../phase-5-quality-of-life/00-overview-et-decisions.md)).
+
 - `POST /api/onboarding/sso/test`
   - body : `{ issuerUrl: string; clientId: string; clientSecret: string }`
   - 200 → `{ ok: true; discovery: { authorizationEndpoint, tokenEndpoint, userinfoEndpoint } } | { ok: false; error: {...} }`
@@ -64,6 +71,8 @@ et avec un contrôle `admin_only_middleware` :
 - `GET /api/settings/instances` → `{ instances: ServarrInstanceDto[] }`
 - `PUT /api/settings/instances/:kind`, `DELETE /api/settings/instances/:kind`
 - `POST /api/settings/instances/:kind/test-connection`
+- `PUT /api/settings/media-servers/:kind` → `{ mediaServer: MediaServerDto }`,
+  `DELETE /api/settings/media-servers/:kind` → 204
 - `GET /api/settings/sso`, `PUT /api/settings/sso`, `POST /api/settings/sso/test`
 
 - `GET /api/settings/auth` — **public**, sans `admin_only_middleware` : la page de
@@ -72,6 +81,16 @@ et avec un contrôle `admin_only_middleware` :
   réponse (booléens + enum).
   → `{ passwordLoginEnabled: boolean; oidcConfigured: boolean; source: 'database' | 'environment' }`
   (lecture seule côté UI quand `source === 'environment'`)
+
+## Media servers (`/api/media-servers`) — authentifié (pas admin)
+
+- `GET /api/media-servers` → `{ mediaServers: MediaServerDto[] }`
+  `MediaServerDto = { id: string; kind: 'plex' | 'jellyfin' | 'emby'; baseUrl: string; enabled: boolean }`
+  Hors `/api/settings` et sans `admin_only_middleware`, volontairement : le
+  détail d'un item affiche des liens "ouvrir dans Plex/Jellyfin/Emby" pour
+  tout utilisateur connecté, et le DTO ne porte aucun secret (aucune clé
+  d'API n'est stockée pour un serveur média). Les écritures restent admin,
+  cf. section Settings ci-dessus.
 
 ## Catalog (`/api/catalog/*`) — authentifié
 

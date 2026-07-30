@@ -58,6 +58,33 @@ describe.each<{ name: string; create: () => ArrConnector }>([
             return json({ userId: 'user-1' }, 201)
           }
         })(),
+        // Stateful on purpose: the media server contract below is about the
+        // save → list → delete round-trip, not about a single payload shape.
+        ...(() => {
+          const servers = new Map<string, unknown>()
+          return {
+            'GET /api/media-servers': () => json({ mediaServers: [...servers.values()] }),
+            'PUT /api/settings/media-servers/plex': (init: RequestInit | undefined) => {
+              const draft = JSON.parse(String(init?.body)) as {
+                baseUrl: string
+                enabled: boolean
+              }
+              // Mirrors the backend's `Url` VO, which strips trailing slashes.
+              const mediaServer = {
+                id: 'media-server-1',
+                kind: 'plex',
+                baseUrl: draft.baseUrl.replace(/\/+$/, ''),
+                enabled: draft.enabled,
+              }
+              servers.set('plex', mediaServer)
+              return json({ mediaServer })
+            },
+            'DELETE /api/settings/media-servers/plex': () => {
+              servers.delete('plex')
+              return new Response(null, { status: 204 })
+            },
+          }
+        })(),
         'GET /api/catalog/search': () =>
           json({
             results: [
@@ -182,6 +209,37 @@ describe.each<{ name: string; create: () => ArrConnector }>([
       expect(item).not.toHaveProperty('posterRef')
       if (item.posterUrl !== null) expect(typeof item.posterUrl).toBe('string')
     }
+  })
+
+  test('starts with no media server declared', async () => {
+    expect(await connector.listMediaServers()).toEqual([])
+  })
+
+  test('saving a media server normalizes its url and makes it listable', async () => {
+    const saved = await connector.saveMediaServer('plex', {
+      baseUrl: 'http://plex.local:32400/',
+      enabled: true,
+    })
+
+    expect(saved.ok).toBe(true)
+    if (!saved.ok) return
+    expect(saved.value.kind).toBe('plex')
+    expect(saved.value.baseUrl).toBe('http://plex.local:32400')
+
+    const servers = await connector.listMediaServers()
+    expect(servers).toHaveLength(1)
+    expect(servers[0].baseUrl).toBe('http://plex.local:32400')
+  })
+
+  test('deleting a media server removes it from the list', async () => {
+    await connector.saveMediaServer('plex', {
+      baseUrl: 'http://plex.local:32400',
+      enabled: true,
+    })
+
+    await connector.deleteMediaServer('plex')
+
+    expect(await connector.listMediaServers()).toEqual([])
   })
 
   test('calendar entries fall within the requested range and expose a posterUrl', async () => {
