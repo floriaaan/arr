@@ -50,8 +50,8 @@ test.group('SaveMediaServer / ListMediaServers / DeleteMediaServer', () => {
     assert.isTrue(result.ok)
     const all = await repository.findAll()
     assert.lengthOf(all, 1)
-    assert.equal(all[0].baseUrl.value, 'http://emby.other:8096')
-    assert.isFalse(all[0].enabled)
+    assert.equal(all[0]?.baseUrl.value, 'http://emby.other:8096')
+    assert.isFalse(all[0]?.enabled)
   })
 
   test('ListMediaServers returns everything the repository has', async ({ assert }) => {
