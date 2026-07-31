@@ -61,6 +61,7 @@ export default class RequestsController {
     const instanceRepository = await app.container.make('settings.instanceRepository')
     const idGenerator = await app.container.make('shared.idGenerator')
     const clock = await app.container.make('shared.clock')
+    const eventBus = await app.container.make('shared.eventBus')
 
     const useCase = new CreateRequest(
       repository,
@@ -69,6 +70,7 @@ export default class RequestsController {
       instanceRepository,
       idGenerator,
       clock,
+      eventBus,
     )
     const result = await useCase.execute({ requestedBy: user.id, ...payload })
     if (!result.ok) {
@@ -131,8 +133,9 @@ export default class RequestsController {
     const repository = await app.container.make('requests.repository')
     const clock = await app.container.make('shared.clock')
     const provisioning = await app.container.make('requests.provisioning')
+    const eventBus = await app.container.make('shared.eventBus')
 
-    const result = await new CancelRequest(repository, clock, provisioning).execute({
+    const result = await new CancelRequest(repository, clock, provisioning, eventBus).execute({
       id: ctx.params.id,
       actor: { id: user.id, isAdmin: user.role === 'admin' },
     })

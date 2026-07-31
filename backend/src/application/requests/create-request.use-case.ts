@@ -5,6 +5,7 @@ import type { MediaLookup } from '#domain/catalog/interfaces/media-lookup.interf
 import type { ServarrInstanceRepository } from '#domain/settings/interfaces/servarr-instance-repository.interface'
 import type { IdGenerator } from '#domain/shared/id-generator.interface'
 import type { Clock } from '#domain/shared/clock.interface'
+import type { EventBus } from '#application/shared/event-bus'
 import type { MediaKind } from '#domain/catalog/media-kind.vo'
 import type { ServarrKind } from '#domain/settings/servarr-kind.vo'
 import type { ExternalIdScheme } from '#domain/catalog/external-id.vo'
@@ -46,6 +47,7 @@ export class CreateRequest implements UseCase<
     private readonly instanceRepository: ServarrInstanceRepository,
     private readonly idGenerator: IdGenerator,
     private readonly clock: Clock,
+    private readonly eventBus: EventBus,
   ) {}
 
   async execute(input: CreateRequestInput): Promise<Result<MediaRequest, CreateRequestError>> {
@@ -78,11 +80,13 @@ export class CreateRequest implements UseCase<
     if (!provisioned.ok) {
       request.fail(provisioned.error.message, this.clock.now())
       await this.repository.save(request)
+      await this.eventBus.publish(request.pullDomainEvents())
       return provisioned
     }
 
     request.submit(provisioned.value, this.clock.now())
     await this.repository.save(request)
+    await this.eventBus.publish(request.pullDomainEvents())
     return Result.ok(request)
   }
 

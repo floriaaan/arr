@@ -33,7 +33,13 @@ export default class RequestsReconcile extends BaseCommand {
     const instanceRepository = new LucidServarrInstanceRepository()
     const registry = new ServarrRegistry(instanceRepository)
     const downloadProgress = new ServarrDownloadProgress(registry)
-    const reconcile = new ReconcileProgress(requestRepository, downloadProgress, new SystemClock())
+    const eventBus = await this.app.container.make('shared.eventBus')
+    const reconcile = new ReconcileProgress(
+      requestRepository,
+      downloadProgress,
+      new SystemClock(),
+      eventBus,
+    )
 
     this.logger.info('requests:reconcile started')
 

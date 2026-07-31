@@ -92,6 +92,34 @@ services:
     networks:
       - internal
 
+  health:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ['node', 'bin/console.js', 'instances:health']
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3333
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL:-http://localhost:3333}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-arr}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-arr}
+      DB_DATABASE: ${POSTGRES_DB:-arr}
+    depends_on:
+      db:
+        condition: service_healthy
+    # Same pattern as the reconciler: an instance was health-checked once, on
+    # save, and never again — so "Disabled" could mean either "an admin turned
+    # it off" or "unreachable for a week" (cf.
+    # docs/phase-6-fiabilite-requests/02, chantier 3).
+    networks:
+      - internal
+
   frontend:
     build:
       context: .

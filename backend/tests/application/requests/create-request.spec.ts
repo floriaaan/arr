@@ -1,4 +1,5 @@
 import { test } from '@japa/runner'
+import { InMemoryEventBus } from '#application/shared/event-bus'
 import { CreateRequest } from '#application/requests/create-request.use-case'
 import { MediaDetail } from '#domain/catalog/media-detail.entity'
 import { ExternalId } from '#domain/catalog/external-id.vo'
@@ -58,6 +59,7 @@ function setup() {
   const provisioning = new FakeMediaProvisioning()
   const lookup = new FakeMediaLookup()
   const instanceRepository = new InMemoryServarrInstanceRepository()
+  const eventBus = new InMemoryEventBus()
   const useCase = new CreateRequest(
     requestRepository,
     provisioning,
@@ -65,8 +67,9 @@ function setup() {
     instanceRepository,
     new SequentialIdGenerator(),
     new FixedClock(),
+    eventBus,
   )
-  return { requestRepository, provisioning, lookup, instanceRepository, useCase }
+  return { requestRepository, provisioning, lookup, instanceRepository, eventBus, useCase }
 }
 
 test.group('CreateRequest', () => {

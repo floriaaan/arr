@@ -6,6 +6,7 @@ import type { MediaRequest } from '#domain/requests/media-request.aggregate'
 import type { MediaProvisioning } from '#domain/requests/interfaces/media-provisioning.interface'
 import type { InvalidTransition } from '#domain/shared/invalid-transition'
 import type { Clock } from '#domain/shared/clock.interface'
+import type { EventBus } from '#application/shared/event-bus'
 import type { RequestActor } from './request-actor.js'
 
 export interface CancelRequestInput {
@@ -33,6 +34,7 @@ export class CancelRequest implements UseCase<
     private readonly repository: MediaRequestRepository,
     private readonly clock: Clock,
     private readonly provisioning: MediaProvisioning,
+    private readonly eventBus: EventBus,
   ) {}
 
   async execute(
@@ -52,6 +54,7 @@ export class CancelRequest implements UseCase<
     const cancelled = await this.provisioning.cancel(request)
 
     await this.repository.save(request)
+    await this.eventBus.publish(request.pullDomainEvents())
     return Result.ok({
       request,
       provisioningError: cancelled.ok ? null : cancelled.error.message,

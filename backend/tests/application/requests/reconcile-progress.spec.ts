@@ -1,4 +1,5 @@
 import { test } from '@japa/runner'
+import { InMemoryEventBus } from '#application/shared/event-bus'
 import { ReconcileProgress } from '#application/requests/reconcile-progress.use-case'
 import { MediaRequest } from '#domain/requests/media-request.aggregate'
 import { ExternalId } from '#domain/catalog/external-id.vo'
@@ -56,7 +57,12 @@ test.group('ReconcileProgress', () => {
       },
     ]
 
-    await new ReconcileProgress(repository, downloadProgress, new FixedClock()).execute()
+    await new ReconcileProgress(
+      repository,
+      downloadProgress,
+      new FixedClock(),
+      new InMemoryEventBus(),
+    ).execute()
 
     const updated = await repository.findById('1')
     assert.equal(updated?.status, 'downloading')
@@ -77,7 +83,12 @@ test.group('ReconcileProgress', () => {
       { ref: ExternalRef.create('instance-1', 'remote-1'), status: 'available' },
     ]
 
-    await new ReconcileProgress(repository, downloadProgress, new FixedClock()).execute()
+    await new ReconcileProgress(
+      repository,
+      downloadProgress,
+      new FixedClock(),
+      new InMemoryEventBus(),
+    ).execute()
 
     const updated = await repository.findById('1')
     assert.equal(updated?.status, 'available')
@@ -95,7 +106,12 @@ test.group('ReconcileProgress', () => {
       { ref: ExternalRef.create('instance-1', 'remote-1'), status: 'available' },
     ]
 
-    await new ReconcileProgress(repository, downloadProgress, new FixedClock()).execute()
+    await new ReconcileProgress(
+      repository,
+      downloadProgress,
+      new FixedClock(),
+      new InMemoryEventBus(),
+    ).execute()
 
     const updated = await repository.findById('1')
     assert.equal(updated?.status, 'available')
@@ -115,7 +131,12 @@ test.group('ReconcileProgress', () => {
       },
     ]
 
-    await new ReconcileProgress(repository, downloadProgress, new FixedClock()).execute()
+    await new ReconcileProgress(
+      repository,
+      downloadProgress,
+      new FixedClock(),
+      new InMemoryEventBus(),
+    ).execute()
 
     const updated = await repository.findById('1')
     assert.equal(updated?.status, 'failed')
@@ -134,7 +155,12 @@ test.group('ReconcileProgress', () => {
       { ref: ExternalRef.create('instance-2', 'other-remote'), status: 'available' },
     ]
 
-    await new ReconcileProgress(repository, downloadProgress, new FixedClock()).execute()
+    await new ReconcileProgress(
+      repository,
+      downloadProgress,
+      new FixedClock(),
+      new InMemoryEventBus(),
+    ).execute()
 
     const updated = await repository.findById('1')
     assert.equal(updated?.status, 'submitted')
@@ -144,7 +170,12 @@ test.group('ReconcileProgress', () => {
     const repository = new InMemoryMediaRequestRepository()
     const downloadProgress = new FakeDownloadProgress()
 
-    await new ReconcileProgress(repository, downloadProgress, new FixedClock()).execute()
+    await new ReconcileProgress(
+      repository,
+      downloadProgress,
+      new FixedClock(),
+      new InMemoryEventBus(),
+    ).execute()
 
     assert.isTrue(true)
   })

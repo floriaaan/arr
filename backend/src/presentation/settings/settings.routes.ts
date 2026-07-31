@@ -5,6 +5,7 @@ const OnboardingController = () => import('./onboarding.controller.js')
 const SettingsController = () => import('./settings.controller.js')
 const MediaServersController = () => import('./media-servers.controller.js')
 const DiscoveryController = () => import('./discovery.controller.js')
+const NotificationsController = () => import('./notifications.controller.js')
 
 /**
  * Public on purpose, and outside the `onboardingGuard` group below: the
@@ -91,6 +92,9 @@ router
       .as('settings.mediaServers.save')
     router.delete('/media-servers/:kind', [MediaServersController, 'destroy'])
     router.post('/discovery', [DiscoveryController, 'scan']).as('settings.discovery.scan')
+    router.get('/notifications', [NotificationsController, 'show'])
+    router.put('/notifications', [NotificationsController, 'update'])
+    router.post('/notifications/test', [NotificationsController, 'test'])
     router.get('/sso', [SettingsController, 'getSso'])
     router.put('/sso', [SettingsController, 'updateSso'])
     router.post('/sso/test', [SettingsController, 'testSso'])

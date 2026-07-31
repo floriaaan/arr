@@ -8,6 +8,7 @@ import { ExternalRef } from '#domain/requests/external-ref.vo'
 import { RequestProgress } from '#domain/requests/request-progress.vo'
 import { Result } from '#domain/shared/result'
 import { InMemoryMediaRequestRepository, FixedClock, FakeMediaProvisioning } from './fakes.js'
+import { InMemoryEventBus } from '#application/shared/event-bus'
 
 const OWNER = { id: 'user-1', isAdmin: false }
 const SOMEONE_ELSE = { id: 'user-2', isAdmin: false }
@@ -39,7 +40,7 @@ function cancelUseCase(
   repository: InMemoryMediaRequestRepository,
   provisioning = new FakeMediaProvisioning(),
 ) {
-  return new CancelRequest(repository, new FixedClock(), provisioning)
+  return new CancelRequest(repository, new FixedClock(), provisioning, new InMemoryEventBus())
 }
 
 test.group('ListRequests', () => {
