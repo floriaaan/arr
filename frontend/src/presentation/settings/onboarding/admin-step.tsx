@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronLeft } from 'lucide-react'
+import { ArrowRight, ChevronLeft } from 'lucide-react'
 import { useCreateAdmin } from '#application/settings/create-admin.mutation'
 import { Input } from '#presentation/ui/input'
 import { Label } from '#presentation/ui/label'
@@ -56,13 +56,14 @@ export function AdminStep({ onNext, onBack }: { onNext: () => void; onBack: () =
       createAdmin.data.error.type !== 'admin_already_exists' ? (
         <p className="text-sm text-destructive">{createAdmin.data.error.message}</p>
       ) : null}
-      <div className="flex items-center gap-2">
+      <div className="flex w-full items-center justify-between gap-2">
         <Button type="button" variant="ghost" onClick={onBack}>
           <ChevronLeft className="size-4" />
           Back
         </Button>
         <Button type="submit" disabled={createAdmin.isPending}>
           {createAdmin.isPending ? 'Creating…' : 'Continue'}
+          <ArrowRight className="size-4" />
         </Button>
       </div>
     </form>

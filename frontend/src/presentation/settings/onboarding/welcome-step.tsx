@@ -1,3 +1,4 @@
+import { ArrowRight } from 'lucide-react'
 import { Button } from '#presentation/ui/button'
 import { SkipOnboardingButton } from './skip-onboarding-button'
 
@@ -10,6 +11,7 @@ export function WelcomeStep({ onNext }: { onNext: () => void }) {
       </p>
       <Button onClick={onNext} className="w-full">
         Get started
+        <ArrowRight className="size-4" />
       </Button>
       <SkipOnboardingButton />
     </div>

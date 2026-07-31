@@ -3,8 +3,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   Clapperboard,
-  Tv,
-  Music,
   ChevronDown,
   KeyRound,
   ShieldCheck,
@@ -30,6 +28,7 @@ import { ServiceInstanceForm } from './service-instance-form'
 import { MediaServerForm } from './media-server-form'
 import { UsersPanel } from './users-panel'
 import { MEDIA_SERVER_META } from '#presentation/shared/media-server-meta'
+import { SERVARR_META } from '#presentation/shared/servarr-meta'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '#presentation/ui/tabs'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '#presentation/ui/card'
 import { Button } from '#presentation/ui/button'
@@ -41,15 +40,6 @@ import { cn } from '#presentation/shared/utils'
 import { MEDIA_SERVER_KINDS } from '#domain/settings/media-server'
 import type { ServarrKind, ServarrInstanceDto } from '#domain/settings/servarr-instance'
 import type { MediaServerDto, MediaServerKind } from '#domain/settings/media-server'
-
-const SERVARR_META: Record<
-  ServarrKind,
-  { label: string; description: string; icon: typeof Clapperboard }
-> = {
-  radarr: { label: 'Radarr', description: 'Movies', icon: Clapperboard },
-  sonarr: { label: 'Sonarr', description: 'TV shows', icon: Tv },
-  lidarr: { label: 'Lidarr', description: 'Music', icon: Music },
-}
 
 const SERVARR_KINDS: readonly ServarrKind[] = ['radarr', 'sonarr', 'lidarr']
 

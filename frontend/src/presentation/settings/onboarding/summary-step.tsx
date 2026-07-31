@@ -1,4 +1,4 @@
-import { ChevronLeft } from 'lucide-react'
+import { Check, ChevronLeft } from 'lucide-react'
 import { useCompleteOnboarding } from '#application/settings/complete-onboarding.mutation'
 import { useInstances } from '#application/settings/instances.query'
 import { Button } from '#presentation/ui/button'
@@ -43,13 +43,14 @@ export function SummaryStep({
         <p className="text-sm text-destructive">{completeOnboarding.data.error.message}</p>
       ) : null}
 
-      <div className="flex items-center gap-2">
+      <div className="flex w-full items-center justify-between gap-2">
         <Button type="button" variant="ghost" onClick={onBack}>
           <ChevronLeft className="size-4" />
           Back
         </Button>
         <Button onClick={handleComplete} disabled={completeOnboarding.isPending}>
           {completeOnboarding.isPending ? 'Finishing…' : 'Finish setup'}
+          <Check className="size-4" />
         </Button>
       </div>
     </div>

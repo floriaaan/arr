@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, ChevronLeft } from 'lucide-react'
+import { ArrowRight, Check, ChevronLeft } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '#presentation/ui/tabs'
 import { Button } from '#presentation/ui/button'
 import { MediaServerForm } from '#presentation/settings/media-server-form'
@@ -50,12 +50,15 @@ export function MediaServersStep({
         ))}
       </Tabs>
 
-      <div className="flex items-center gap-2">
+      <div className="flex w-full items-center justify-between gap-2">
         <Button type="button" variant="ghost" onClick={onBack}>
           <ChevronLeft className="size-4" />
           Back
         </Button>
-        <Button onClick={onNext}>Continue</Button>
+        <Button onClick={onNext}>
+          Continue
+          <ArrowRight className="size-4" />
+        </Button>
       </div>
     </div>
   )
