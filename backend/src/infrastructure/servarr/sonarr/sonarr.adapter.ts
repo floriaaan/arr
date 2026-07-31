@@ -8,8 +8,10 @@ import {
   SonarrSeriesLookupArraySchema,
   SonarrCalendarEpisodeArraySchema,
   SonarrQueueResponseSchema,
+  SonarrEpisodeArraySchema,
 } from './sonarr.schemas.js'
 import {
+  toRequestEpisode,
   toMediaItem,
   toMediaDetail,
   toLibraryItem,
@@ -17,6 +19,7 @@ import {
   aggregateQueueProgress,
 } from './sonarr.mapper.js'
 import type { SonarrQueueRecord } from './sonarr.schemas.js'
+import type { RequestEpisode } from '#domain/requests/request-episode.entity'
 import type { ServarrKindAdapter } from '../servarr-kind-adapter.interface.js'
 import type { ServarrInstance } from '#domain/settings/servarr-instance.aggregate'
 import type { MediaItem } from '#domain/catalog/media-item.entity'
@@ -149,6 +152,31 @@ export class SonarrAdapter implements ServarrKindAdapter {
       }
     }
     return snapshots
+  }
+
+  /**
+   * Per-episode state for the request accordion. Two calls on purpose — the
+   * episode list has no progress, the queue has no episode titles — and only
+   * ever paid when the user actually unfolds a request (cf.
+   * docs/phase-6-fiabilite-requests, chantier 5 décision 1).
+   */
+  async listEpisodes(remoteId: string): Promise<RequestEpisode[]> {
+    const [episodesRaw, queueRaw] = await Promise.all([
+      this.client.request({ path: '/api/v3/episode', query: { seriesId: remoteId } }),
+      this.client.request({ path: '/api/v3/queue', query: { pageSize: '250' } }),
+    ])
+
+    const episodes = SonarrEpisodeArraySchema.parse(episodesRaw)
+    const queue = SonarrQueueResponseSchema.parse(queueRaw)
+    const queueByEpisodeId = new Map(
+      queue.records
+        .filter((record) => record.episodeId !== null && record.episodeId !== undefined)
+        .map((record) => [record.episodeId as number, record]),
+    )
+
+    return episodes
+      .map((episode) => toRequestEpisode(episode, queueByEpisodeId.get(episode.id)))
+      .sort((a, b) => a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber)
   }
 
   async list(): Promise<LibraryItem[]> {

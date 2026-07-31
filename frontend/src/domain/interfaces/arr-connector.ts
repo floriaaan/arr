@@ -19,6 +19,7 @@ import type { MediaItem } from '../catalog/media-item'
 import type { MediaDetail } from '../catalog/media-detail'
 import type { MediaRequest } from '../requests/media-request'
 import type { RequestFilter } from '../requests/request-filter'
+import type { RequestEpisode } from '../requests/request-episode'
 import type { LibraryItem } from '../library/library-item'
 import type { CalendarEntry } from '../calendar/calendar-entry'
 
@@ -223,6 +224,8 @@ export interface ArrConnector {
   ) => Promise<Result<MediaRequest, ApiError>>
   getRequest: (id: string) => Promise<MediaRequest | null>
   cancelRequest: (id: string) => Promise<Result<MediaRequest, ApiError>>
+  /** Series only; empty for anything with nothing to unfold. Fetched on expand. */
+  listRequestEpisodes: (id: string) => Promise<Result<RequestEpisode[], ApiError>>
 
   // library
   listLibrary: (kind?: MediaKind) => Promise<LibraryItem[]>

@@ -1,4 +1,12 @@
-import type { SonarrSeries, SonarrSeriesLookup, SonarrCalendarEpisode } from './sonarr.schemas.js'
+import { toQueueProgress } from '../queue-progress.js'
+import type {
+  SonarrSeries,
+  SonarrSeriesLookup,
+  SonarrCalendarEpisode,
+  SonarrEpisode,
+  SonarrQueueRecord,
+} from './sonarr.schemas.js'
+import type { RequestEpisode, RequestEpisodeState } from '#domain/requests/request-episode.entity'
 import { ExternalId } from '#domain/catalog/external-id.vo'
 import { PosterRef } from '#domain/catalog/poster-ref.vo'
 import { MediaItem } from '#domain/catalog/media-item.entity'
@@ -93,3 +101,38 @@ export function toCalendarEntry(episode: SonarrCalendarEpisode, instanceId: stri
  */
 export { toQueueProgress, aggregateQueueProgress } from '../queue-progress.js'
 export type { QueueProgress } from '../queue-progress.js'
+
+/**
+ * Per-episode state for the request accordion. The queue record wins over
+ * `hasFile`: an episode being re-grabbed is "downloading", not "available"
+ * (cf. docs/phase-6-fiabilite-requests, chantier 5 décision 5).
+ */
+export function toRequestEpisode(
+  episode: SonarrEpisode,
+  queueRecord: SonarrQueueRecord | undefined,
+): RequestEpisode {
+  const queued = queueRecord ? toQueueProgress(queueRecord) : null
+
+  const state: RequestEpisodeState =
+    queued?.status === 'failed'
+      ? 'failed'
+      : queued?.status === 'importing'
+        ? 'importing'
+        : queued?.status === 'downloading'
+          ? 'downloading'
+          : episode.hasFile
+            ? 'available'
+            : 'missing'
+
+  return {
+    seasonNumber: episode.seasonNumber ?? 0,
+    episodeNumber: episode.episodeNumber ?? 0,
+    title: episode.title ?? 'Untitled',
+    airDate: episode.airDateUtc ?? null,
+    state,
+    percentage:
+      state === 'downloading' || state === 'importing'
+        ? (queued?.progress?.percentage ?? null)
+        : null,
+  }
+}

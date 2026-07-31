@@ -51,7 +51,7 @@ export const SonarrSeriesLookupArraySchema = SonarrSeriesLookupSchema.array()
 export type SonarrSeriesLookup = z.infer<typeof SonarrSeriesLookupSchema>
 
 /** `GET /api/v3/calendar?includeSeries=true` — one entry per episode. */
-export const SonarrCalendarEpisodeSchema = z.object({
+export const SonarrEpisodeSchema = z.object({
   id: z.number(),
   seriesId: z.number(),
   title: z.string().nullable().optional(),
@@ -60,10 +60,17 @@ export const SonarrCalendarEpisodeSchema = z.object({
   episodeNumber: z.number().optional(),
   monitored: z.boolean().optional(),
   hasFile: z.boolean().optional(),
+})
+
+export const SonarrEpisodeArraySchema = SonarrEpisodeSchema.array()
+
+/** `GET /api/v3/calendar` returns the same episode plus its parent series. */
+export const SonarrCalendarEpisodeSchema = SonarrEpisodeSchema.extend({
   series: SonarrSeriesSchema.optional(),
 })
 
 export const SonarrCalendarEpisodeArraySchema = SonarrCalendarEpisodeSchema.array()
+export type SonarrEpisode = z.infer<typeof SonarrEpisodeSchema>
 export type SonarrCalendarEpisode = z.infer<typeof SonarrCalendarEpisodeSchema>
 
 export const SonarrQualityProfileArraySchema = z
@@ -74,6 +81,7 @@ export const SonarrRootFolderArraySchema = z.object({ id: z.number(), path: z.st
 export const SonarrQueueRecordSchema = z.object({
   id: z.number(),
   seriesId: z.number().nullable().optional(),
+  episodeId: z.number().nullable().optional(),
   title: z.string().nullable().optional(),
   size: z.number().optional(),
   sizeleft: z.number().optional(),

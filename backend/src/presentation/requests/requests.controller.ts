@@ -4,6 +4,7 @@ import { ListRequests } from '#application/requests/list-requests.use-case'
 import { GetRequest } from '#application/requests/get-request.use-case'
 import { CreateRequest } from '#application/requests/create-request.use-case'
 import { CancelRequest } from '#application/requests/cancel-request.use-case'
+import { ListRequestEpisodes } from '#application/requests/list-request-episodes.use-case'
 import { requireAuthenticatedUser } from '#presentation/shared/auth-context'
 import { serializeError } from '#presentation/shared/error-serializer'
 import { toMediaRequestDto, toMediaRequestDtoList } from './request.dto.js'
@@ -101,6 +102,28 @@ export default class RequestsController {
 
     const userDirectory = await app.container.make('identity.userDirectory')
     return ctx.response.json({ request: await toMediaRequestDto(result.value, userDirectory) })
+  }
+
+  /**
+   * Deliberately its own endpoint rather than a field on the request DTO: a
+   * page of 50 requests would otherwise fire 50 *arr calls (cf.
+   * docs/phase-6-fiabilite-requests, chantier 5 décision 1).
+   */
+  async episodes(ctx: HttpContext) {
+    const user = requireAuthenticatedUser(ctx)
+    const repository = await app.container.make('requests.repository')
+    const episodes = await app.container.make('requests.episodes')
+
+    const result = await new ListRequestEpisodes(repository, episodes).execute({
+      id: ctx.params.id,
+      actor: { id: user.id, isAdmin: user.role === 'admin' },
+    })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    return ctx.response.json({ episodes: result.value })
   }
 
   async cancel(ctx: HttpContext) {

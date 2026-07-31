@@ -129,6 +129,12 @@ et avec un contrôle `admin_only_middleware` :
   - 403 → `{ error: { type: 'forbidden' } }` si la requête appartient à un
     autre utilisateur (les admins voient tout)
 
+- `GET /api/requests/:id/episodes` → `{ episodes: RequestEpisodeDto[] }`
+  `RequestEpisodeDto = { seasonNumber: number; episodeNumber: number; title: string; airDate: string | null; state: 'available' | 'downloading' | 'importing' | 'missing' | 'failed'; percentage: number | null }`
+  Endpoint dédié plutôt qu'un champ du DTO de requête : une page de 50
+  requêtes déclencherait sinon 50 appels *arr. Vide pour un film. Mêmes règles
+  d'autorisation que `GET /api/requests/:id`.
+
 - `POST /api/requests/:id/cancel`
   - 200 → `{ request: MediaRequestDto }` — l'annulation est aussi propagée à
     l'instance *arr (retrait de la file + démonitorage) ; si l'instance est

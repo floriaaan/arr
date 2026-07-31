@@ -2,6 +2,7 @@ import type { ApplicationService } from '@adonisjs/core/types'
 import type { MediaRequestRepository } from '#domain/requests/interfaces/media-request-repository.interface'
 import type { MediaProvisioning } from '#domain/requests/interfaces/media-provisioning.interface'
 import type { DownloadProgress } from '#domain/requests/interfaces/download-progress.interface'
+import type { RequestEpisodes } from '#domain/requests/interfaces/request-episodes.interface'
 
 export default class RequestsProvider {
   constructor(protected app: ApplicationService) {}
@@ -20,6 +21,13 @@ export default class RequestsProvider {
       return new ServarrMediaProvisioning(registry)
     })
 
+    this.app.container.singleton('requests.episodes', async (resolver) => {
+      const { ServarrRequestEpisodes } =
+        await import('#infrastructure/servarr/servarr-request-episodes')
+      const registry = await resolver.make('servarr.registry')
+      return new ServarrRequestEpisodes(registry)
+    })
+
     this.app.container.singleton('requests.downloadProgress', async (resolver) => {
       const { ServarrDownloadProgress } =
         await import('#infrastructure/servarr/servarr-download-progress')
@@ -33,6 +41,7 @@ declare module '@adonisjs/core/types' {
   interface ContainerBindings {
     'requests.repository': MediaRequestRepository
     'requests.provisioning': MediaProvisioning
+    'requests.episodes': RequestEpisodes
     'requests.downloadProgress': DownloadProgress
   }
 }

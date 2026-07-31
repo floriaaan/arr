@@ -1,6 +1,14 @@
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { Clapperboard, Music, Tv, X } from 'lucide-react'
 import { useCancelRequest } from '#application/requests/cancel-request.mutation'
+import { RequestEpisodes } from './request-episodes'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '#presentation/ui/accordion'
 import { Card, CardContent } from '#presentation/ui/card'
 import { Badge } from '#presentation/ui/badge'
 import { Progress } from '#presentation/ui/progress'
@@ -35,11 +43,14 @@ const CANCELLABLE_STATUSES: readonly MediaRequest['status'][] = [
 
 export function RequestCard({ request }: { request: MediaRequest }) {
   const cancelRequest = useCancelRequest()
+  const [episodesOpen, setEpisodesOpen] = useState(false)
   const KindIcon = KIND_ICON[request.kind]
+  // Only a series has episodes to unfold, and only once it has been submitted.
+  const canUnfold = request.kind === 'series' && request.status !== 'pending'
 
   return (
     <Card>
-      <CardContent className="flex items-center justify-between gap-4">
+      <CardContent className="flex items-start justify-between gap-4">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
           <KindIcon className="size-4" />
         </div>
@@ -61,6 +72,24 @@ export function RequestCard({ request }: { request: MediaRequest }) {
             Requested by {request.requestedBy.email ?? 'unknown'} ·{' '}
             {new Date(request.createdAt).toLocaleDateString()}
           </p>
+
+          {canUnfold ? (
+            <Accordion
+              type="single"
+              collapsible
+              value={episodesOpen ? 'episodes' : ''}
+              onValueChange={(value) => setEpisodesOpen(value === 'episodes')}
+            >
+              <AccordionItem value="episodes" className="border-b-0">
+                <AccordionTrigger className="py-1 text-xs text-muted-foreground">
+                  Episodes
+                </AccordionTrigger>
+                <AccordionContent>
+                  <RequestEpisodes requestId={request.id} open={episodesOpen} />
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          ) : null}
         </div>
         {CANCELLABLE_STATUSES.includes(request.status) ? (
           <Button

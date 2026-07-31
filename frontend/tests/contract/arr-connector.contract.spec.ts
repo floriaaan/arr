@@ -121,6 +121,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
         'POST /api/requests': () =>
           json({ error: { type: 'no_active_instance', message: 'No active instance.' } }, 409),
         'GET /api/requests/does-not-exist': () => NOT_FOUND_INSTANCE,
+        'GET /api/requests/does-not-exist/episodes': () => NOT_FOUND_INSTANCE,
         'POST /api/requests/does-not-exist/cancel': () =>
           json({ error: { type: 'not_found', message: 'Request not found.' } }, 404),
         'GET /api/library': () =>
@@ -219,6 +220,12 @@ describe.each<{ name: string; create: () => ArrConnector }>([
     const result = await connector.cancelRequest('does-not-exist')
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.type).toBe('not_found')
+  })
+
+  test('asking for the episodes of an unknown request fails, it does not return []', async () => {
+    const result = await connector.listRequestEpisodes('does-not-exist')
+
+    expect(result.ok).toBe(false)
   })
 
   test('library items expose a ready-to-use posterUrl, never the raw ref', async () => {

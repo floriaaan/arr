@@ -32,6 +32,7 @@ import type { MediaItem } from '#domain/catalog/media-item'
 import type { MediaDetail } from '#domain/catalog/media-detail'
 import type { MediaRequest } from '#domain/requests/media-request'
 import type { RequestFilter } from '#domain/requests/request-filter'
+import type { RequestEpisode } from '#domain/requests/request-episode'
 import type { LibraryItem } from '#domain/library/library-item'
 import type { CalendarEntry, CalendarEntryKind } from '#domain/calendar/calendar-entry'
 
@@ -874,6 +875,44 @@ export class FakeArrConnector implements ArrConnector {
   async removeLibraryItem(externalId: ExternalId, _deleteFiles: boolean) {
     this.removedLibraryItems.add(`${externalId.scheme}:${externalId.value}`)
     return { ok: true as const, value: undefined }
+  }
+
+  /**
+   * Ten deterministic episodes covering every state the accordion renders, so
+   * the UI can be exercised without Sonarr. Empty for anything but a series,
+   * mirroring the real adapter.
+   */
+  async listRequestEpisodes(id: string) {
+    const request = this.requests.get(id)
+    if (!request) return { ok: false as const, error: notFound(`No request ${id}.`) }
+    if (request.kind !== 'series') return { ok: true as const, value: [] }
+
+    const seed = hashString(id)
+    const episodes: RequestEpisode[] = Array.from({ length: 10 }, (_, index) => {
+      const bucket = (seed + index) % 5
+      const state: RequestEpisode['state'] =
+        bucket === 0
+          ? 'missing'
+          : bucket === 1
+            ? 'downloading'
+            : bucket === 2
+              ? 'importing'
+              : bucket === 3
+                ? 'failed'
+                : 'available'
+
+      return {
+        seasonNumber: 1,
+        episodeNumber: index + 1,
+        title: `Episode ${index + 1}`,
+        airDate: new Date(Date.now() - (10 - index) * 86_400_000).toISOString(),
+        state,
+        percentage:
+          state === 'downloading' || state === 'importing' ? ((seed + index) % 90) + 5 : null,
+      }
+    })
+
+    return { ok: true as const, value: episodes }
   }
 
   async listLibrary(kind?: MediaKind): Promise<LibraryItem[]> {

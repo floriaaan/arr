@@ -4,16 +4,56 @@ import { toast } from 'sonner'
 import { FastForward, Loader2 } from 'lucide-react'
 import { useArrConnector } from '#application/shared/connector-context'
 import { Button } from '#presentation/ui/button'
+import type { ServarrKind } from '#domain/settings/servarr-instance'
+import type { InstanceDraft } from '#domain/settings/instance-draft'
 
 const FAKE_ADMIN_EMAIL = 'admin@example.com'
 const FAKE_ADMIN_PASSWORD = 'Password123!'
 
+/** Root folders and quality profile ids match `FakeArrConnector`'s catalogs. */
+const FAKE_INSTANCES = [
+  {
+    kind: 'radarr',
+    draft: {
+      baseUrl: 'http://localhost:7878',
+      apiKey: 'fake-api-key',
+      rootFolderPath: '/data/movies',
+      qualityProfileId: 3,
+      enabled: true,
+    },
+  },
+  {
+    kind: 'sonarr',
+    draft: {
+      baseUrl: 'http://localhost:8989',
+      apiKey: 'fake-api-key',
+      rootFolderPath: '/data/tv',
+      qualityProfileId: 3,
+      enabled: true,
+    },
+  },
+  {
+    kind: 'lidarr',
+    draft: {
+      baseUrl: 'http://localhost:8686',
+      apiKey: 'fake-api-key',
+      rootFolderPath: '/data/music',
+      qualityProfileId: 2,
+      enabled: true,
+    },
+  },
+] as const satisfies ReadonlyArray<{ kind: ServarrKind; draft: InstanceDraft }>
+
 /**
  * Dev-only shortcut for `task dev:fake` — walks the whole onboarding wizard
- * in one call (admin account, one enabled Radarr instance, completion, sign
+ * in one call (admin account, the three enabled instances, completion, sign
  * in) so testing the app doesn't require clicking through every step every
  * time state resets. Never rendered against the real backend: `HttpArrConnector`
  * enforces the actual admin/instance/health-check rules this button skips.
+ *
+ * All three kinds, not just Radarr: with only Radarr configured, requesting a
+ * series or an album fails with "no active instance", so none of the
+ * Sonarr/Lidarr flows could be exercised in fake mode at all.
  */
 export function SkipOnboardingButton() {
   if (import.meta.env.VITE_CONNECTOR !== 'fake') return null
@@ -33,14 +73,10 @@ function SkipOnboardingButtonImpl() {
         throw new Error(admin.error.message)
       }
 
-      const instance = await connector.saveOnboardingInstance('radarr', {
-        baseUrl: 'http://localhost:7878',
-        apiKey: 'fake-api-key',
-        rootFolderPath: '/data/movies',
-        qualityProfileId: 3,
-        enabled: true,
-      })
-      if (!instance.ok) throw new Error(instance.error.message)
+      for (const instance of FAKE_INSTANCES) {
+        const saved = await connector.saveOnboardingInstance(instance.kind, instance.draft)
+        if (!saved.ok) throw new Error(saved.error.message)
+      }
 
       const completed = await connector.completeOnboarding()
       if (!completed.ok) throw new Error(completed.error.message)

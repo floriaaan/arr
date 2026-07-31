@@ -28,6 +28,7 @@ import { ExternalRef } from '#domain/requests/external-ref.vo'
 import type { ProvisioningError } from '#domain/requests/provisioning-error.vo'
 import { Result } from '#domain/shared/result'
 import type { ProgressSnapshot } from '#domain/requests/interfaces/download-progress.interface'
+import type { RequestEpisode } from '#domain/requests/request-episode.entity'
 import type { ConnectionError } from '#domain/settings/connection-error.vo'
 
 export class RadarrAdapter implements ServarrKindAdapter {
@@ -142,6 +143,11 @@ export class RadarrAdapter implements ServarrKindAdapter {
       }
     }
     return snapshots
+  }
+
+  /** A movie has nothing to unfold */
+  async listEpisodes(): Promise<RequestEpisode[]> {
+    return []
   }
 
   async list(): Promise<LibraryItem[]> {

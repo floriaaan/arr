@@ -34,3 +34,12 @@ export const mediaRequestDtoSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
 })
+
+export const requestEpisodeSchema = z.object({
+  seasonNumber: z.number(),
+  episodeNumber: z.number(),
+  title: z.string(),
+  airDate: z.string().nullable(),
+  state: z.enum(['available', 'downloading', 'importing', 'missing', 'failed']),
+  percentage: z.number().nullable(),
+})

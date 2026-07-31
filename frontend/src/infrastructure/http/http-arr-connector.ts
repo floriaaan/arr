@@ -21,7 +21,7 @@ import {
   savedSsoConfigSchema,
 } from './schemas/settings.schema'
 import { mediaItemDtoSchema, mediaDetailDtoSchema } from './schemas/catalog.schema'
-import { mediaRequestDtoSchema } from './schemas/requests.schema'
+import { mediaRequestDtoSchema, requestEpisodeSchema } from './schemas/requests.schema'
 import { libraryItemDtoSchema, calendarEntryDtoSchema } from './schemas/library.schema'
 import type {
   ArrConnector,
@@ -525,6 +525,16 @@ export class HttpArrConnector implements ArrConnector {
     }
     const body = (await response.json()) as { request: unknown }
     return { ok: true as const, value: mediaRequestDtoSchema.parse(body.request) }
+  }
+
+  async listRequestEpisodes(id: string) {
+    const response = await this.http.get(`/api/requests/${id}/episodes`)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { episodes: unknown[] }
+    return {
+      ok: true as const,
+      value: body.episodes.map((episode) => requestEpisodeSchema.parse(episode)),
+    }
   }
 
   async listLibrary(kind?: MediaKind): Promise<LibraryItem[]> {

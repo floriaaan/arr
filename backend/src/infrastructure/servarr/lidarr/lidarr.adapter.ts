@@ -28,6 +28,7 @@ import { ExternalRef } from '#domain/requests/external-ref.vo'
 import type { ProvisioningError } from '#domain/requests/provisioning-error.vo'
 import { Result } from '#domain/shared/result'
 import type { ProgressSnapshot } from '#domain/requests/interfaces/download-progress.interface'
+import type { RequestEpisode } from '#domain/requests/request-episode.entity'
 import type { ConnectionError } from '#domain/settings/connection-error.vo'
 
 export class LidarrAdapter implements ServarrKindAdapter {
@@ -180,6 +181,11 @@ export class LidarrAdapter implements ServarrKindAdapter {
    * artists on the instance — moderate rather than fully-verified
    * confidence, same caveat class as the lookup-term convention above.
    */
+  /** Album tracks has nothing to unfold — out of scope for now (cf. docs/phase-6-fiabilite-requests, chantier 5 décision 2). */
+  async listEpisodes(): Promise<RequestEpisode[]> {
+    return []
+  }
+
   async list(): Promise<LibraryItem[]> {
     const raw = await this.client.request({ path: '/api/v1/album' })
     return LidarrAlbumArraySchema.parse(raw).map((album) => toLibraryItem(album, this.instance.id))
