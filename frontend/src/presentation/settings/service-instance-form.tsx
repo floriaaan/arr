@@ -103,7 +103,12 @@ export function ServiceInstanceForm({
             value={baseUrl}
             onChange={(event) => setBaseUrl(event.target.value)}
           />
-          <DiscoveryDialog kind={kind} duringOnboarding={duringOnboarding} onPick={setBaseUrl} />
+          <DiscoveryDialog
+            kind={kind}
+            duringOnboarding={duringOnboarding}
+            onPick={setBaseUrl}
+            triggerClassName="h-9"
+          />
         </div>
       </div>
       <div className="space-y-2">

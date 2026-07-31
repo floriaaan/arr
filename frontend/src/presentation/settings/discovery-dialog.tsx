@@ -68,10 +68,12 @@ export function DiscoveryDialog({
   kind,
   duringOnboarding,
   onPick,
+  triggerClassName,
 }: {
   kind: DiscoverableKind
   duringOnboarding: boolean
   onPick: (baseUrl: string) => void
+  triggerClassName?: string
 }) {
   const [open, setOpen] = useState(false)
   const [extraHost, setExtraHost] = useState('')
@@ -105,7 +107,7 @@ export function DiscoveryDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" size="sm">
+        <Button type="button" variant="outline" size="sm" className={triggerClassName}>
           <Radar className="size-4" />
           Scan network
         </Button>
