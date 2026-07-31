@@ -437,8 +437,8 @@ function NotificationsPanel() {
       <div>
         <h2 className="text-lg font-semibold tracking-tight">Notifications</h2>
         <p className="text-sm text-muted-foreground">
-          Send a webhook (ntfy, Gotify, Discord, …) when a request becomes available, fails, or
-          an instance goes unreachable.
+          Push a notification to an ntfy topic when a request becomes available, fails, or an
+          instance goes unreachable.
         </p>
       </div>
       <Card>
@@ -447,8 +447,8 @@ function NotificationsPanel() {
             <Bell className="size-4.5" />
           </div>
           <div className="flex-1">
-            <CardTitle>Webhook</CardTitle>
-            <CardDescription>Posted as JSON to the URL below.</CardDescription>
+            <CardTitle>ntfy</CardTitle>
+            <CardDescription>Pushed to the topic below.</CardDescription>
           </div>
           <Badge variant={hasWebhookUrl ? 'default' : 'outline'}>
             {hasWebhookUrl ? 'Configured' : 'Not configured'}
@@ -456,7 +456,7 @@ function NotificationsPanel() {
         </CardHeader>
         <CardContent className="space-y-4 border-t pt-6">
           <div className="space-y-2">
-            <Label>Webhook URL</Label>
+            <Label>Topic URL</Label>
             <Input
               placeholder={hasWebhookUrl ? 'Re-enter to change' : 'https://ntfy.sh/my-topic'}
               value={webhookUrl}

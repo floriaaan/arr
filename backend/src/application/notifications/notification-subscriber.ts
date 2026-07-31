@@ -1,8 +1,13 @@
+import { appUrl } from '#config/app'
 import type { EventBus } from '#application/shared/event-bus'
 import type { Notifier } from '#domain/notifications/interfaces/notifier.interface'
 import type { NotificationSettingsRepository } from '#domain/notifications/interfaces/notification-settings-repository.interface'
 import type { MediaRequestRepository } from '#domain/requests/interfaces/media-request-repository.interface'
 import type { DomainEvent } from '#domain/shared/domain-event'
+
+/** `APP_URL` should be the user-facing origin for these deep links to open the right page. */
+const requestsUrl = `${appUrl}/requests`
+const settingsUrl = `${appUrl}/settings`
 
 /**
  * Wires the domain events that were emitted-and-dropped since day one to the
@@ -45,9 +50,11 @@ export function registerNotificationSubscribers(
 
       const { requestId } = event.payload as { requestId: string }
       await deps.notifier.notify({
-        title: 'Request available',
-        body: `${await titleOf(requestId)} is ready to watch.`,
+        title: '🎬 Request available',
+        body: `**${await titleOf(requestId)}** is ready to watch.`,
         level: 'success',
+        clickUrl: requestsUrl,
+        actions: [{ label: 'Open requests', url: requestsUrl }],
       })
     }),
   )
@@ -60,9 +67,11 @@ export function registerNotificationSubscribers(
 
       const { requestId, reason } = event.payload as { requestId: string; reason?: string }
       await deps.notifier.notify({
-        title: 'Request failed',
-        body: `${await titleOf(requestId)} failed: ${reason ?? 'unknown reason'}`,
+        title: '❌ Request failed',
+        body: `**${await titleOf(requestId)}** failed: ${reason ?? 'unknown reason'}`,
         level: 'error',
+        clickUrl: requestsUrl,
+        actions: [{ label: 'Open requests', url: requestsUrl }],
       })
     }),
   )
@@ -75,9 +84,11 @@ export function registerNotificationSubscribers(
 
       const { kind, error } = event.payload as { kind: string; error: { message: string } }
       await deps.notifier.notify({
-        title: 'Instance unreachable',
-        body: `${kind} is not answering: ${error.message}`,
+        title: '🔌 Instance unreachable',
+        body: `**${kind}** is not answering: ${error.message}`,
         level: 'error',
+        clickUrl: settingsUrl,
+        actions: [{ label: 'Open settings', url: settingsUrl }],
       })
     }),
   )

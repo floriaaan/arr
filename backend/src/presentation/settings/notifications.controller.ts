@@ -1,4 +1,5 @@
 import app from '@adonisjs/core/services/app'
+import { appUrl } from '#config/app'
 import { GetNotificationSettings } from '#application/notifications/get-notification-settings.use-case'
 import { SaveNotificationSettings } from '#application/notifications/save-notification-settings.use-case'
 import { SendNotification } from '#application/notifications/send-notification.use-case'
@@ -36,9 +37,10 @@ export default class NotificationsController {
     const notifier = await app.container.make('notifications.notifier')
 
     const result = await new SendNotification(notifier).execute({
-      title: 'Test notification',
-      body: 'If you can read this, arr can reach your webhook.',
+      title: '🔔 Test notification',
+      body: 'If you can read this, **arr** can reach your ntfy topic.',
       level: 'info',
+      clickUrl: `${appUrl}/settings`,
     })
 
     if (!result.ok) {
