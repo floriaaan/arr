@@ -32,7 +32,7 @@ livraison :
    - **Balayage du sous-réseau** (optionnel, décoché par défaut) : le /24 de
      chaque interface IPv4 non-loopback du backend, soit 254 adresses.
 
-3. **Filtrage TCP avant tout HTTP.** Un balayage /24 sur 7 ports fait ~1 800
+3. **Filtrage TCP avant tout HTTP.** Un balayage /24 sur 5 ports fait ~1 270
    candidats ; les sonder en HTTP serait long et bruyant. Chaque candidat
    passe donc d'abord par une **connexion TCP brute** (`node:net`, timeout
    court), et seuls les ports effectivement ouverts reçoivent une requête HTTP
@@ -52,8 +52,17 @@ livraison :
    | sonarr | 8989 | idem | `<title>Sonarr</title>` |
    | lidarr | 8686 | idem | `<title>Lidarr</title>` |
    | plex | 32400 | `GET /identity` | XML `<MediaContainer … version="…">` |
-   | jellyfin | 8096, 8920 | `GET /System/Info/Public` | JSON, `ProductName` contenant « Jellyfin » |
-   | emby | 8096, 8920 | `GET /System/Info/Public` | JSON, `ProductName` absent ou contenant « Emby » |
+   | jellyfin | 8096 | `GET /System/Info/Public` | JSON, `ProductName` contenant « Jellyfin » |
+   | emby | 8096 | `GET /System/Info/Public` | JSON, `ProductName` absent ou contenant « Emby » |
+
+   **HTTP uniquement.** Jellyfin/Emby écoutent aussi en 8920 (HTTPS), mais ce
+   port porte quasi systématiquement un certificat auto-signé : l'atteindre
+   demanderait de désactiver la vérification du certificat, ce que cette app ne
+   fait pas. Un serveur exposé *uniquement* en 8920 n'est donc pas découvert.
+
+   Les *arr ne renvoient pas leur version sans clé d'API (`/system/status` est
+   authentifié), donc `detectedVersion` reste `null` pour eux ; Plex et
+   Jellyfin/Emby la donnent sur leur endpoint public.
 
    `/ping` prouve qu'on parle à un *arr mais pas *lequel* ; le `<title>` de la
    page de login le dit sans authentification. Quand le titre est illisible
@@ -155,6 +164,7 @@ DI : `settings.instanceDiscovery`.
   demanderait un token Plex — exclu par la décision 1 de la phase 5.
 - Scan de plages autres que le /24 des interfaces locales (pas de CIDR
   arbitraire saisi par l'utilisateur).
+- Ports HTTPS à certificat auto-signé (8920), cf. décision 5.
 - Récupération automatique de la clé d'API (décision 6).
 - Persistance ou rafraîchissement périodique des résultats.
 

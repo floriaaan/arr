@@ -4,6 +4,7 @@ import { middleware } from '#start/kernel'
 const OnboardingController = () => import('./onboarding.controller.js')
 const SettingsController = () => import('./settings.controller.js')
 const MediaServersController = () => import('./media-servers.controller.js')
+const DiscoveryController = () => import('./discovery.controller.js')
 
 /**
  * Public on purpose, and outside the `onboardingGuard` group below: the
@@ -30,6 +31,9 @@ router
     router
       .put('/media-servers/:kind', [MediaServersController, 'save'])
       .as('onboarding.mediaServers.save')
+    /* Named explicitly: the settings group below reuses the same controller
+       method, and Adonis derives route names from `controller.method`. */
+    router.post('/discovery', [DiscoveryController, 'scan']).as('onboarding.discovery.scan')
     router.post('/sso/test', [OnboardingController, 'testSso'])
     router.put('/sso', [OnboardingController, 'saveSso'])
     router.post('/complete', [OnboardingController, 'complete'])
@@ -86,6 +90,7 @@ router
       .put('/media-servers/:kind', [MediaServersController, 'save'])
       .as('settings.mediaServers.save')
     router.delete('/media-servers/:kind', [MediaServersController, 'destroy'])
+    router.post('/discovery', [DiscoveryController, 'scan']).as('settings.discovery.scan')
     router.get('/sso', [SettingsController, 'getSso'])
     router.put('/sso', [SettingsController, 'updateSso'])
     router.post('/sso/test', [SettingsController, 'testSso'])

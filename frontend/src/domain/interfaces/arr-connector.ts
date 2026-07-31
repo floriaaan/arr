@@ -8,6 +8,7 @@ import type { ServarrKind, ServarrInstanceDto } from '../settings/servarr-instan
 import type { InstanceDraft } from '../settings/instance-draft'
 import type { InstanceProfileDto, InstanceProfileDraft } from '../settings/instance-profile'
 import type { MediaServerDraft, MediaServerDto, MediaServerKind } from '../settings/media-server'
+import type { DiscoveredInstance, DiscoveryScope } from '../settings/discovered-instance'
 import type { QualityProfileRecord } from '../settings/quality-profile-record'
 import type { DownloadClientRecord } from '../settings/download-client-record'
 import type { IndexerRecord } from '../settings/indexer-record'
@@ -93,6 +94,9 @@ export interface ArrConnector {
     kind: MediaServerKind,
     draft: MediaServerDraft,
   ) => Promise<Result<MediaServerDto, ApiError>>
+  discoverOnboardingInstances: (
+    scope: DiscoveryScope,
+  ) => Promise<Result<DiscoveredInstance[], ApiError>>
   testOidcDiscovery: (
     issuerUrl: string,
     clientId: string,
@@ -189,6 +193,10 @@ export interface ArrConnector {
     draft: MediaServerDraft,
   ) => Promise<Result<MediaServerDto, ApiError>>
   deleteMediaServer: (kind: MediaServerKind) => Promise<void>
+
+  // settings — network discovery (cf. docs/phase-5-quality-of-life/01)
+  // Proposes base URLs only; never reads an API key, never writes anything.
+  discoverInstances: (scope: DiscoveryScope) => Promise<Result<DiscoveredInstance[], ApiError>>
 
   getSso: () => Promise<{
     issuerUrl: string

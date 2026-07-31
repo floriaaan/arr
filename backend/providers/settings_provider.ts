@@ -5,6 +5,7 @@ import type { MediaServerRepository } from '#domain/settings/interfaces/media-se
 import type { AuthSettingsRepository } from '#domain/settings/interfaces/auth-settings-repository.interface'
 import type { OnboardingStateRepository } from '#domain/settings/interfaces/onboarding-state-repository.interface'
 import type { ServarrConnectionTester } from '#domain/settings/interfaces/servarr-connection-tester.interface'
+import type { InstanceDiscovery } from '#domain/settings/interfaces/instance-discovery.interface'
 import type { ServarrProfileCatalog } from '#domain/settings/interfaces/servarr-profile-catalog.interface'
 import type { ServarrQualityProfileManager } from '#domain/settings/interfaces/servarr-quality-profile-manager.interface'
 import type { ServarrDownloadClientManager } from '#domain/settings/interfaces/servarr-download-client-manager.interface'
@@ -51,6 +52,12 @@ export default class SettingsProvider {
       const { LucidOnboardingStateRepository } =
         await import('#infrastructure/persistence/settings/onboarding-state.repository')
       return new LucidOnboardingStateRepository()
+    })
+
+    this.app.container.singleton('settings.instanceDiscovery', async () => {
+      const { NetworkInstanceDiscovery } =
+        await import('#infrastructure/discovery/network-instance-discovery')
+      return new NetworkInstanceDiscovery()
     })
 
     this.app.container.singleton('settings.connectionTester', async () => {
@@ -109,6 +116,7 @@ declare module '@adonisjs/core/types' {
     'settings.authSettingsRepository': AuthSettingsRepository
     'settings.onboardingStateRepository': OnboardingStateRepository
     'settings.connectionTester': ServarrConnectionTester
+    'settings.instanceDiscovery': InstanceDiscovery
     'settings.profileCatalog': ServarrProfileCatalog
     'settings.qualityProfileManager': ServarrQualityProfileManager
     'settings.downloadClientManager': ServarrDownloadClientManager

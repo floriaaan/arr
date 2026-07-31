@@ -51,6 +51,14 @@ HTTP approprié (`400` validation, `401` non authentifié, `403` non autorisé, 
     avancer `OnboardingState` : un serveur média est un simple lien de confort
     (cf. [phase 5](../phase-5-quality-of-life/00-overview-et-decisions.md)).
 
+- `POST /api/onboarding/discovery`
+  - body : `{ extraHost?: string; scanSubnet?: boolean }`
+  - 200 → `{ instances: DiscoveredInstanceDto[] }`
+  `DiscoveredInstanceDto = { kind: 'radarr'|'sonarr'|'lidarr'|'plex'|'jellyfin'|'emby'; baseUrl: string; detectedVersion: string | null; serverName: string | null; confidence: 'confirmed' | 'port' }`
+  Sonde le réseau à la recherche d'instances (cf.
+  [phase 5 / addendum](../phase-5-quality-of-life/01-discovery-et-palette-unifiee.md)) —
+  ne renvoie que des URL, jamais de clé d'API, et n'écrit rien.
+
 - `POST /api/onboarding/sso/test`
   - body : `{ issuerUrl: string; clientId: string; clientSecret: string }`
   - 200 → `{ ok: true; discovery: { authorizationEndpoint, tokenEndpoint, userinfoEndpoint } } | { ok: false; error: {...} }`
@@ -71,6 +79,8 @@ et avec un contrôle `admin_only_middleware` :
 - `GET /api/settings/instances` → `{ instances: ServarrInstanceDto[] }`
 - `PUT /api/settings/instances/:kind`, `DELETE /api/settings/instances/:kind`
 - `POST /api/settings/instances/:kind/test-connection`
+- `POST /api/settings/discovery` → `{ instances: DiscoveredInstanceDto[] }` (même
+  forme que `/api/onboarding/discovery`)
 - `PUT /api/settings/media-servers/:kind` → `{ mediaServer: MediaServerDto }`,
   `DELETE /api/settings/media-servers/:kind` → 204
 - `GET /api/settings/sso`, `PUT /api/settings/sso`, `POST /api/settings/sso/test`

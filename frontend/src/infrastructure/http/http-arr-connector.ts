@@ -12,6 +12,7 @@ import {
   instanceProfilesSchema,
   instanceProfileDtoSchema,
   mediaServerDtoSchema,
+  discoveredInstanceSchema,
   qualityProfileRecordSchema,
   downloadClientRecordSchema,
   indexerRecordSchema,
@@ -37,6 +38,7 @@ import type { ServarrKind } from '#domain/settings/servarr-instance'
 import type { InstanceDraft } from '#domain/settings/instance-draft'
 import type { InstanceProfileDraft } from '#domain/settings/instance-profile'
 import type { MediaServerDraft, MediaServerKind } from '#domain/settings/media-server'
+import type { DiscoveryScope } from '#domain/settings/discovered-instance'
 import type { DownloadClientRecord } from '#domain/settings/download-client-record'
 import type { IndexerRecord } from '#domain/settings/indexer-record'
 import type { MediaKind } from '#domain/catalog/media-kind'
@@ -174,6 +176,10 @@ export class HttpArrConnector implements ArrConnector {
     if (!response.ok) return { ok: false as const, error: await toApiError(response) }
     const body = (await response.json()) as { mediaServer: unknown }
     return { ok: true as const, value: mediaServerDtoSchema.parse(body.mediaServer) }
+  }
+
+  async discoverOnboardingInstances(scope: DiscoveryScope) {
+    return this.parseDiscovery(await this.http.post('/api/onboarding/discovery', scope))
   }
 
   async testOidcDiscovery(
@@ -431,6 +437,10 @@ export class HttpArrConnector implements ArrConnector {
     await this.http.delete(`/api/settings/media-servers/${kind}`)
   }
 
+  async discoverInstances(scope: DiscoveryScope) {
+    return this.parseDiscovery(await this.http.post('/api/settings/discovery', scope))
+  }
+
   async getSso() {
     const response = await this.http.get('/api/settings/sso')
     const body = (await response.json()) as { oidc: unknown }
@@ -543,6 +553,15 @@ export class HttpArrConnector implements ArrConnector {
     const response = await this.http.get(`/api/calendar?${qs.toString()}`)
     const body = (await response.json()) as { entries: unknown[] }
     return body.entries.map((entry) => toCalendarEntry(calendarEntryDtoSchema.parse(entry)))
+  }
+
+  private async parseDiscovery(response: Response) {
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { instances: unknown[] }
+    return {
+      ok: true as const,
+      value: body.instances.map((instance) => discoveredInstanceSchema.parse(instance)),
+    }
   }
 
   private async parseConnectionTestResult(response: Response): Promise<ConnectionTestResult> {

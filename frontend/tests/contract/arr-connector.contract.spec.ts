@@ -85,6 +85,25 @@ describe.each<{ name: string; create: () => ArrConnector }>([
             },
           }
         })(),
+        'POST /api/settings/discovery': () =>
+          json({
+            instances: [
+              {
+                kind: 'radarr',
+                baseUrl: 'http://localhost:7878',
+                detectedVersion: null,
+                serverName: null,
+                confidence: 'confirmed',
+              },
+              {
+                kind: 'jellyfin',
+                baseUrl: 'http://localhost:8096',
+                detectedVersion: '10.10.3',
+                serverName: 'Living room',
+                confidence: 'confirmed',
+              },
+            ],
+          }),
         'GET /api/catalog/search': () =>
           json({
             results: [
@@ -240,6 +259,19 @@ describe.each<{ name: string; create: () => ArrConnector }>([
     await connector.deleteMediaServer('plex')
 
     expect(await connector.listMediaServers()).toEqual([])
+  })
+
+  test('discovery only ever proposes base urls, never a credential', async () => {
+    const result = await connector.discoverInstances({ scanSubnet: false })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.length).toBeGreaterThan(0)
+    for (const instance of result.value) {
+      expect(instance.baseUrl).toMatch(/^https?:\/\//)
+      expect(instance).not.toHaveProperty('apiKey')
+      expect(['confirmed', 'port']).toContain(instance.confidence)
+    }
   })
 
   test('calendar entries fall within the requested range and expose a posterUrl', async () => {

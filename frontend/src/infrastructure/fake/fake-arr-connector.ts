@@ -22,6 +22,7 @@ import type {
   MediaServerDto,
   MediaServerKind,
 } from '#domain/settings/media-server'
+import type { DiscoveredInstance, DiscoveryScope } from '#domain/settings/discovered-instance'
 import type { QualityProfileRecord } from '#domain/settings/quality-profile-record'
 import type { DownloadClientRecord } from '#domain/settings/download-client-record'
 import type { IndexerRecord } from '#domain/settings/indexer-record'
@@ -621,6 +622,61 @@ export class FakeArrConnector implements ArrConnector {
 
   async saveOnboardingMediaServer(kind: MediaServerKind, draft: MediaServerDraft) {
     return this.saveMediaServer(kind, draft)
+  }
+
+  async discoverOnboardingInstances(scope: DiscoveryScope) {
+    return this.discoverInstances(scope)
+  }
+
+  /**
+   * A plausible-looking result set, including one `confidence: 'port'` entry
+   * and one Emby-behind-a-reverse-proxy case, so the dialog's edge cases are
+   * exercisable without a network.
+   */
+  async discoverInstances(scope: DiscoveryScope) {
+    const host = scope.extraHost?.trim() || 'localhost'
+    const instances: DiscoveredInstance[] = [
+      {
+        kind: 'radarr',
+        baseUrl: `http://${host}:7878`,
+        detectedVersion: null,
+        serverName: null,
+        confidence: 'confirmed',
+      },
+      {
+        kind: 'sonarr',
+        baseUrl: `http://${host}:8989`,
+        detectedVersion: null,
+        serverName: null,
+        confidence: 'confirmed',
+      },
+      {
+        kind: 'lidarr',
+        baseUrl: `http://${host}:8686`,
+        detectedVersion: null,
+        serverName: null,
+        confidence: 'port',
+      },
+      {
+        kind: 'plex',
+        baseUrl: `http://${host}:32400`,
+        detectedVersion: '1.41.0.8992',
+        serverName: null,
+        confidence: 'confirmed',
+      },
+    ]
+
+    if (scope.scanSubnet) {
+      instances.push({
+        kind: 'jellyfin',
+        baseUrl: 'http://192.168.1.24:8096',
+        detectedVersion: '10.10.3',
+        serverName: 'Living room',
+        confidence: 'confirmed',
+      })
+    }
+
+    return { ok: true as const, value: instances }
   }
 
   async listMediaServers(): Promise<MediaServerDto[]> {

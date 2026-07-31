@@ -8,6 +8,7 @@ import { Input } from '#presentation/ui/input'
 import { Label } from '#presentation/ui/label'
 import { Button } from '#presentation/ui/button'
 import { Switch } from '#presentation/ui/switch'
+import { DiscoveryDialog } from './discovery-dialog'
 import {
   Select,
   SelectContent,
@@ -97,7 +98,14 @@ export function ServiceInstanceForm({
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Base URL</Label>
+          <div className="flex items-center justify-between gap-2">
+            <Label>Base URL</Label>
+            <DiscoveryDialog
+              kind={kind}
+              duringOnboarding={duringOnboarding}
+              onPick={setBaseUrl}
+            />
+          </div>
           <Input
             placeholder="http://localhost:7878"
             value={baseUrl}

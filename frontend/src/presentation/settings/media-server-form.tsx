@@ -8,6 +8,7 @@ import { Label } from '#presentation/ui/label'
 import { Button } from '#presentation/ui/button'
 import { Switch } from '#presentation/ui/switch'
 import { MEDIA_SERVER_META } from '#presentation/shared/media-server-meta'
+import { DiscoveryDialog } from './discovery-dialog'
 import { buildMediaServerSearchUrl } from '#domain/settings/media-server-link'
 import type { MediaServerDto, MediaServerKind } from '#domain/settings/media-server'
 
@@ -66,7 +67,10 @@ export function MediaServerForm({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label>Base URL</Label>
+        <div className="flex items-center justify-between gap-2">
+          <Label>Base URL</Label>
+          <DiscoveryDialog kind={kind} duringOnboarding={duringOnboarding} onPick={setBaseUrl} />
+        </div>
         <Input
           placeholder={meta.placeholder}
           value={baseUrl}

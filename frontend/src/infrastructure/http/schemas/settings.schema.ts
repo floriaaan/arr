@@ -90,6 +90,14 @@ export const mediaServerDtoSchema = z.object({
   enabled: z.boolean(),
 })
 
+export const discoveredInstanceSchema = z.object({
+  kind: z.enum(['radarr', 'sonarr', 'lidarr', 'plex', 'jellyfin', 'emby']),
+  baseUrl: z.string(),
+  detectedVersion: z.string().nullable(),
+  serverName: z.string().nullable(),
+  confidence: z.enum(['confirmed', 'port']),
+})
+
 export const instanceProfilesSchema = z.object({
   rootFolders: z.array(z.object({ path: z.string() })),
   qualityProfiles: z.array(z.object({ id: z.number(), name: z.string() })),
