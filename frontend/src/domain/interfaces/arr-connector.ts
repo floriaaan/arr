@@ -9,6 +9,11 @@ import type { InstanceDraft } from '../settings/instance-draft'
 import type { InstanceProfileDto, InstanceProfileDraft } from '../settings/instance-profile'
 import type { MediaServerDraft, MediaServerDto, MediaServerKind } from '../settings/media-server'
 import type { DiscoveredInstance, DiscoveryScope } from '../settings/discovered-instance'
+import type {
+  NotificationSettingsDraft,
+  NotificationSettingsDto,
+  NotificationTestResult,
+} from '../settings/notification-settings'
 import type { QualityProfileRecord } from '../settings/quality-profile-record'
 import type { DownloadClientRecord } from '../settings/download-client-record'
 import type { IndexerRecord } from '../settings/indexer-record'
@@ -198,6 +203,13 @@ export interface ArrConnector {
   // settings — network discovery (cf. docs/phase-5-quality-of-life/01)
   // Proposes base URLs only; never reads an API key, never writes anything.
   discoverInstances: (scope: DiscoveryScope) => Promise<Result<DiscoveredInstance[], ApiError>>
+
+  // settings — notifications (cf. docs/phase-6-fiabilite-requests/02)
+  getNotificationSettings: () => Promise<NotificationSettingsDto>
+  saveNotificationSettings: (
+    draft: NotificationSettingsDraft,
+  ) => Promise<Result<NotificationSettingsDto, ApiError>>
+  testNotification: () => Promise<NotificationTestResult>
 
   getSso: () => Promise<{
     issuerUrl: string

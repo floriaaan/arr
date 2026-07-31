@@ -23,6 +23,11 @@ import type {
   MediaServerKind,
 } from '#domain/settings/media-server'
 import type { DiscoveredInstance, DiscoveryScope } from '#domain/settings/discovered-instance'
+import type {
+  NotificationSettingsDraft,
+  NotificationSettingsDto,
+  NotificationTestResult,
+} from '#domain/settings/notification-settings'
 import type { QualityProfileRecord } from '#domain/settings/quality-profile-record'
 import type { DownloadClientRecord } from '#domain/settings/download-client-record'
 import type { IndexerRecord } from '#domain/settings/indexer-record'
@@ -386,6 +391,13 @@ export class FakeArrConnector implements ArrConnector {
   private readonly downloadClients = new Map<ServarrKind, DownloadClientRecord[]>()
   private readonly indexers = new Map<ServarrKind, IndexerRecord[]>()
   private readonly mediaServers = new Map<MediaServerKind, MediaServerDto>()
+  private notificationSettings: NotificationSettingsDto & { webhookUrl: string | null } = {
+    webhookUrl: null,
+    hasWebhookUrl: false,
+    onRequestAvailable: true,
+    onRequestFailed: true,
+    onInstanceUnreachable: true,
+  }
   private ssoConfig: (OidcConfigInput & { claimsMapping?: Record<string, string> }) | null = null
   private readonly requests = new Map<string, MediaRequest>()
   private readonly removedLibraryItems = new Set<string>()
@@ -717,6 +729,43 @@ export class FakeArrConnector implements ArrConnector {
     return this.fetchInstanceProfiles(kind)
   }
 
+  async getNotificationSettings(): Promise<NotificationSettingsDto> {
+    const { webhookUrl: _webhookUrl, ...dto } = this.notificationSettings
+    return dto
+  }
+
+  async saveNotificationSettings(draft: NotificationSettingsDraft) {
+    const webhookUrl =
+      draft.webhookUrl === undefined ? this.notificationSettings.webhookUrl : draft.webhookUrl
+    if (webhookUrl !== null && !/^https?:\/\//.test(webhookUrl)) {
+      return {
+        ok: false as const,
+        error: {
+          type: 'validation_failed',
+          message: `"${webhookUrl}" is not a valid URL`,
+          status: 400,
+        },
+      }
+    }
+
+    this.notificationSettings = {
+      webhookUrl,
+      hasWebhookUrl: webhookUrl !== null,
+      onRequestAvailable: draft.onRequestAvailable,
+      onRequestFailed: draft.onRequestFailed,
+      onInstanceUnreachable: draft.onInstanceUnreachable,
+    }
+    const { webhookUrl: _hidden, ...dto } = this.notificationSettings
+    return { ok: true as const, value: dto }
+  }
+
+  async testNotification(): Promise<NotificationTestResult> {
+    if (!this.notificationSettings.webhookUrl) {
+      return { ok: false, error: { message: 'No webhook URL configured.' } }
+    }
+    return { ok: true }
+  }
+
   async getSso() {
     if (!this.ssoConfig) return null
     return {
@@ -979,6 +1028,12 @@ export class FakeArrConnector implements ArrConnector {
       seriesType: draft.seriesType ?? null,
       minimumAvailability: draft.minimumAvailability ?? null,
       enabled: draft.enabled,
+      // A fake instance is always reachable — the health panel needs
+      // something plausible to render.
+      lastCheckedAt: new Date().toISOString(),
+      healthy: true,
+      detectedVersion: '5.0.0.0',
+      lastError: null,
     }
     this.instances.set(kind, instance)
 

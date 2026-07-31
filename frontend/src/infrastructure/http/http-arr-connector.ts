@@ -13,6 +13,7 @@ import {
   instanceProfileDtoSchema,
   mediaServerDtoSchema,
   discoveredInstanceSchema,
+  notificationSettingsDtoSchema,
   qualityProfileRecordSchema,
   downloadClientRecordSchema,
   indexerRecordSchema,
@@ -39,6 +40,10 @@ import type { InstanceDraft } from '#domain/settings/instance-draft'
 import type { InstanceProfileDraft } from '#domain/settings/instance-profile'
 import type { MediaServerDraft, MediaServerKind } from '#domain/settings/media-server'
 import type { DiscoveryScope } from '#domain/settings/discovered-instance'
+import type {
+  NotificationSettingsDraft,
+  NotificationTestResult,
+} from '#domain/settings/notification-settings'
 import type { DownloadClientRecord } from '#domain/settings/download-client-record'
 import type { IndexerRecord } from '#domain/settings/indexer-record'
 import type { MediaKind } from '#domain/catalog/media-kind'
@@ -439,6 +444,31 @@ export class HttpArrConnector implements ArrConnector {
 
   async discoverInstances(scope: DiscoveryScope) {
     return this.parseDiscovery(await this.http.post('/api/settings/discovery', scope))
+  }
+
+  async getNotificationSettings() {
+    const response = await this.http.get('/api/settings/notifications')
+    const body = (await response.json()) as { notifications: unknown }
+    return notificationSettingsDtoSchema.parse(body.notifications)
+  }
+
+  async saveNotificationSettings(draft: NotificationSettingsDraft) {
+    const response = await this.http.put('/api/settings/notifications', draft)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { notifications: unknown }
+    return { ok: true as const, value: notificationSettingsDtoSchema.parse(body.notifications) }
+  }
+
+  /** 200 with `{ ok: false }` on a failed delivery, like the instance test endpoints. */
+  async testNotification(): Promise<NotificationTestResult> {
+    const response = await this.http.post('/api/settings/notifications/test')
+    if (!response.ok) {
+      return { ok: false, error: { message: (await toApiError(response)).message } }
+    }
+    const body = (await response.json()) as
+      | { ok: true }
+      | { ok: false; error: { message: string } }
+    return body
   }
 
   async getSso() {

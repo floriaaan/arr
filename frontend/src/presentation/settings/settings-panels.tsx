@@ -14,6 +14,8 @@ import {
   ShieldOff,
   Users,
   MonitorPlay,
+  Bell,
+  Send,
 } from 'lucide-react'
 import { useInstances } from '#application/settings/instances.query'
 import { useDeleteInstance } from '#application/settings/delete-instance.mutation'
@@ -21,6 +23,9 @@ import { useSso } from '#application/settings/sso.query'
 import { useSaveOidc } from '#application/settings/save-oidc.mutation'
 import { useEffectiveAuthSettings } from '#application/settings/auth-settings.query'
 import { useMediaServers } from '#application/settings/media-servers.query'
+import { useNotificationSettings } from '#application/settings/notification-settings.query'
+import { useSaveNotificationSettings } from '#application/settings/save-notification-settings.mutation'
+import { useTestNotification } from '#application/settings/test-notification.mutation'
 import { ServiceInstanceForm } from './service-instance-form'
 import { MediaServerForm } from './media-server-form'
 import { UsersPanel } from './users-panel'
@@ -31,6 +36,7 @@ import { Button } from '#presentation/ui/button'
 import { Input } from '#presentation/ui/input'
 import { Label } from '#presentation/ui/label'
 import { Badge } from '#presentation/ui/badge'
+import { Switch } from '#presentation/ui/switch'
 import { cn } from '#presentation/shared/utils'
 import { MEDIA_SERVER_KINDS } from '#domain/settings/media-server'
 import type { ServarrKind, ServarrInstanceDto } from '#domain/settings/servarr-instance'
@@ -49,11 +55,20 @@ const SERVARR_KINDS: readonly ServarrKind[] = ['radarr', 'sonarr', 'lidarr']
 
 function InstanceStatusBadge({ existing }: { existing?: ServarrInstanceDto }) {
   if (!existing) return <Badge variant="outline">Not configured</Badge>
-  return existing.enabled ? (
-    <Badge>Enabled</Badge>
-  ) : (
-    <Badge variant="secondary">Disabled</Badge>
-  )
+  if (!existing.enabled) return <Badge variant="secondary">Disabled</Badge>
+  if (existing.healthy === false) return <Badge variant="destructive">Unreachable</Badge>
+  return <Badge>Enabled</Badge>
+}
+
+function instanceHealthLabel(existing: ServarrInstanceDto): string | null {
+  if (!existing.enabled || existing.lastCheckedAt === null) return null
+  const checkedAt = new Date(existing.lastCheckedAt).toLocaleString()
+  if (existing.healthy === false) {
+    return existing.lastError ? `${existing.lastError.message} · checked ${checkedAt}` : `Unreachable · checked ${checkedAt}`
+  }
+  return existing.detectedVersion
+    ? `${existing.detectedVersion} · checked ${checkedAt}`
+    : `Checked ${checkedAt}`
 }
 
 function ServiceCard({
@@ -89,6 +104,11 @@ function ServiceCard({
           <CardDescription className="truncate">
             {existing?.baseUrl ?? `Connect your ${meta.description.toLowerCase()} manager`}
           </CardDescription>
+          {existing && instanceHealthLabel(existing) ? (
+            <CardDescription className="truncate text-xs">
+              {instanceHealthLabel(existing)}
+            </CardDescription>
+          ) : null}
         </div>
         <ChevronDown
           className={cn('size-4 shrink-0 text-muted-foreground transition-transform', expanded && 'rotate-180')}
@@ -338,6 +358,143 @@ function SsoPanel() {
   )
 }
 
+function NotificationsPanel() {
+  const queryClient = useQueryClient()
+  const notificationSettings = useNotificationSettings()
+  const saveNotificationSettings = useSaveNotificationSettings()
+  const testNotification = useTestNotification()
+
+  function invalidate() {
+    void queryClient.invalidateQueries({ queryKey: ['notification-settings'] })
+  }
+
+  const [webhookUrl, setWebhookUrl] = useState('')
+  const [onRequestAvailable, setOnRequestAvailable] = useState(
+    notificationSettings.data?.onRequestAvailable ?? true,
+  )
+  const [onRequestFailed, setOnRequestFailed] = useState(
+    notificationSettings.data?.onRequestFailed ?? true,
+  )
+  const [onInstanceUnreachable, setOnInstanceUnreachable] = useState(
+    notificationSettings.data?.onInstanceUnreachable ?? true,
+  )
+
+  const hasWebhookUrl = notificationSettings.data?.hasWebhookUrl ?? false
+
+  function handleSave() {
+    saveNotificationSettings.mutate(
+      {
+        ...(webhookUrl ? { webhookUrl } : {}),
+        onRequestAvailable,
+        onRequestFailed,
+        onInstanceUnreachable,
+      },
+      {
+        onSuccess: (result) => {
+          if (!result.ok) return toast.error(result.error.message)
+          toast.success('Notification settings saved.')
+          setWebhookUrl('')
+          invalidate()
+        },
+      },
+    )
+  }
+
+  function handleClear() {
+    saveNotificationSettings.mutate(
+      { webhookUrl: null, onRequestAvailable, onRequestFailed, onInstanceUnreachable },
+      {
+        onSuccess: () => {
+          toast.success('Webhook cleared.')
+          invalidate()
+        },
+      },
+    )
+  }
+
+  function handleTest() {
+    testNotification.mutate(undefined, {
+      onSuccess: (result) => {
+        if (!result.ok) return toast.error(result.error.message)
+        toast.success('Test notification sent.')
+      },
+    })
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight">Notifications</h2>
+        <p className="text-sm text-muted-foreground">
+          Send a webhook (ntfy, Gotify, Discord, …) when a request becomes available, fails, or
+          an instance goes unreachable.
+        </p>
+      </div>
+      <Card>
+        <CardHeader className="flex-row items-center gap-3 space-y-0">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+            <Bell className="size-4.5" />
+          </div>
+          <div className="flex-1">
+            <CardTitle>Webhook</CardTitle>
+            <CardDescription>Posted as JSON to the URL below.</CardDescription>
+          </div>
+          <Badge variant={hasWebhookUrl ? 'default' : 'outline'}>
+            {hasWebhookUrl ? 'Configured' : 'Not configured'}
+          </Badge>
+        </CardHeader>
+        <CardContent className="space-y-4 border-t pt-6">
+          <div className="space-y-2">
+            <Label>Webhook URL</Label>
+            <Input
+              placeholder={hasWebhookUrl ? 'Re-enter to change' : 'https://ntfy.sh/my-topic'}
+              value={webhookUrl}
+              onChange={(event) => setWebhookUrl(event.target.value)}
+            />
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Switch checked={onRequestAvailable} onCheckedChange={setOnRequestAvailable} />
+              <Label>Request available</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={onRequestFailed} onCheckedChange={setOnRequestFailed} />
+              <Label>Request failed</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={onInstanceUnreachable}
+                onCheckedChange={setOnInstanceUnreachable}
+              />
+              <Label>Instance unreachable</Label>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={handleSave} disabled={saveNotificationSettings.isPending}>
+              <Save className="size-4" />
+              {saveNotificationSettings.isPending ? 'Saving…' : 'Save'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleTest}
+              disabled={!hasWebhookUrl || testNotification.isPending}
+            >
+              <Send className="size-4" />
+              {testNotification.isPending ? 'Sending…' : 'Send test'}
+            </Button>
+            {hasWebhookUrl ? (
+              <Button type="button" variant="outline" onClick={handleClear}>
+                Clear webhook
+              </Button>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 function AuthPanel() {
   const authSettings = useEffectiveAuthSettings()
 
@@ -405,6 +562,10 @@ export function SettingsPanels() {
           <MonitorPlay className="size-4" />
           Media servers
         </TabsTrigger>
+        <TabsTrigger value="notifications">
+          <Bell className="size-4" />
+          Notifications
+        </TabsTrigger>
         <TabsTrigger value="sso">
           <KeyRound className="size-4" />
           Single sign-on
@@ -423,6 +584,9 @@ export function SettingsPanels() {
       </TabsContent>
       <TabsContent value="media-servers" className="min-w-0">
         <MediaServersPanel />
+      </TabsContent>
+      <TabsContent value="notifications" className="min-w-0">
+        <NotificationsPanel />
       </TabsContent>
       <TabsContent value="sso" className="min-w-0">
         <SsoPanel />

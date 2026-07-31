@@ -85,6 +85,37 @@ describe.each<{ name: string; create: () => ArrConnector }>([
             },
           }
         })(),
+        ...(() => {
+          let settings = {
+            hasWebhookUrl: false,
+            onRequestAvailable: true,
+            onRequestFailed: true,
+            onInstanceUnreachable: true,
+          }
+          return {
+            'GET /api/settings/notifications': () => json({ notifications: settings }),
+            'PUT /api/settings/notifications': (init: RequestInit | undefined) => {
+              const draft = JSON.parse(String(init?.body)) as {
+                webhookUrl?: string | null
+                onRequestAvailable: boolean
+                onRequestFailed: boolean
+                onInstanceUnreachable: boolean
+              }
+              settings = {
+                hasWebhookUrl:
+                  draft.webhookUrl === undefined ? settings.hasWebhookUrl : draft.webhookUrl !== null,
+                onRequestAvailable: draft.onRequestAvailable,
+                onRequestFailed: draft.onRequestFailed,
+                onInstanceUnreachable: draft.onInstanceUnreachable,
+              }
+              return json({ notifications: settings })
+            },
+            'POST /api/settings/notifications/test': () =>
+              settings.hasWebhookUrl
+                ? json({ ok: true })
+                : json({ ok: false, error: { message: 'No webhook URL configured.' } }),
+          }
+        })(),
         'POST /api/settings/discovery': () =>
           json({
             instances: [
@@ -279,6 +310,35 @@ describe.each<{ name: string; create: () => ArrConnector }>([
       expect(instance).not.toHaveProperty('apiKey')
       expect(['confirmed', 'port']).toContain(instance.confidence)
     }
+  })
+
+  test('notification settings start unconfigured, never exposing a webhook url', async () => {
+    const settings = await connector.getNotificationSettings()
+    expect(settings.hasWebhookUrl).toBe(false)
+    expect(settings).not.toHaveProperty('webhookUrl')
+  })
+
+  test('saving notification settings makes the webhook present without ever echoing it back', async () => {
+    const saved = await connector.saveNotificationSettings({
+      webhookUrl: 'https://ntfy.sh/my-topic',
+      onRequestAvailable: true,
+      onRequestFailed: false,
+      onInstanceUnreachable: true,
+    })
+
+    expect(saved.ok).toBe(true)
+    if (!saved.ok) return
+    expect(saved.value.hasWebhookUrl).toBe(true)
+    expect(saved.value.onRequestFailed).toBe(false)
+    expect(saved.value).not.toHaveProperty('webhookUrl')
+
+    const refetched = await connector.getNotificationSettings()
+    expect(refetched.hasWebhookUrl).toBe(true)
+  })
+
+  test('testing notifications without a configured webhook fails', async () => {
+    const result = await connector.testNotification()
+    expect(result.ok).toBe(false)
   })
 
   test('calendar entries fall within the requested range and expose a posterUrl', async () => {

@@ -12,4 +12,9 @@ export interface ServarrInstanceDto {
   seriesType: string | null
   minimumAvailability: string | null
   enabled: boolean
+  /** Health of the last check — `null` when the instance was never checked. */
+  lastCheckedAt: string | null
+  healthy: boolean | null
+  detectedVersion: string | null
+  lastError: { type: string; message: string } | null
 }

@@ -81,6 +81,17 @@ export const servarrInstanceDtoSchema = z.object({
   seriesType: z.enum(['standard', 'daily', 'anime']).nullable(),
   minimumAvailability: z.enum(['announced', 'inCinemas', 'released', 'preDB']).nullable(),
   enabled: z.boolean(),
+  lastCheckedAt: z.string().nullable(),
+  healthy: z.boolean().nullable(),
+  detectedVersion: z.string().nullable(),
+  lastError: z.object({ type: z.string(), message: z.string() }).nullable(),
+})
+
+export const notificationSettingsDtoSchema = z.object({
+  hasWebhookUrl: z.boolean(),
+  onRequestAvailable: z.boolean(),
+  onRequestFailed: z.boolean(),
+  onInstanceUnreachable: z.boolean(),
 })
 
 export const mediaServerDtoSchema = z.object({
