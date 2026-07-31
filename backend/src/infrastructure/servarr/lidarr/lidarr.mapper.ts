@@ -1,12 +1,10 @@
-import type { LidarrAlbum, LidarrAlbumLookup, LidarrQueueRecord } from './lidarr.schemas.js'
+import type { LidarrAlbum, LidarrAlbumLookup } from './lidarr.schemas.js'
 import { ExternalId } from '#domain/catalog/external-id.vo'
 import { PosterRef } from '#domain/catalog/poster-ref.vo'
 import { MediaItem } from '#domain/catalog/media-item.entity'
 import { MediaDetail } from '#domain/catalog/media-detail.entity'
 import { LibraryItem } from '#domain/catalog/library-item.entity'
 import { CalendarEntry } from '#domain/catalog/calendar-entry.entity'
-import { RequestProgress } from '#domain/requests/request-progress.vo'
-import type { RequestStatus } from '#domain/requests/request-status.vo'
 
 function posterRefFrom(album: LidarrAlbumLookup): PosterRef | null {
   const images = album.images ?? album.artist?.images
@@ -85,51 +83,9 @@ export function toCalendarEntry(album: LidarrAlbum, instanceId: string): Calenda
   })
 }
 
-const TRACKED_DOWNLOAD_STATE_TO_STATUS: Record<string, RequestStatus | undefined> = {
-  downloading: 'downloading',
-  importPending: 'importing',
-  importBlocked: 'importing',
-  importing: 'importing',
-  imported: 'available',
-  failedPending: 'failed',
-  failed: 'failed',
-}
-
-export interface LidarrQueueProgress {
-  status: RequestStatus | null
-  progress: RequestProgress | null
-  failureReason: string | null
-}
-
-export function toQueueProgress(record: LidarrQueueRecord): LidarrQueueProgress {
-  const mappedStatus = record.trackedDownloadState
-    ? TRACKED_DOWNLOAD_STATE_TO_STATUS[record.trackedDownloadState]
-    : undefined
-  const status =
-    mappedStatus ??
-    (record.status === 'failed' ? 'failed' : record.status === 'downloading' ? 'downloading' : null)
-
-  const size = record.size ?? 0
-  const sizeLeft = record.sizeleft ?? 0
-  const percentage = size > 0 ? Math.min(100, Math.round(((size - sizeLeft) / size) * 100)) : 0
-
-  const progressResult = RequestProgress.create({
-    percentage,
-    sizeLeftBytes: sizeLeft,
-    eta: record.estimatedCompletionTime ? new Date(record.estimatedCompletionTime) : null,
-    stepLabel: record.trackedDownloadState ?? record.status,
-  })
-
-  const failureReason =
-    status === 'failed'
-      ? (record.errorMessage ??
-        record.statusMessages?.flatMap((m) => m.messages ?? []).join('; ') ??
-        'Download failed')
-      : null
-
-  return {
-    status,
-    progress: progressResult.ok ? progressResult.value : null,
-    failureReason,
-  }
-}
+/**
+ * Queue mapping lives in `../queue-progress.ts` — the three *arr shared three
+ * byte-identical copies of it, and the multi-record rule must exist once.
+ */
+export { toQueueProgress, aggregateQueueProgress } from '../queue-progress.js'
+export type { QueueProgress } from '../queue-progress.js'

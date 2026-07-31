@@ -1,4 +1,4 @@
-import type { Result } from '#domain/shared/result'
+import { Result } from '#domain/shared/result'
 import type { Clock } from '#domain/shared/clock.interface'
 import type { IdGenerator } from '#domain/shared/id-generator.interface'
 import type { MediaKind } from '#domain/catalog/media-kind.vo'
@@ -95,9 +95,15 @@ export class InMemoryMediaRequestRepository implements MediaRequestRepository {
   }
 
   async findByExternalId(kind: MediaKind, externalId: ExternalId): Promise<MediaRequest | null> {
+    // Mirrors `LIVE_STATUSES` in the Lucid repository: a cancelled or failed
+    // request must not keep a title blocked (cf. docs/phase-6-fiabilite-requests).
+    const live = new Set(['pending', 'submitted', 'downloading', 'importing', 'available'])
     return (
       [...this.byId.values()].find(
-        (request) => request.kind === kind && request.externalId.equals(externalId),
+        (request) =>
+          request.kind === kind &&
+          request.externalId.equals(externalId) &&
+          live.has(request.status),
       ) ?? null
     )
   }
@@ -116,10 +122,18 @@ export class InMemoryMediaRequestRepository implements MediaRequestRepository {
 
 export class FakeMediaProvisioning implements MediaProvisioning {
   nextResult: Result<ExternalRef, ProvisioningError> | null = null
+  /** Set to make `cancel()` report the *arr refusing — the request must still cancel. */
+  cancelResult: Result<void, ProvisioningError> = Result.ok(undefined)
+  cancelledRequestIds: string[] = []
 
   async submit(_request: MediaRequest): Promise<Result<ExternalRef, ProvisioningError>> {
     if (!this.nextResult) throw new Error('FakeMediaProvisioning.nextResult was not set')
     return this.nextResult
+  }
+
+  async cancel(request: MediaRequest): Promise<Result<void, ProvisioningError>> {
+    this.cancelledRequestIds.push(request.id)
+    return this.cancelResult
   }
 }
 

@@ -21,6 +21,7 @@ export interface ServarrKindAdapter {
   search(term: string): Promise<MediaItem[]>
   detail(externalId: ExternalId): Promise<MediaDetail>
   submit(request: MediaRequest): Promise<Result<ExternalRef, ProvisioningError>>
+  cancel(request: MediaRequest): Promise<Result<void, ProvisioningError>>
   fetchProgress(refs: ExternalRef[]): Promise<ProgressSnapshot[]>
   list(): Promise<LibraryItem[]>
   calendar(start: Date, end: Date): Promise<CalendarEntry[]>

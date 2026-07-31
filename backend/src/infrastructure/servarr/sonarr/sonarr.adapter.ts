@@ -1,5 +1,6 @@
 import { type BaseServarrClient } from '../base-servarr-client.js'
 import { classifyProvisioningError, classifyConnectionError } from '../errors.js'
+import { removeFromQueue, unmonitorItem } from '../cancel-provisioning.js'
 import { isoDate } from '../date-range.js'
 import {
   SonarrSeriesArraySchema,
@@ -13,8 +14,9 @@ import {
   toMediaDetail,
   toLibraryItem,
   toCalendarEntry,
-  toQueueProgress,
+  aggregateQueueProgress,
 } from './sonarr.mapper.js'
+import type { SonarrQueueRecord } from './sonarr.schemas.js'
 import type { ServarrKindAdapter } from '../servarr-kind-adapter.interface.js'
 import type { ServarrInstance } from '#domain/settings/servarr-instance.aggregate'
 import type { MediaItem } from '#domain/catalog/media-item.entity'
@@ -81,37 +83,68 @@ export class SonarrAdapter implements ServarrKindAdapter {
     }
   }
 
+  async cancel(request: MediaRequest): Promise<Result<void, ProvisioningError>> {
+    const remoteId = request.externalRef?.remoteId
+    if (!remoteId) return Result.ok(undefined)
+
+    try {
+      const raw = await this.client.request({ path: '/api/v3/queue', query: { pageSize: '250' } })
+      const queue = SonarrQueueResponseSchema.parse(raw)
+      await removeFromQueue(
+        this.client,
+        '/api/v3',
+        queue.records.filter((r) => String(r.seriesId) === remoteId).map((r) => r.id),
+      )
+
+      const seriesRaw = await this.client.request({ path: `/api/v3/series/${remoteId}` })
+      await unmonitorItem(
+        this.client,
+        `/api/v3/series/${remoteId}`,
+        seriesRaw as Record<string, unknown>,
+      )
+      return Result.ok(undefined)
+    } catch (error) {
+      return Result.err(classifyProvisioningError(error))
+    }
+  }
+
   async fetchProgress(refs: ExternalRef[]): Promise<ProgressSnapshot[]> {
     const raw = await this.client.request({ path: '/api/v3/queue', query: { pageSize: '250' } })
     const queue = SonarrQueueResponseSchema.parse(raw)
-    const recordsBySeriesId = new Map(
-      queue.records
-        .filter((record) => record.seriesId !== null && record.seriesId !== undefined)
-        .map((record) => [String(record.seriesId), record]),
-    )
+    // A series has one queue record *per episode*: grouping into a plain Map
+    // kept only the last one, so the reported progress was an arbitrary
+    // episode's (cf. docs/phase-6-fiabilite-requests, chantier 4).
+    const recordsBySeriesId = new Map<string, SonarrQueueRecord[]>()
+    for (const record of queue.records) {
+      if (record.seriesId === null || record.seriesId === undefined) continue
+      const key = String(record.seriesId)
+      const existing = recordsBySeriesId.get(key)
+      if (existing) existing.push(record)
+      else recordsBySeriesId.set(key, [record])
+    }
 
     const snapshots: ProgressSnapshot[] = []
     for (const ref of refs) {
-      const record = recordsBySeriesId.get(ref.remoteId)
-      if (record) {
-        const { status, progress, failureReason } = toQueueProgress(record)
-        if (status) {
-          snapshots.push({
-            ref,
-            status,
-            progress: progress ?? undefined,
-            failureReason: failureReason ?? undefined,
-          })
-        }
+      const { status, progress, failureReason } = aggregateQueueProgress(
+        recordsBySeriesId.get(ref.remoteId) ?? [],
+      )
+      if (status) {
+        snapshots.push({
+          ref,
+          status,
+          progress: progress ?? undefined,
+          failureReason: failureReason ?? undefined,
+        })
         continue
       }
 
-      // Not in the queue — approximate "series has at least one imported
-      // episode" as available. Full per-episode completion isn't tracked
-      // at request granularity in the MVP.
+      // The queue is inconclusive (nothing queued, or everything imported):
+      // a series is available only when *every* aired episode has a file.
       const seriesRaw = await this.client.request({ path: `/api/v3/series/${ref.remoteId}` })
       const series = SonarrSeriesSchema.parse(seriesRaw)
-      if ((series.statistics?.episodeFileCount ?? 0) > 0) {
+      const episodeCount = series.statistics?.episodeCount ?? 0
+      const episodeFileCount = series.statistics?.episodeFileCount ?? 0
+      if (episodeCount > 0 && episodeFileCount >= episodeCount) {
         snapshots.push({ ref, status: 'available' })
       }
     }

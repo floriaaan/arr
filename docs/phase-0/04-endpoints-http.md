@@ -126,10 +126,21 @@ et avec un contrôle `admin_only_middleware` :
   - 502 → `{ error: { type: 'provisioning_failed'; message } }`
 
 - `GET /api/requests/:id` → `{ request: MediaRequestDto }`
+  - 403 → `{ error: { type: 'forbidden' } }` si la requête appartient à un
+    autre utilisateur (les admins voient tout)
 
 - `POST /api/requests/:id/cancel`
-  - 200 → `{ request: MediaRequestDto }`
+  - 200 → `{ request: MediaRequestDto }` — l'annulation est aussi propagée à
+    l'instance *arr (retrait de la file + démonitorage) ; si l'instance est
+    injoignable, l'annulation locale est conservée quand même et l'échec est
+    seulement loggé (cf.
+    [phase 6](../phase-6-fiabilite-requests/00-overview-et-decisions.md))
+  - 403 → `{ error: { type: 'forbidden' } }` (idem `GET`)
   - 409 → `{ error: { type: 'not_cancellable'; currentStatus } }`
+
+`GET /api/requests` reste volontairement non filtré par utilisateur : sur une
+instance partagée, voir ce que les autres ont demandé est utile. Seules les
+**écritures** sont restreintes au propriétaire (ou à un admin).
 
 `MediaRequestDto = { id, requestedBy: { id, email }, kind, externalId, title, status, progress: RequestProgressDto | null, failureReason: string | null, createdAt, updatedAt }`
 

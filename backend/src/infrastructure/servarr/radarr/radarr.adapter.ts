@@ -1,5 +1,6 @@
 import { type BaseServarrClient } from '../base-servarr-client.js'
 import { classifyProvisioningError, classifyConnectionError } from '../errors.js'
+import { removeFromQueue, unmonitorItem } from '../cancel-provisioning.js'
 import { isoDate } from '../date-range.js'
 import {
   RadarrMovieArraySchema,
@@ -77,6 +78,31 @@ export class RadarrAdapter implements ServarrKindAdapter {
       })
       const movie = RadarrMovieSchema.parse(raw)
       return Result.ok(ExternalRef.create(this.instance.id, String(movie.id)))
+    } catch (error) {
+      return Result.err(classifyProvisioningError(error))
+    }
+  }
+
+  async cancel(request: MediaRequest): Promise<Result<void, ProvisioningError>> {
+    const remoteId = request.externalRef?.remoteId
+    if (!remoteId) return Result.ok(undefined)
+
+    try {
+      const raw = await this.client.request({ path: '/api/v3/queue', query: { pageSize: '250' } })
+      const queue = RadarrQueueResponseSchema.parse(raw)
+      await removeFromQueue(
+        this.client,
+        '/api/v3',
+        queue.records.filter((r) => String(r.movieId) === remoteId).map((r) => r.id),
+      )
+
+      const movieRaw = await this.client.request({ path: `/api/v3/movie/${remoteId}` })
+      await unmonitorItem(
+        this.client,
+        `/api/v3/movie/${remoteId}`,
+        movieRaw as Record<string, unknown>,
+      )
+      return Result.ok(undefined)
     } catch (error) {
       return Result.err(classifyProvisioningError(error))
     }

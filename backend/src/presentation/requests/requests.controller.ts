@@ -87,22 +87,32 @@ export default class RequestsController {
   }
 
   async show(ctx: HttpContext) {
+    const user = requireAuthenticatedUser(ctx)
     const repository = await app.container.make('requests.repository')
-    const request = await new GetRequest(repository).execute({ id: ctx.params.id })
-    if (!request) {
-      const { status, body } = serializeError('not_found')
+
+    const result = await new GetRequest(repository).execute({
+      id: ctx.params.id,
+      actor: { id: user.id, isAdmin: user.role === 'admin' },
+    })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
       return ctx.response.status(status).send(body)
     }
 
     const userDirectory = await app.container.make('identity.userDirectory')
-    return ctx.response.json({ request: await toMediaRequestDto(request, userDirectory) })
+    return ctx.response.json({ request: await toMediaRequestDto(result.value, userDirectory) })
   }
 
   async cancel(ctx: HttpContext) {
+    const user = requireAuthenticatedUser(ctx)
     const repository = await app.container.make('requests.repository')
     const clock = await app.container.make('shared.clock')
+    const provisioning = await app.container.make('requests.provisioning')
 
-    const result = await new CancelRequest(repository, clock).execute({ id: ctx.params.id })
+    const result = await new CancelRequest(repository, clock, provisioning).execute({
+      id: ctx.params.id,
+      actor: { id: user.id, isAdmin: user.role === 'admin' },
+    })
     if (!result.ok) {
       if (typeof result.error === 'string') {
         const { status, body } = serializeError(result.error)
@@ -117,7 +127,17 @@ export default class RequestsController {
       })
     }
 
+    // The cancellation stands either way; the *arr just didn't confirm it.
+    if (result.value.provisioningError) {
+      ctx.logger.warn(
+        { requestId: ctx.params.id, reason: result.value.provisioningError },
+        'Request cancelled locally but the *arr instance refused',
+      )
+    }
+
     const userDirectory = await app.container.make('identity.userDirectory')
-    return ctx.response.json({ request: await toMediaRequestDto(result.value, userDirectory) })
+    return ctx.response.json({
+      request: await toMediaRequestDto(result.value.request, userDirectory),
+    })
   }
 }

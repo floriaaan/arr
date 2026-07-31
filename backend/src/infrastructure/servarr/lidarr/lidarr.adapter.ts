@@ -1,5 +1,6 @@
 import { type BaseServarrClient } from '../base-servarr-client.js'
 import { classifyProvisioningError, classifyConnectionError } from '../errors.js'
+import { removeFromQueue, unmonitorItem } from '../cancel-provisioning.js'
 import { isoDate } from '../date-range.js'
 import {
   LidarrAlbumArraySchema,
@@ -12,8 +13,9 @@ import {
   toMediaDetail,
   toLibraryItem,
   toCalendarEntry,
-  toQueueProgress,
+  aggregateQueueProgress,
 } from './lidarr.mapper.js'
+import type { LidarrQueueRecord } from './lidarr.schemas.js'
 import type { ServarrKindAdapter } from '../servarr-kind-adapter.interface.js'
 import type { ServarrInstance } from '#domain/settings/servarr-instance.aggregate'
 import type { MediaItem } from '#domain/catalog/media-item.entity'
@@ -107,34 +109,66 @@ export class LidarrAdapter implements ServarrKindAdapter {
     }
   }
 
+  async cancel(request: MediaRequest): Promise<Result<void, ProvisioningError>> {
+    const remoteId = request.externalRef?.remoteId
+    if (!remoteId) return Result.ok(undefined)
+
+    try {
+      const raw = await this.client.request({ path: '/api/v1/queue', query: { pageSize: '250' } })
+      const queue = LidarrQueueResponseSchema.parse(raw)
+      await removeFromQueue(
+        this.client,
+        '/api/v1',
+        queue.records.filter((r) => String(r.albumId) === remoteId).map((r) => r.id),
+      )
+
+      const albumRaw = await this.client.request({ path: `/api/v1/album/${remoteId}` })
+      await unmonitorItem(
+        this.client,
+        `/api/v1/album/${remoteId}`,
+        albumRaw as Record<string, unknown>,
+      )
+      return Result.ok(undefined)
+    } catch (error) {
+      return Result.err(classifyProvisioningError(error))
+    }
+  }
+
   async fetchProgress(refs: ExternalRef[]): Promise<ProgressSnapshot[]> {
     const raw = await this.client.request({ path: '/api/v1/queue', query: { pageSize: '250' } })
     const queue = LidarrQueueResponseSchema.parse(raw)
-    const recordsByAlbumId = new Map(
-      queue.records
-        .filter((record) => record.albumId !== null && record.albumId !== undefined)
-        .map((record) => [String(record.albumId), record]),
-    )
+    // One queue record per *track*, same shape as Sonarr's per-episode records
+    // (cf. docs/phase-6-fiabilite-requests, chantier 4).
+    const recordsByAlbumId = new Map<string, LidarrQueueRecord[]>()
+    for (const record of queue.records) {
+      if (record.albumId === null || record.albumId === undefined) continue
+      const key = String(record.albumId)
+      const existing = recordsByAlbumId.get(key)
+      if (existing) existing.push(record)
+      else recordsByAlbumId.set(key, [record])
+    }
 
     const snapshots: ProgressSnapshot[] = []
     for (const ref of refs) {
-      const record = recordsByAlbumId.get(ref.remoteId)
-      if (record) {
-        const { status, progress, failureReason } = toQueueProgress(record)
-        if (status) {
-          snapshots.push({
-            ref,
-            status,
-            progress: progress ?? undefined,
-            failureReason: failureReason ?? undefined,
-          })
-        }
+      const { status, progress, failureReason } = aggregateQueueProgress(
+        recordsByAlbumId.get(ref.remoteId) ?? [],
+      )
+      if (status) {
+        snapshots.push({
+          ref,
+          status,
+          progress: progress ?? undefined,
+          failureReason: failureReason ?? undefined,
+        })
         continue
       }
 
+      // An album is available only when every one of its tracks has a file.
       const albumRaw = await this.client.request({ path: `/api/v1/album/${ref.remoteId}` })
       const album = LidarrAlbumSchema.parse(albumRaw)
-      if ((album.statistics?.trackFileCount ?? 0) > 0) {
+      const trackCount = album.statistics?.trackCount ?? 0
+      const trackFileCount = album.statistics?.trackFileCount ?? 0
+      if (trackCount > 0 && trackFileCount >= trackCount) {
         snapshots.push({ ref, status: 'available' })
       }
     }

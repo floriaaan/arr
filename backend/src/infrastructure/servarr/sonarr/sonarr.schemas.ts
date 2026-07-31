@@ -27,7 +27,16 @@ export const SonarrSeriesSchema = z.object({
   network: z.string().optional(),
   status: z.string().optional(),
   statistics: z
-    .object({ episodeFileCount: z.number().optional(), sizeOnDisk: z.number().optional() })
+    .object({
+      episodeFileCount: z.number().optional(),
+      /**
+       * Aired episodes. `totalEpisodeCount` would include unaired ones, which
+       * would leave any ongoing series permanently "in progress"
+       * (cf. docs/phase-6-fiabilite-requests, chantier 4 décision 3).
+       */
+      episodeCount: z.number().optional(),
+      sizeOnDisk: z.number().optional(),
+    })
     .optional(),
 })
 

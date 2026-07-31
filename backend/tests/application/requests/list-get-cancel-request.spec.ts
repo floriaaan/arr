@@ -6,7 +6,12 @@ import { MediaRequest } from '#domain/requests/media-request.aggregate'
 import { ExternalId } from '#domain/catalog/external-id.vo'
 import { ExternalRef } from '#domain/requests/external-ref.vo'
 import { RequestProgress } from '#domain/requests/request-progress.vo'
-import { InMemoryMediaRequestRepository, FixedClock } from './fakes.js'
+import { Result } from '#domain/shared/result'
+import { InMemoryMediaRequestRepository, FixedClock, FakeMediaProvisioning } from './fakes.js'
+
+const OWNER = { id: 'user-1', isAdmin: false }
+const SOMEONE_ELSE = { id: 'user-2', isAdmin: false }
+const ADMIN = { id: 'user-2', isAdmin: true }
 
 function anExternalId(value = '550') {
   const result = ExternalId.create('tmdb', value)
@@ -30,6 +35,13 @@ function aRequest(
   )
 }
 
+function cancelUseCase(
+  repository: InMemoryMediaRequestRepository,
+  provisioning = new FakeMediaProvisioning(),
+) {
+  return new CancelRequest(repository, new FixedClock(), provisioning)
+}
+
 test.group('ListRequests', () => {
   test('filters by requestedBy', async ({ assert }) => {
     const repository = new InMemoryMediaRequestRepository()
@@ -43,17 +55,49 @@ test.group('ListRequests', () => {
 })
 
 test.group('GetRequest', () => {
-  test('returns null for an unknown id', async ({ assert }) => {
+  test('returns not_found for an unknown id', async ({ assert }) => {
     const repository = new InMemoryMediaRequestRepository()
-    const result = await new GetRequest(repository).execute({ id: 'unknown' })
-    assert.isNull(result)
+
+    const result = await new GetRequest(repository).execute({ id: 'unknown', actor: OWNER })
+
+    assert.isFalse(result.ok)
+    assert.equal(!result.ok ? result.error : undefined, 'not_found')
+  })
+
+  test('returns the request to its owner', async ({ assert }) => {
+    const repository = new InMemoryMediaRequestRepository()
+    await repository.save(aRequest({ id: '1', requestedBy: 'user-1' }))
+
+    const result = await new GetRequest(repository).execute({ id: '1', actor: OWNER })
+
+    assert.isTrue(result.ok)
+  })
+
+  test('refuses to expose another user request', async ({ assert }) => {
+    const repository = new InMemoryMediaRequestRepository()
+    await repository.save(aRequest({ id: '1', requestedBy: 'user-1' }))
+
+    const result = await new GetRequest(repository).execute({ id: '1', actor: SOMEONE_ELSE })
+
+    assert.isFalse(result.ok)
+    assert.equal(!result.ok ? result.error : undefined, 'forbidden')
+  })
+
+  test('lets an admin read anyone request', async ({ assert }) => {
+    const repository = new InMemoryMediaRequestRepository()
+    await repository.save(aRequest({ id: '1', requestedBy: 'user-1' }))
+
+    const result = await new GetRequest(repository).execute({ id: '1', actor: ADMIN })
+
+    assert.isTrue(result.ok)
   })
 })
 
 test.group('CancelRequest', () => {
   test('returns not_found for an unknown id', async ({ assert }) => {
     const repository = new InMemoryMediaRequestRepository()
-    const result = await new CancelRequest(repository, new FixedClock()).execute({ id: 'unknown' })
+
+    const result = await cancelUseCase(repository).execute({ id: 'unknown', actor: OWNER })
 
     assert.isFalse(result.ok)
     assert.equal(!result.ok ? result.error : undefined, 'not_found')
@@ -63,11 +107,61 @@ test.group('CancelRequest', () => {
     const repository = new InMemoryMediaRequestRepository()
     await repository.save(aRequest({ id: '1' }))
 
-    const result = await new CancelRequest(repository, new FixedClock()).execute({ id: '1' })
+    const result = await cancelUseCase(repository).execute({ id: '1', actor: OWNER })
 
     assert.isTrue(result.ok)
     const request = await repository.findById('1')
     assert.equal(request?.status, 'cancelled')
+  })
+
+  test('refuses to cancel another user request', async ({ assert }) => {
+    const repository = new InMemoryMediaRequestRepository()
+    await repository.save(aRequest({ id: '1', requestedBy: 'user-1' }))
+
+    const result = await cancelUseCase(repository).execute({ id: '1', actor: SOMEONE_ELSE })
+
+    assert.isFalse(result.ok)
+    assert.equal(!result.ok ? result.error : undefined, 'forbidden')
+    const untouched = await repository.findById('1')
+    assert.equal(untouched?.status, 'pending')
+  })
+
+  test('lets an admin cancel anyone request', async ({ assert }) => {
+    const repository = new InMemoryMediaRequestRepository()
+    await repository.save(aRequest({ id: '1', requestedBy: 'user-1' }))
+
+    const result = await cancelUseCase(repository).execute({ id: '1', actor: ADMIN })
+
+    assert.isTrue(result.ok)
+    const cancelled = await repository.findById('1')
+    assert.equal(cancelled?.status, 'cancelled')
+  })
+
+  test('tells the *arr to drop the download', async ({ assert }) => {
+    const repository = new InMemoryMediaRequestRepository()
+    await repository.save(aRequest({ id: '1' }))
+    const provisioning = new FakeMediaProvisioning()
+
+    await cancelUseCase(repository, provisioning).execute({ id: '1', actor: OWNER })
+
+    assert.deepEqual(provisioning.cancelledRequestIds, ['1'])
+  })
+
+  test('still cancels locally when the *arr refuses, and reports why', async ({ assert }) => {
+    const repository = new InMemoryMediaRequestRepository()
+    await repository.save(aRequest({ id: '1' }))
+    const provisioning = new FakeMediaProvisioning()
+    provisioning.cancelResult = Result.err({
+      type: 'instance_unavailable',
+      message: 'Radarr is down',
+    })
+
+    const result = await cancelUseCase(repository, provisioning).execute({ id: '1', actor: OWNER })
+
+    assert.isTrue(result.ok)
+    assert.equal(result.ok ? result.value.provisioningError : undefined, 'Radarr is down')
+    const stored = await repository.findById('1')
+    assert.equal(stored?.status, 'cancelled')
   })
 
   test('refuses to cancel an importing request', async ({ assert }) => {
@@ -85,7 +179,7 @@ test.group('CancelRequest', () => {
     request.startImporting(new Date())
     await repository.save(request)
 
-    const result = await new CancelRequest(repository, new FixedClock()).execute({ id: '1' })
+    const result = await cancelUseCase(repository).execute({ id: '1', actor: OWNER })
 
     assert.isFalse(result.ok)
   })
