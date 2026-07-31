@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useSearchMedia } from '#application/catalog/search-media.query'
 import { rankSearchResults } from '#domain/catalog/rank-search-results'
-import { PosterGrid } from '#presentation/shared/poster-grid'
+import { SearchResultRow } from './search-result-row'
 import { EmptyState } from '#presentation/shared/empty-state'
 import { ErrorState } from '#presentation/shared/error-state'
 import { Skeleton } from '#presentation/ui/skeleton'
@@ -38,9 +38,9 @@ export function SearchResults({
 
   if (queries.some((query) => query.isLoading)) {
     return (
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-        {Array.from({ length: 10 }, (_, index) => (
-          <Skeleton key={index} className="aspect-[2/3] w-full" />
+      <div className="space-y-1">
+        {Array.from({ length: 6 }, (_, index) => (
+          <Skeleton key={index} className="h-14 w-full" />
         ))}
       </div>
     )
@@ -61,5 +61,15 @@ export function SearchResults({
     return <EmptyState title="No results" description={`Nothing matches "${term}".`} />
   }
 
-  return <PosterGrid items={items} onSelect={onSelect} showKind />
+  return (
+    <div className="space-y-0.5">
+      {items.map((item) => (
+        <SearchResultRow
+          key={`${item.kind}:${item.externalId.scheme}:${item.externalId.value}`}
+          item={item}
+          onSelect={onSelect}
+        />
+      ))}
+    </div>
+  )
 }

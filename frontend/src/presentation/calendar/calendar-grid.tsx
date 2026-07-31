@@ -130,9 +130,9 @@ export function CalendarGrid() {
       </div>
 
       {isLoading ? (
-        <Skeleton className="h-[600px] w-full" />
+        <Skeleton className="hidden h-[600px] w-full md:block" />
       ) : (
-        <div className="overflow-hidden rounded-lg border">
+        <div className="hidden overflow-hidden rounded-lg border md:block">
           <div className="grid grid-cols-7 border-b bg-muted/50 text-xs font-medium text-muted-foreground">
             {WEEKDAY_LABELS.map((label) => (
               <div key={label} className="px-2 py-2 text-center">
@@ -214,7 +214,9 @@ export function CalendarGrid() {
               {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} in
               detail
             </h2>
-            <p className="text-xs text-muted-foreground">
+            {/* On mobile the grid above is hidden entirely, so this stops being
+                a complement and becomes the calendar. */}
+            <p className="hidden text-xs text-muted-foreground md:block">
               Every release of the displayed range, including the ones the grid had to truncate.
             </p>
           </div>
