@@ -1,16 +1,22 @@
 import { Badge } from '#presentation/ui/badge'
 import { cn } from '#presentation/shared/utils'
+import { MEDIA_KIND_ICONS } from '#presentation/shared/media-kind-icons'
 import type { MediaItem } from '#domain/catalog/media-item'
 
 export function PosterCard({
   item,
   onSelect,
   className,
+  showKind = false,
 }: {
   item: MediaItem
   onSelect?: (item: MediaItem) => void
   className?: string
+  /** Off by default so the single-kind grids stay untouched. */
+  showKind?: boolean
 }) {
+  const KindIcon = MEDIA_KIND_ICONS[item.kind]
+
   return (
     <button
       type="button"
@@ -51,6 +57,11 @@ export function PosterCard({
             No poster
           </div>
         )}
+        {showKind ? (
+          <div className="absolute top-2 left-2 flex size-6 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm">
+            <KindIcon className="size-3.5" />
+          </div>
+        ) : null}
         {item.alreadyManaged ? (
           <Badge className="absolute top-2 right-2" variant="secondary">
             In library
