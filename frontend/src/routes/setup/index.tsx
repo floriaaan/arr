@@ -42,6 +42,12 @@ function SetupRoute() {
     if (nextStep) setStep(nextStep)
   }
 
+  function back() {
+    const currentIndex = STEPS.indexOf(step)
+    const previousStep = STEPS[currentIndex - 1]
+    if (previousStep) setStep(previousStep)
+  }
+
   const currentIndex = STEPS.indexOf(step)
 
   return (
@@ -74,12 +80,14 @@ function SetupRoute() {
               </p>
             </div>
             {step === 'welcome' ? <WelcomeStep onNext={next} /> : null}
-            {step === 'admin' ? <AdminStep onNext={next} /> : null}
-            {step === 'services' ? <ServicesStep onNext={next} /> : null}
-            {step === 'media-servers' ? <MediaServersStep onNext={next} /> : null}
-            {step === 'sso' ? <SsoStep onNext={next} /> : null}
+            {step === 'admin' ? <AdminStep onNext={next} onBack={back} /> : null}
+            {step === 'services' ? <ServicesStep onNext={next} onBack={back} /> : null}
+            {step === 'media-servers' ? (
+              <MediaServersStep onNext={next} onBack={back} />
+            ) : null}
+            {step === 'sso' ? <SsoStep onNext={next} onBack={back} /> : null}
             {step === 'summary' ? (
-              <SummaryStep onComplete={() => void navigate({ to: '/login' })} />
+              <SummaryStep onComplete={() => void navigate({ to: '/login' })} onBack={back} />
             ) : null}
           </CardContent>
         </Card>

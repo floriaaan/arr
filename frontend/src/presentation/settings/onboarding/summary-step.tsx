@@ -1,9 +1,16 @@
+import { ChevronLeft } from 'lucide-react'
 import { useCompleteOnboarding } from '#application/settings/complete-onboarding.mutation'
 import { useInstances } from '#application/settings/instances.query'
 import { Button } from '#presentation/ui/button'
 import { Badge } from '#presentation/ui/badge'
 
-export function SummaryStep({ onComplete }: { onComplete: () => void }) {
+export function SummaryStep({
+  onComplete,
+  onBack,
+}: {
+  onComplete: () => void
+  onBack: () => void
+}) {
   const instances = useInstances()
   const completeOnboarding = useCompleteOnboarding()
 
@@ -36,9 +43,15 @@ export function SummaryStep({ onComplete }: { onComplete: () => void }) {
         <p className="text-sm text-destructive">{completeOnboarding.data.error.message}</p>
       ) : null}
 
-      <Button onClick={handleComplete} disabled={completeOnboarding.isPending}>
-        {completeOnboarding.isPending ? 'Finishing…' : 'Finish setup'}
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button type="button" variant="ghost" onClick={onBack}>
+          <ChevronLeft className="size-4" />
+          Back
+        </Button>
+        <Button onClick={handleComplete} disabled={completeOnboarding.isPending}>
+          {completeOnboarding.isPending ? 'Finishing…' : 'Finish setup'}
+        </Button>
+      </div>
     </div>
   )
 }

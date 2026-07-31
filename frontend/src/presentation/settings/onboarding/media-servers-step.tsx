@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check } from 'lucide-react'
+import { Check, ChevronLeft } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '#presentation/ui/tabs'
 import { Button } from '#presentation/ui/button'
 import { MediaServerForm } from '#presentation/settings/media-server-form'
@@ -7,7 +7,13 @@ import { MEDIA_SERVER_META } from '#presentation/shared/media-server-meta'
 import { MEDIA_SERVER_KINDS } from '#domain/settings/media-server'
 import type { MediaServerKind } from '#domain/settings/media-server'
 
-export function MediaServersStep({ onNext }: { onNext: () => void }) {
+export function MediaServersStep({
+  onNext,
+  onBack,
+}: {
+  onNext: () => void
+  onBack: () => void
+}) {
   const [configured, setConfigured] = useState<Record<MediaServerKind, boolean>>({
     plex: false,
     jellyfin: false,
@@ -44,7 +50,13 @@ export function MediaServersStep({ onNext }: { onNext: () => void }) {
         ))}
       </Tabs>
 
-      <Button onClick={onNext}>Continue</Button>
+      <div className="flex items-center gap-2">
+        <Button type="button" variant="ghost" onClick={onBack}>
+          <ChevronLeft className="size-4" />
+          Back
+        </Button>
+        <Button onClick={onNext}>Continue</Button>
+      </div>
     </div>
   )
 }

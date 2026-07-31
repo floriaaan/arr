@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { ChevronLeft } from 'lucide-react'
 import { useTestOidc } from '#application/settings/test-oidc.mutation'
 import { useSaveOidc } from '#application/settings/save-oidc.mutation'
 import { Input } from '#presentation/ui/input'
 import { Label } from '#presentation/ui/label'
 import { Button } from '#presentation/ui/button'
 
-export function SsoStep({ onNext }: { onNext: () => void }) {
+export function SsoStep({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const [issuerUrl, setIssuerUrl] = useState('')
   const [clientId, setClientId] = useState('')
   const [clientSecret, setClientSecret] = useState('')
@@ -62,7 +63,11 @@ export function SsoStep({ onNext }: { onNext: () => void }) {
         />
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
+        <Button type="button" variant="ghost" onClick={onBack}>
+          <ChevronLeft className="size-4" />
+          Back
+        </Button>
         <Button variant="outline" onClick={handleTest} disabled={!configured || testOidc.isPending}>
           {testOidc.isPending ? 'Testing…' : 'Test'}
         </Button>

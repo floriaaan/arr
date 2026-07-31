@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check } from 'lucide-react'
+import { Check, ChevronLeft } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '#presentation/ui/tabs'
 import { Button } from '#presentation/ui/button'
 import { ServiceInstanceForm } from '#presentation/settings/service-instance-form'
@@ -7,7 +7,7 @@ import { ServiceInstanceForm } from '#presentation/settings/service-instance-for
 const SERVARR_KINDS = ['radarr', 'sonarr', 'lidarr'] as const
 type Kind = (typeof SERVARR_KINDS)[number]
 
-export function ServicesStep({ onNext }: { onNext: () => void }) {
+export function ServicesStep({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const [configured, setConfigured] = useState<Record<Kind, boolean>>({
     radarr: false,
     sonarr: false,
@@ -43,7 +43,13 @@ export function ServicesStep({ onNext }: { onNext: () => void }) {
         ))}
       </Tabs>
 
-      <Button onClick={onNext}>Continue</Button>
+      <div className="flex items-center gap-2">
+        <Button type="button" variant="ghost" onClick={onBack}>
+          <ChevronLeft className="size-4" />
+          Back
+        </Button>
+        <Button onClick={onNext}>Continue</Button>
+      </div>
     </div>
   )
 }
