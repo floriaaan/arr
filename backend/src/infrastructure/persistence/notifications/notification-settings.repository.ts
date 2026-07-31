@@ -1,5 +1,6 @@
 import NotificationSettingLucidModel from './notification_setting.lucid.js'
 import { NotificationSettings } from '#domain/notifications/notification-settings.aggregate'
+import { NotificationAuth } from '#domain/notifications/notification-auth.vo'
 import { Url } from '#domain/settings/url.vo'
 import { encryptSecret, decryptSecret } from '#infrastructure/shared/encryption'
 import type { NotificationSettingsRepository } from '#domain/notifications/interfaces/notification-settings-repository.interface'
@@ -22,10 +23,25 @@ export class LucidNotificationSettingsRepository implements NotificationSettings
 
     return NotificationSettings.reconstruct(SINGLETON_ID, {
       webhookUrl,
+      auth: this.reconstructAuth(row),
       onRequestAvailable: row.onRequestAvailable,
       onRequestFailed: row.onRequestFailed,
       onInstanceUnreachable: row.onInstanceUnreachable,
     })
+  }
+
+  private reconstructAuth(row: NotificationSettingLucidModel): NotificationAuth {
+    if (row.authMode === 'token' && row.tokenEncrypted) {
+      const token = NotificationAuth.token(decryptSecret(row.tokenEncrypted))
+      if (!token.ok) throw new Error(`Corrupted notification_settings row: ${token.error.message}`)
+      return token.value
+    }
+    if (row.authMode === 'basic' && row.username && row.passwordEncrypted) {
+      const basic = NotificationAuth.basic(row.username, decryptSecret(row.passwordEncrypted))
+      if (!basic.ok) throw new Error(`Corrupted notification_settings row: ${basic.error.message}`)
+      return basic.value
+    }
+    return NotificationAuth.none()
   }
 
   async save(settings: NotificationSettings): Promise<void> {
@@ -35,6 +51,12 @@ export class LucidNotificationSettingsRepository implements NotificationSettings
     model.id = SINGLETON_ID
     model.webhookUrlEncrypted = settings.webhookUrl
       ? encryptSecret(settings.webhookUrl.value)
+      : null
+    model.authMode = settings.auth.mode
+    model.tokenEncrypted = settings.auth.token ? encryptSecret(settings.auth.token.reveal()) : null
+    model.username = settings.auth.username
+    model.passwordEncrypted = settings.auth.password
+      ? encryptSecret(settings.auth.password.reveal())
       : null
     model.onRequestAvailable = settings.onRequestAvailable
     model.onRequestFailed = settings.onRequestFailed

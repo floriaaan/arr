@@ -88,6 +88,10 @@ describe.each<{ name: string; create: () => ArrConnector }>([
         ...(() => {
           let settings = {
             hasWebhookUrl: false,
+            authMode: 'none' as 'none' | 'token' | 'basic',
+            hasToken: false,
+            username: null as string | null,
+            hasPassword: false,
             onRequestAvailable: true,
             onRequestFailed: true,
             onInstanceUnreachable: true,
@@ -97,13 +101,27 @@ describe.each<{ name: string; create: () => ArrConnector }>([
             'PUT /api/settings/notifications': (init: RequestInit | undefined) => {
               const draft = JSON.parse(String(init?.body)) as {
                 webhookUrl?: string | null
+                authMode: 'none' | 'token' | 'basic'
+                token?: string
+                username?: string
+                password?: string
                 onRequestAvailable: boolean
                 onRequestFailed: boolean
                 onInstanceUnreachable: boolean
               }
+              if (draft.authMode === 'token' && draft.token === undefined && !settings.hasToken) {
+                return json({ error: { type: 'validation_failed', message: 'A token is required.' } }, 400)
+              }
+              if (draft.authMode === 'basic' && draft.password === undefined && !settings.hasPassword) {
+                return json({ error: { type: 'validation_failed', message: 'A password is required.' } }, 400)
+              }
               settings = {
                 hasWebhookUrl:
                   draft.webhookUrl === undefined ? settings.hasWebhookUrl : draft.webhookUrl !== null,
+                authMode: draft.authMode,
+                hasToken: draft.authMode === 'token' ? true : false,
+                username: draft.authMode === 'basic' ? (draft.username ?? settings.username) : null,
+                hasPassword: draft.authMode === 'basic' ? true : false,
                 onRequestAvailable: draft.onRequestAvailable,
                 onRequestFailed: draft.onRequestFailed,
                 onInstanceUnreachable: draft.onInstanceUnreachable,
@@ -321,6 +339,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
   test('saving notification settings makes the webhook present without ever echoing it back', async () => {
     const saved = await connector.saveNotificationSettings({
       webhookUrl: 'https://ntfy.sh/my-topic',
+      authMode: 'none',
       onRequestAvailable: true,
       onRequestFailed: false,
       onInstanceUnreachable: true,
@@ -339,6 +358,54 @@ describe.each<{ name: string; create: () => ArrConnector }>([
   test('testing notifications without a configured webhook fails', async () => {
     const result = await connector.testNotification()
     expect(result.ok).toBe(false)
+  })
+
+  test('configuring token auth makes the token present without ever echoing it back', async () => {
+    const saved = await connector.saveNotificationSettings({
+      authMode: 'token',
+      token: 'tk_abc123',
+      onRequestAvailable: true,
+      onRequestFailed: true,
+      onInstanceUnreachable: true,
+    })
+
+    expect(saved.ok).toBe(true)
+    if (!saved.ok) return
+    expect(saved.value.authMode).toBe('token')
+    expect(saved.value.hasToken).toBe(true)
+    expect(saved.value).not.toHaveProperty('token')
+
+    const refetched = await connector.getNotificationSettings()
+    expect(refetched.hasToken).toBe(true)
+  })
+
+  test('switching to token auth without a token fails', async () => {
+    const saved = await connector.saveNotificationSettings({
+      authMode: 'token',
+      onRequestAvailable: true,
+      onRequestFailed: true,
+      onInstanceUnreachable: true,
+    })
+
+    expect(saved.ok).toBe(false)
+  })
+
+  test('configuring basic auth exposes the username but never the password', async () => {
+    const saved = await connector.saveNotificationSettings({
+      authMode: 'basic',
+      username: 'alice',
+      password: 'hunter2',
+      onRequestAvailable: true,
+      onRequestFailed: true,
+      onInstanceUnreachable: true,
+    })
+
+    expect(saved.ok).toBe(true)
+    if (!saved.ok) return
+    expect(saved.value.authMode).toBe('basic')
+    expect(saved.value.username).toBe('alice')
+    expect(saved.value.hasPassword).toBe(true)
+    expect(saved.value).not.toHaveProperty('password')
   })
 
   test('calendar entries fall within the requested range and expose a posterUrl', async () => {

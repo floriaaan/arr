@@ -11,6 +11,18 @@ export default class NotificationSettingLucidModel extends BaseModel {
   declare webhookUrlEncrypted: string | null
 
   @column()
+  declare authMode: 'none' | 'token' | 'basic'
+
+  @column()
+  declare tokenEncrypted: string | null
+
+  @column()
+  declare username: string | null
+
+  @column()
+  declare passwordEncrypted: string | null
+
+  @column()
   declare onRequestAvailable: boolean
 
   @column()

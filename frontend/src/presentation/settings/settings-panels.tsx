@@ -36,10 +36,18 @@ import { Input } from '#presentation/ui/input'
 import { Label } from '#presentation/ui/label'
 import { Badge } from '#presentation/ui/badge'
 import { Switch } from '#presentation/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#presentation/ui/select'
 import { cn } from '#presentation/shared/utils'
 import { MEDIA_SERVER_KINDS } from '#domain/settings/media-server'
 import type { ServarrKind, ServarrInstanceDto } from '#domain/settings/servarr-instance'
 import type { MediaServerDto, MediaServerKind } from '#domain/settings/media-server'
+import type { NotificationAuthMode } from '#domain/settings/notification-settings'
 
 const SERVARR_KINDS: readonly ServarrKind[] = ['radarr', 'sonarr', 'lidarr']
 
@@ -359,6 +367,12 @@ function NotificationsPanel() {
   }
 
   const [webhookUrl, setWebhookUrl] = useState('')
+  const [authMode, setAuthMode] = useState<NotificationAuthMode>(
+    notificationSettings.data?.authMode ?? 'none',
+  )
+  const [token, setToken] = useState('')
+  const [username, setUsername] = useState(notificationSettings.data?.username ?? '')
+  const [password, setPassword] = useState('')
   const [onRequestAvailable, setOnRequestAvailable] = useState(
     notificationSettings.data?.onRequestAvailable ?? true,
   )
@@ -370,11 +384,16 @@ function NotificationsPanel() {
   )
 
   const hasWebhookUrl = notificationSettings.data?.hasWebhookUrl ?? false
+  const hasToken = notificationSettings.data?.hasToken ?? false
+  const hasPassword = notificationSettings.data?.hasPassword ?? false
 
   function handleSave() {
     saveNotificationSettings.mutate(
       {
         ...(webhookUrl ? { webhookUrl } : {}),
+        authMode,
+        ...(authMode === 'token' && token ? { token } : {}),
+        ...(authMode === 'basic' ? { username, ...(password ? { password } : {}) } : {}),
         onRequestAvailable,
         onRequestFailed,
         onInstanceUnreachable,
@@ -384,6 +403,8 @@ function NotificationsPanel() {
           if (!result.ok) return toast.error(result.error.message)
           toast.success('Notification settings saved.')
           setWebhookUrl('')
+          setToken('')
+          setPassword('')
           invalidate()
         },
       },
@@ -392,7 +413,7 @@ function NotificationsPanel() {
 
   function handleClear() {
     saveNotificationSettings.mutate(
-      { webhookUrl: null, onRequestAvailable, onRequestFailed, onInstanceUnreachable },
+      { webhookUrl: null, authMode, onRequestAvailable, onRequestFailed, onInstanceUnreachable },
       {
         onSuccess: () => {
           toast.success('Webhook cleared.')
@@ -442,6 +463,53 @@ function NotificationsPanel() {
               onChange={(event) => setWebhookUrl(event.target.value)}
             />
           </div>
+          <div className="space-y-2">
+            <Label>Authentication</Label>
+            <Select
+              value={authMode}
+              onValueChange={(value) => setAuthMode(value as NotificationAuthMode)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="token">Token (Bearer)</SelectItem>
+                <SelectItem value="basic">Username / password</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              For a self-hosted ntfy topic behind access control — token auth or username/password.
+            </p>
+          </div>
+          {authMode === 'token' ? (
+            <div className="space-y-2">
+              <Label>Token</Label>
+              <Input
+                type="password"
+                placeholder={hasToken ? 'Re-enter to change' : 'tk_...'}
+                value={token}
+                onChange={(event) => setToken(event.target.value)}
+              />
+            </div>
+          ) : null}
+          {authMode === 'basic' ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Username</Label>
+                <Input value={username} onChange={(event) => setUsername(event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Password</Label>
+                <Input
+                  type="password"
+                  placeholder={hasPassword ? 'Re-enter to change' : ''}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+              </div>
+            </div>
+          ) : null}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Switch checked={onRequestAvailable} onCheckedChange={setOnRequestAvailable} />

@@ -1,9 +1,12 @@
 import { AggregateRoot } from '#domain/shared/aggregate-root'
+import { NotificationAuth } from './notification-auth.vo.js'
 import type { Url } from '#domain/settings/url.vo'
 
 export interface NotificationSettingsProps {
   /** `null` disables every channel — there is nowhere to send. */
   webhookUrl: Url | null
+  /** Credentials sent with the webhook request — `NotificationAuth.none()` by default. */
+  auth: NotificationAuth
   onRequestAvailable: boolean
   onRequestFailed: boolean
   onInstanceUnreachable: boolean
@@ -27,6 +30,7 @@ export class NotificationSettings extends AggregateRoot<string> {
   static create(id: string): NotificationSettings {
     return new NotificationSettings(id, {
       webhookUrl: null,
+      auth: NotificationAuth.none(),
       onRequestAvailable: true,
       onRequestFailed: true,
       onInstanceUnreachable: true,
@@ -39,6 +43,10 @@ export class NotificationSettings extends AggregateRoot<string> {
 
   get webhookUrl(): Url | null {
     return this.props.webhookUrl
+  }
+
+  get auth(): NotificationAuth {
+    return this.props.auth
   }
 
   get onRequestAvailable(): boolean {

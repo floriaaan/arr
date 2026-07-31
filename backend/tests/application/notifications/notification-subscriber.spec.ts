@@ -2,6 +2,7 @@ import { test } from '@japa/runner'
 import { InMemoryEventBus } from '#application/shared/event-bus'
 import { registerNotificationSubscribers } from '#application/notifications/notification-subscriber'
 import { NotificationSettings } from '#domain/notifications/notification-settings.aggregate'
+import { NotificationAuth } from '#domain/notifications/notification-auth.vo'
 import { MediaRequest } from '#domain/requests/media-request.aggregate'
 import { ExternalId } from '#domain/catalog/external-id.vo'
 import { Url } from '#domain/settings/url.vo'
@@ -46,6 +47,7 @@ function settingsWith(overrides: Partial<Parameters<NotificationSettings['config
   const settings = NotificationSettings.create('id-1')
   settings.configure({
     webhookUrl: aUrl(),
+    auth: NotificationAuth.none(),
     onRequestAvailable: true,
     onRequestFailed: true,
     onInstanceUnreachable: true,

@@ -89,6 +89,10 @@ export const servarrInstanceDtoSchema = z.object({
 
 export const notificationSettingsDtoSchema = z.object({
   hasWebhookUrl: z.boolean(),
+  authMode: z.enum(['none', 'token', 'basic']),
+  hasToken: z.boolean(),
+  username: z.string().nullable(),
+  hasPassword: z.boolean(),
   onRequestAvailable: z.boolean(),
   onRequestFailed: z.boolean(),
   onInstanceUnreachable: z.boolean(),

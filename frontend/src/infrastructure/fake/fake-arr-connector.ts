@@ -391,9 +391,19 @@ export class FakeArrConnector implements ArrConnector {
   private readonly downloadClients = new Map<ServarrKind, DownloadClientRecord[]>()
   private readonly indexers = new Map<ServarrKind, IndexerRecord[]>()
   private readonly mediaServers = new Map<MediaServerKind, MediaServerDto>()
-  private notificationSettings: NotificationSettingsDto & { webhookUrl: string | null } = {
+  private notificationSettings: NotificationSettingsDto & {
+    webhookUrl: string | null
+    token: string | null
+    password: string | null
+  } = {
     webhookUrl: null,
     hasWebhookUrl: false,
+    authMode: 'none',
+    token: null,
+    hasToken: false,
+    username: null,
+    password: null,
+    hasPassword: false,
     onRequestAvailable: true,
     onRequestFailed: true,
     onInstanceUnreachable: true,
@@ -730,8 +740,46 @@ export class FakeArrConnector implements ArrConnector {
   }
 
   async getNotificationSettings(): Promise<NotificationSettingsDto> {
-    const { webhookUrl: _webhookUrl, ...dto } = this.notificationSettings
+    const { webhookUrl: _webhookUrl, token: _token, password: _password, ...dto } =
+      this.notificationSettings
     return dto
+  }
+
+  private resolveNotificationAuth(draft: NotificationSettingsDraft) {
+    const existing = this.notificationSettings
+
+    if (draft.authMode === 'none') {
+      return { ok: true as const, value: { mode: 'none' as const, token: null, username: null, password: null } }
+    }
+
+    if (draft.authMode === 'token') {
+      const token = draft.token !== undefined ? draft.token : existing.authMode === 'token' ? existing.token : null
+      if (!token) {
+        return {
+          ok: false as const,
+          error: { type: 'validation_failed', message: 'A token is required.', status: 400 },
+        }
+      }
+      return { ok: true as const, value: { mode: 'token' as const, token, username: null, password: null } }
+    }
+
+    const username =
+      draft.username !== undefined ? draft.username : existing.authMode === 'basic' ? existing.username : null
+    if (!username || username.trim() === '') {
+      return {
+        ok: false as const,
+        error: { type: 'validation_failed', message: 'Username must not be empty', status: 400 },
+      }
+    }
+    const password =
+      draft.password !== undefined ? draft.password : existing.authMode === 'basic' ? existing.password : null
+    if (!password) {
+      return {
+        ok: false as const,
+        error: { type: 'validation_failed', message: 'A password is required.', status: 400 },
+      }
+    }
+    return { ok: true as const, value: { mode: 'basic' as const, token: null, username, password } }
   }
 
   async saveNotificationSettings(draft: NotificationSettingsDraft) {
@@ -748,14 +796,24 @@ export class FakeArrConnector implements ArrConnector {
       }
     }
 
+    const auth = this.resolveNotificationAuth(draft)
+    if (!auth.ok) return auth
+
     this.notificationSettings = {
       webhookUrl,
       hasWebhookUrl: webhookUrl !== null,
+      authMode: auth.value.mode,
+      token: auth.value.token,
+      hasToken: auth.value.token !== null,
+      username: auth.value.username,
+      password: auth.value.password,
+      hasPassword: auth.value.password !== null,
       onRequestAvailable: draft.onRequestAvailable,
       onRequestFailed: draft.onRequestFailed,
       onInstanceUnreachable: draft.onInstanceUnreachable,
     }
-    const { webhookUrl: _hidden, ...dto } = this.notificationSettings
+    const { webhookUrl: _hidden, token: _hiddenToken, password: _hiddenPassword, ...dto } =
+      this.notificationSettings
     return { ok: true as const, value: dto }
   }
 

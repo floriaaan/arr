@@ -22,10 +22,14 @@ export class WebhookNotifier implements Notifier {
       return Result.err({ type: 'not_configured', message: 'No webhook URL configured.' })
     }
 
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    const authorization = settings.auth.authorizationHeader()
+    if (authorization) headers.Authorization = authorization
+
     try {
       const response = await fetch(settings.webhookUrl.value, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           content: `**${notification.title}**\n${notification.body}`,
           title: notification.title,
