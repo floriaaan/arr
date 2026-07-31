@@ -43,6 +43,23 @@ export function registerNotificationSubscribers(
   }
 
   bus.subscribe(
+    'MediaRequested',
+    safely(async (event) => {
+      const settings = await deps.settings.get()
+      if (!settings.onRequestCreated || !settings.webhookUrl) return
+
+      const { requestId } = event.payload as { requestId: string }
+      await deps.notifier.notify({
+        title: '📨 New request',
+        body: `**${await titleOf(requestId)}** was just requested.`,
+        level: 'info',
+        clickUrl: requestsUrl,
+        actions: [{ label: 'Open requests', url: requestsUrl }],
+      })
+    }),
+  )
+
+  bus.subscribe(
     'RequestCompleted',
     safely(async (event) => {
       const settings = await deps.settings.get()

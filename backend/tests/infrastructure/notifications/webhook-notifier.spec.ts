@@ -28,6 +28,7 @@ function settingsWith(webhookUrl: string | null, auth = NotificationAuth.none())
   settings.configure({
     webhookUrl: webhookUrl ? aUrl(webhookUrl) : null,
     auth,
+    onRequestCreated: true,
     onRequestAvailable: true,
     onRequestFailed: true,
     onInstanceUnreachable: true,

@@ -7,6 +7,7 @@ export interface NotificationSettingsDto {
   /** Not secret — echoed back, unlike the token/password. */
   username: string | null
   hasPassword: boolean
+  onRequestCreated: boolean
   onRequestAvailable: boolean
   onRequestFailed: boolean
   onInstanceUnreachable: boolean
@@ -25,6 +26,7 @@ export function toNotificationSettingsDto(settings: NotificationSettings): Notif
     hasToken: settings.auth.token !== null,
     username: settings.auth.username,
     hasPassword: settings.auth.password !== null,
+    onRequestCreated: settings.onRequestCreated,
     onRequestAvailable: settings.onRequestAvailable,
     onRequestFailed: settings.onRequestFailed,
     onInstanceUnreachable: settings.onInstanceUnreachable,

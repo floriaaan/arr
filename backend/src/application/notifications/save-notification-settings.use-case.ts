@@ -16,6 +16,7 @@ export interface SaveNotificationSettingsInput {
   username?: string
   /** Only read when `authMode` is `'basic'`. `undefined` keeps the stored password. */
   password?: string
+  onRequestCreated: boolean
   onRequestAvailable: boolean
   onRequestFailed: boolean
   onInstanceUnreachable: boolean
@@ -47,6 +48,7 @@ export class SaveNotificationSettings implements UseCase<
     settings.configure({
       webhookUrl,
       auth: auth.value,
+      onRequestCreated: input.onRequestCreated,
       onRequestAvailable: input.onRequestAvailable,
       onRequestFailed: input.onRequestFailed,
       onInstanceUnreachable: input.onInstanceUnreachable,

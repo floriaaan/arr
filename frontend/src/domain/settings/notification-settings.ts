@@ -10,6 +10,7 @@ export interface NotificationSettingsDto {
   username: string | null
   /** The password itself never leaves the backend. */
   hasPassword: boolean
+  onRequestCreated: boolean
   onRequestAvailable: boolean
   onRequestFailed: boolean
   onInstanceUnreachable: boolean
@@ -25,6 +26,7 @@ export interface NotificationSettingsDraft {
   username?: string
   /** Only read when `authMode` is `'basic'`. Omit to keep the stored password. */
   password?: string
+  onRequestCreated: boolean
   onRequestAvailable: boolean
   onRequestFailed: boolean
   onInstanceUnreachable: boolean

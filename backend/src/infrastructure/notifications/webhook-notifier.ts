@@ -1,3 +1,4 @@
+import logger from '@adonisjs/core/services/logger'
 import { Result } from '#domain/shared/result'
 import type { Notifier } from '#domain/notifications/interfaces/notifier.interface'
 import type { NotificationSettingsRepository } from '#domain/notifications/interfaces/notification-settings-repository.interface'
@@ -33,11 +34,16 @@ export class WebhookNotifier implements Notifier {
   async notify(notification: Notification): Promise<Result<void, NotificationError>> {
     const settings = await this.repository.get()
     if (!settings.webhookUrl) {
+      logger.debug(`Notification "${notification.title}" suppressed: no webhook configured.`)
       return Result.err({ type: 'not_configured', message: 'No webhook URL configured.' })
     }
 
     const target = resolveNtfyTarget(settings.webhookUrl.value)
     if (!target) {
+      logger.error(
+        { webhookUrl: settings.webhookUrl.value },
+        `Notification "${notification.title}" not sent: "${settings.webhookUrl.value}" does not look like an ntfy topic URL.`,
+      )
       return Result.err({
         type: 'delivery_failed',
         message: `"${settings.webhookUrl.value}" does not look like an ntfy topic URL (https://host/topic).`,
@@ -66,6 +72,11 @@ export class WebhookNotifier implements Notifier {
       }))
     }
 
+    logger.info(
+      { topic: target.topic, host: new URL(target.origin).host, level: notification.level },
+      `Sending notification "${notification.title}" to ntfy topic "${target.topic}"`,
+    )
+
     try {
       const response = await fetch(target.origin, {
         method: 'POST',
@@ -75,17 +86,27 @@ export class WebhookNotifier implements Notifier {
       })
 
       if (!response.ok) {
+        logger.error(
+          { topic: target.topic, status: response.status },
+          `ntfy rejected notification "${notification.title}": HTTP ${response.status}`,
+        )
         return Result.err({
           type: 'delivery_failed',
           message: `ntfy answered HTTP ${response.status}`,
         })
       }
+      logger.info(
+        { topic: target.topic },
+        `Notification "${notification.title}" delivered to ntfy topic "${target.topic}"`,
+      )
       return Result.ok(undefined)
     } catch (error) {
-      return Result.err({
-        type: 'delivery_failed',
-        message: error instanceof Error ? error.message : String(error),
-      })
+      const message = error instanceof Error ? error.message : String(error)
+      logger.error(
+        { topic: target.topic, err: message },
+        `Failed to deliver notification "${notification.title}" to ntfy: ${message}`,
+      )
+      return Result.err({ type: 'delivery_failed', message })
     }
   }
 }

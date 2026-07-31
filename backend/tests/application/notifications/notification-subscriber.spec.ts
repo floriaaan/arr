@@ -7,7 +7,7 @@ import { MediaRequest } from '#domain/requests/media-request.aggregate'
 import { ExternalId } from '#domain/catalog/external-id.vo'
 import { Url } from '#domain/settings/url.vo'
 import { Result } from '#domain/shared/result'
-import { requestCompleted, requestFailed } from '#domain/requests/requests.events'
+import { mediaRequested, requestCompleted, requestFailed } from '#domain/requests/requests.events'
 import { instanceHealthCheckFailed } from '#domain/settings/settings.events'
 import { InMemoryMediaRequestRepository } from '../requests/fakes.js'
 import type { Notification } from '#domain/notifications/notification.vo'
@@ -48,6 +48,7 @@ function settingsWith(overrides: Partial<Parameters<NotificationSettings['config
   settings.configure({
     webhookUrl: aUrl(),
     auth: NotificationAuth.none(),
+    onRequestCreated: true,
     onRequestAvailable: true,
     onRequestFailed: true,
     onInstanceUnreachable: true,
@@ -89,6 +90,28 @@ async function setup(settings = settingsWith()) {
 }
 
 test.group('notification subscribers', () => {
+  test('notifies when a request is created', async ({ assert }) => {
+    const { bus, notifier } = await setup()
+
+    await bus.publish([
+      mediaRequested({ requestId: 'request-1', kind: 'movie', externalId: 'tmdb:550' }, new Date()),
+    ])
+
+    assert.lengthOf(notifier.sent, 1)
+    assert.equal(notifier.sent[0]?.level, 'info')
+    assert.include(notifier.sent[0]?.body ?? '', 'Fight Club')
+  })
+
+  test('stays silent on creation when the matching switch is off', async ({ assert }) => {
+    const { bus, notifier } = await setup(settingsWith({ onRequestCreated: false }))
+
+    await bus.publish([
+      mediaRequested({ requestId: 'request-1', kind: 'movie', externalId: 'tmdb:550' }, new Date()),
+    ])
+
+    assert.isEmpty(notifier.sent)
+  })
+
   test('notifies when a request becomes available', async ({ assert }) => {
     const { bus, notifier } = await setup()
 

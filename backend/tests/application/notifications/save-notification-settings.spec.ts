@@ -18,6 +18,7 @@ class InMemoryNotificationSettings implements NotificationSettingsRepository {
 function baseInput() {
   return {
     authMode: 'none' as const,
+    onRequestCreated: true,
     onRequestAvailable: true,
     onRequestFailed: true,
     onInstanceUnreachable: true,

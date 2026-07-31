@@ -93,6 +93,7 @@ export const notificationSettingsDtoSchema = z.object({
   hasToken: z.boolean(),
   username: z.string().nullable(),
   hasPassword: z.boolean(),
+  onRequestCreated: z.boolean(),
   onRequestAvailable: z.boolean(),
   onRequestFailed: z.boolean(),
   onInstanceUnreachable: z.boolean(),

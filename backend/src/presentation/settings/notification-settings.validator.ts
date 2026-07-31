@@ -11,6 +11,7 @@ export const saveNotificationSettingsValidator = vine.compile(
     username: vine.string().optional(),
     /** Omitted keeps the stored password — only read when `authMode` is `'basic'`. */
     password: vine.string().optional(),
+    onRequestCreated: vine.boolean(),
     onRequestAvailable: vine.boolean(),
     onRequestFailed: vine.boolean(),
     onInstanceUnreachable: vine.boolean(),

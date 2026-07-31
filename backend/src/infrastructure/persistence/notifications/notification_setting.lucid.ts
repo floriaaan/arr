@@ -23,6 +23,9 @@ export default class NotificationSettingLucidModel extends BaseModel {
   declare passwordEncrypted: string | null
 
   @column()
+  declare onRequestCreated: boolean
+
+  @column()
   declare onRequestAvailable: boolean
 
   @column()

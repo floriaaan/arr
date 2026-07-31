@@ -92,6 +92,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
             hasToken: false,
             username: null as string | null,
             hasPassword: false,
+            onRequestCreated: true,
             onRequestAvailable: true,
             onRequestFailed: true,
             onInstanceUnreachable: true,
@@ -105,6 +106,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
                 token?: string
                 username?: string
                 password?: string
+                onRequestCreated: boolean
                 onRequestAvailable: boolean
                 onRequestFailed: boolean
                 onInstanceUnreachable: boolean
@@ -122,6 +124,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
                 hasToken: draft.authMode === 'token' ? true : false,
                 username: draft.authMode === 'basic' ? (draft.username ?? settings.username) : null,
                 hasPassword: draft.authMode === 'basic' ? true : false,
+                onRequestCreated: draft.onRequestCreated,
                 onRequestAvailable: draft.onRequestAvailable,
                 onRequestFailed: draft.onRequestFailed,
                 onInstanceUnreachable: draft.onInstanceUnreachable,
@@ -340,6 +343,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
     const saved = await connector.saveNotificationSettings({
       webhookUrl: 'https://ntfy.sh/my-topic',
       authMode: 'none',
+      onRequestCreated: true,
       onRequestAvailable: true,
       onRequestFailed: false,
       onInstanceUnreachable: true,
@@ -364,6 +368,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
     const saved = await connector.saveNotificationSettings({
       authMode: 'token',
       token: 'tk_abc123',
+      onRequestCreated: true,
       onRequestAvailable: true,
       onRequestFailed: true,
       onInstanceUnreachable: true,
@@ -382,6 +387,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
   test('switching to token auth without a token fails', async () => {
     const saved = await connector.saveNotificationSettings({
       authMode: 'token',
+      onRequestCreated: true,
       onRequestAvailable: true,
       onRequestFailed: true,
       onInstanceUnreachable: true,
@@ -395,6 +401,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
       authMode: 'basic',
       username: 'alice',
       password: 'hunter2',
+      onRequestCreated: true,
       onRequestAvailable: true,
       onRequestFailed: true,
       onInstanceUnreachable: true,

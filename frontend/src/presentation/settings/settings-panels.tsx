@@ -373,6 +373,9 @@ function NotificationsPanel() {
   const [token, setToken] = useState('')
   const [username, setUsername] = useState(notificationSettings.data?.username ?? '')
   const [password, setPassword] = useState('')
+  const [onRequestCreated, setOnRequestCreated] = useState(
+    notificationSettings.data?.onRequestCreated ?? true,
+  )
   const [onRequestAvailable, setOnRequestAvailable] = useState(
     notificationSettings.data?.onRequestAvailable ?? true,
   )
@@ -394,6 +397,7 @@ function NotificationsPanel() {
         authMode,
         ...(authMode === 'token' && token ? { token } : {}),
         ...(authMode === 'basic' ? { username, ...(password ? { password } : {}) } : {}),
+        onRequestCreated,
         onRequestAvailable,
         onRequestFailed,
         onInstanceUnreachable,
@@ -413,7 +417,14 @@ function NotificationsPanel() {
 
   function handleClear() {
     saveNotificationSettings.mutate(
-      { webhookUrl: null, authMode, onRequestAvailable, onRequestFailed, onInstanceUnreachable },
+      {
+        webhookUrl: null,
+        authMode,
+        onRequestCreated,
+        onRequestAvailable,
+        onRequestFailed,
+        onInstanceUnreachable,
+      },
       {
         onSuccess: () => {
           toast.success('Webhook cleared.')
@@ -437,8 +448,8 @@ function NotificationsPanel() {
       <div>
         <h2 className="text-lg font-semibold tracking-tight">Notifications</h2>
         <p className="text-sm text-muted-foreground">
-          Push a notification to an ntfy topic when a request becomes available, fails, or an
-          instance goes unreachable.
+          Push a notification to an ntfy topic when a request is created, becomes available,
+          fails, or an instance goes unreachable.
         </p>
       </div>
       <Card>
@@ -511,6 +522,10 @@ function NotificationsPanel() {
             </div>
           ) : null}
           <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Switch checked={onRequestCreated} onCheckedChange={setOnRequestCreated} />
+              <Label>Request created</Label>
+            </div>
             <div className="flex items-center gap-2">
               <Switch checked={onRequestAvailable} onCheckedChange={setOnRequestAvailable} />
               <Label>Request available</Label>

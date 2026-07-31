@@ -24,6 +24,7 @@ export class LucidNotificationSettingsRepository implements NotificationSettings
     return NotificationSettings.reconstruct(SINGLETON_ID, {
       webhookUrl,
       auth: this.reconstructAuth(row),
+      onRequestCreated: row.onRequestCreated,
       onRequestAvailable: row.onRequestAvailable,
       onRequestFailed: row.onRequestFailed,
       onInstanceUnreachable: row.onInstanceUnreachable,
@@ -58,6 +59,7 @@ export class LucidNotificationSettingsRepository implements NotificationSettings
     model.passwordEncrypted = settings.auth.password
       ? encryptSecret(settings.auth.password.reveal())
       : null
+    model.onRequestCreated = settings.onRequestCreated
     model.onRequestAvailable = settings.onRequestAvailable
     model.onRequestFailed = settings.onRequestFailed
     model.onInstanceUnreachable = settings.onInstanceUnreachable

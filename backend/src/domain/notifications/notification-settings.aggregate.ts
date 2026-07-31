@@ -7,6 +7,7 @@ export interface NotificationSettingsProps {
   webhookUrl: Url | null
   /** Credentials sent with the webhook request — `NotificationAuth.none()` by default. */
   auth: NotificationAuth
+  onRequestCreated: boolean
   onRequestAvailable: boolean
   onRequestFailed: boolean
   onInstanceUnreachable: boolean
@@ -31,6 +32,7 @@ export class NotificationSettings extends AggregateRoot<string> {
     return new NotificationSettings(id, {
       webhookUrl: null,
       auth: NotificationAuth.none(),
+      onRequestCreated: true,
       onRequestAvailable: true,
       onRequestFailed: true,
       onInstanceUnreachable: true,
@@ -47,6 +49,10 @@ export class NotificationSettings extends AggregateRoot<string> {
 
   get auth(): NotificationAuth {
     return this.props.auth
+  }
+
+  get onRequestCreated(): boolean {
+    return this.props.onRequestCreated
   }
 
   get onRequestAvailable(): boolean {
