@@ -28,6 +28,28 @@ test.group('toQueueProgress (single record)', () => {
     assert.equal(status, 'failed')
     assert.equal(failureReason, 'No space left')
   })
+
+  test('treats a blocked import as a failure, surfacing the status message', async ({ assert }) => {
+    const { status, failureReason } = toQueueProgress(
+      aRecord({
+        trackedDownloadState: 'importBlocked',
+        errorMessage: null,
+        statusMessages: [
+          {
+            messages: [
+              'Found matching movie via grab history, but release was matched to movie by ID. Manual Import required.',
+            ],
+          },
+        ],
+      }),
+    )
+
+    assert.equal(status, 'failed')
+    assert.equal(
+      failureReason,
+      'Found matching movie via grab history, but release was matched to movie by ID. Manual Import required.',
+    )
+  })
 })
 
 test.group('aggregateQueueProgress — all-or-nothing rule', () => {
@@ -87,6 +109,20 @@ test.group('aggregateQueueProgress — all-or-nothing rule', () => {
     ])
 
     assert.equal(progress?.eta?.toISOString(), '2026-01-01T12:00:00.000Z')
+  })
+
+  test('a blocked import fails the whole request, not just that episode', async ({ assert }) => {
+    const { status, failureReason } = aggregateQueueProgress([
+      aRecord({ trackedDownloadState: 'importing' }),
+      aRecord({
+        trackedDownloadState: 'importBlocked',
+        errorMessage: null,
+        statusMessages: [{ messages: ['Manual Import required.'] }],
+      }),
+    ])
+
+    assert.equal(status, 'failed')
+    assert.equal(failureReason, 'Manual Import required.')
   })
 
   test('a failure wins over an in-progress import', async ({ assert }) => {

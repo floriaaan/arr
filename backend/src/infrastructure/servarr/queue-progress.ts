@@ -9,11 +9,18 @@ import type { RequestStatus } from '#domain/requests/request-status.vo'
 const TRACKED_DOWNLOAD_STATE_TO_STATUS: Record<string, RequestStatus | undefined> = {
   downloading: 'downloading',
   importPending: 'importing',
-  importBlocked: 'importing',
   importing: 'importing',
   imported: 'available',
   failedPending: 'failed',
   failed: 'failed',
+  /**
+   * The download finished but the *arr couldn't import it on its own (e.g.
+   * "Found matching movie via grab history, but release was matched to
+   * movie by ID. Manual Import required.") — it needs a human in the *arr's
+   * own Manual Import screen, and will otherwise sit there forever. Treated
+   * as a failure so it surfaces a reason instead of freezing at "importing".
+   */
+  importBlocked: 'failed',
 }
 
 /** Structural minimum shared by Radarr/Sonarr/Lidarr queue records. */
