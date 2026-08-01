@@ -38,7 +38,7 @@ export default class NotificationsController {
 
     const result = await new SendNotification(notifier).execute({
       title: '🔔 Test notification',
-      body: 'If you can read this, **arr** can reach your ntfy topic.',
+      body: 'If you can read this, arr can reach your ntfy topic.',
       level: 'info',
       clickUrl: `${appUrl}/settings`,
     })

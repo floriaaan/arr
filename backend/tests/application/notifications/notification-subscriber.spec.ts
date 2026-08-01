@@ -5,6 +5,10 @@ import { NotificationSettings } from '#domain/notifications/notification-setting
 import { NotificationAuth } from '#domain/notifications/notification-auth.vo'
 import { MediaRequest } from '#domain/requests/media-request.aggregate'
 import { ExternalId } from '#domain/catalog/external-id.vo'
+import { MediaDetail } from '#domain/catalog/media-detail.entity'
+import { PosterRef } from '#domain/catalog/poster-ref.vo'
+import { User } from '#domain/identity/user.entity'
+import { Email } from '#domain/identity/email.vo'
 import { Url } from '#domain/settings/url.vo'
 import { Result } from '#domain/shared/result'
 import { mediaRequested, requestCompleted, requestFailed } from '#domain/requests/requests.events'
@@ -14,6 +18,8 @@ import type { Notification } from '#domain/notifications/notification.vo'
 import type { Notifier } from '#domain/notifications/interfaces/notifier.interface'
 import type { NotificationError } from '#domain/notifications/notification-error.vo'
 import type { NotificationSettingsRepository } from '#domain/notifications/interfaces/notification-settings-repository.interface'
+import type { MediaLookup } from '#domain/catalog/interfaces/media-lookup.interface'
+import type { UserDirectory } from '#domain/identity/interfaces/user-directory.interface'
 
 class RecordingNotifier implements Notifier {
   sent: Notification[] = []
@@ -34,6 +40,40 @@ class InMemoryNotificationSettings implements NotificationSettingsRepository {
 
   async save(settings: NotificationSettings): Promise<void> {
     this.settings = settings
+  }
+}
+
+class FakeMediaLookup implements MediaLookup {
+  async search(): Promise<never[]> {
+    return []
+  }
+
+  async detail(id: ExternalId): Promise<MediaDetail> {
+    return MediaDetail.create(id, {
+      kind: 'movie',
+      title: 'Fight Club',
+      year: 1999,
+      overview: '',
+      posterRef: PosterRef.create('https://image.tmdb.org/t/p/w500/poster.jpg'),
+      alreadyManaged: false,
+      genres: [],
+    })
+  }
+}
+
+class FakeUserDirectory implements UserDirectory {
+  async findById(): Promise<User> {
+    const email = Email.create('alice@example.test')
+    if (!email.ok) throw new Error('unreachable')
+    return User.create('user-1', { email: email.value, role: 'user', createdAt: new Date() })
+  }
+
+  async findByEmail(): Promise<null> {
+    return null
+  }
+
+  async existsAny(): Promise<boolean> {
+    return true
   }
 }
 
@@ -83,6 +123,8 @@ async function setup(settings = settingsWith()) {
     notifier,
     settings: new InMemoryNotificationSettings(settings),
     requests,
+    lookup: new FakeMediaLookup(),
+    users: new FakeUserDirectory(),
     onError: (message) => errors.push(message),
   })
 
@@ -100,6 +142,9 @@ test.group('notification subscribers', () => {
     assert.lengthOf(notifier.sent, 1)
     assert.equal(notifier.sent[0]?.level, 'info')
     assert.include(notifier.sent[0]?.body ?? '', 'Fight Club')
+    assert.include(notifier.sent[0]?.body ?? '', 'alice@example.test')
+    assert.notInclude(notifier.sent[0]?.body ?? '', '**')
+    assert.equal(notifier.sent[0]?.imageUrl, 'https://image.tmdb.org/t/p/w500/poster.jpg')
   })
 
   test('stays silent on creation when the matching switch is off', async ({ assert }) => {
@@ -120,6 +165,9 @@ test.group('notification subscribers', () => {
     assert.lengthOf(notifier.sent, 1)
     assert.equal(notifier.sent[0]?.level, 'success')
     assert.include(notifier.sent[0]?.body ?? '', 'Fight Club')
+    assert.include(notifier.sent[0]?.body ?? '', 'alice@example.test')
+    assert.notInclude(notifier.sent[0]?.body ?? '', '**')
+    assert.equal(notifier.sent[0]?.imageUrl, 'https://image.tmdb.org/t/p/w500/poster.jpg')
   })
 
   test('notifies on failure, carrying the reason', async ({ assert }) => {
@@ -131,6 +179,8 @@ test.group('notification subscribers', () => {
 
     assert.equal(notifier.sent[0]?.level, 'error')
     assert.include(notifier.sent[0]?.body ?? '', 'No space left')
+    assert.include(notifier.sent[0]?.body ?? '', 'alice@example.test')
+    assert.notInclude(notifier.sent[0]?.body ?? '', '**')
   })
 
   test('notifies when an instance stops answering', async ({ assert }) => {

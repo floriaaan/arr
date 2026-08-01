@@ -65,7 +65,7 @@ test.group('WebhookNotifier', () => {
     assert.equal(calls[0]?.url, 'https://ntfy.example.com')
   })
 
-  test('carries the topic, title, message, tags, priority and markdown in the JSON body', async ({
+  test('carries the topic, title, message, tags and priority in the JSON body, no markdown', async ({
     assert,
     cleanup,
   }) => {
@@ -77,17 +77,17 @@ test.group('WebhookNotifier', () => {
     )
     await notifier.notify({
       title: '🎬 Request available',
-      body: '**Fight Club**',
+      body: 'Fight Club is ready to watch.',
       level: 'success',
     })
 
     const body = JSON.parse(String(calls[0]?.init.body))
     assert.equal(body.topic, 'my-topic')
     assert.equal(body.title, '🎬 Request available')
-    assert.equal(body.message, '**Fight Club**')
+    assert.equal(body.message, 'Fight Club is ready to watch.')
     assert.deepEqual(body.tags, ['tada'])
     assert.equal(body.priority, 3)
-    assert.isTrue(body.markdown)
+    assert.isUndefined(body.markdown)
   })
 
   test('uses a higher priority for errors', async ({ assert, cleanup }) => {
@@ -103,7 +103,10 @@ test.group('WebhookNotifier', () => {
     assert.equal(body.priority, 5)
   })
 
-  test('carries click and actions when provided', async ({ assert, cleanup }) => {
+  test('carries click, actions and an image attachment when provided', async ({
+    assert,
+    cleanup,
+  }) => {
     const { calls, restore } = stubFetch()
     cleanup(restore)
 
@@ -115,11 +118,13 @@ test.group('WebhookNotifier', () => {
       body: 'World',
       level: 'info',
       clickUrl: 'https://arr.example.com/requests',
+      imageUrl: 'https://image.tmdb.org/t/p/w500/poster.jpg',
       actions: [{ label: 'Open requests', url: 'https://arr.example.com/requests' }],
     })
 
     const body = JSON.parse(String(calls[0]?.init.body))
     assert.equal(body.click, 'https://arr.example.com/requests')
+    assert.equal(body.attach, 'https://image.tmdb.org/t/p/w500/poster.jpg')
     assert.deepEqual(body.actions, [
       { action: 'view', label: 'Open requests', url: 'https://arr.example.com/requests' },
     ])

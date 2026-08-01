@@ -60,7 +60,6 @@ export class WebhookNotifier implements Notifier {
       message: notification.body,
       tags: LEVEL_TAGS[notification.level],
       priority: LEVEL_PRIORITY[notification.level],
-      markdown: true,
     }
     if (notification.clickUrl) payload.click = notification.clickUrl
     if (notification.imageUrl) payload.attach = notification.imageUrl

@@ -34,6 +34,8 @@ export default class NotificationsProvider {
       notifier: await this.app.container.make('notifications.notifier'),
       settings: await this.app.container.make('notifications.settingsRepository'),
       requests: await this.app.container.make('requests.repository'),
+      lookup: await this.app.container.make('catalog.mediaLookup'),
+      users: await this.app.container.make('identity.userDirectory'),
       onError: (message) => logger.warn(`Notification subscriber failed: ${message}`),
     })
   }

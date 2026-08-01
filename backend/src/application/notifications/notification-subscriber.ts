@@ -3,6 +3,8 @@ import type { EventBus } from '#application/shared/event-bus'
 import type { Notifier } from '#domain/notifications/interfaces/notifier.interface'
 import type { NotificationSettingsRepository } from '#domain/notifications/interfaces/notification-settings-repository.interface'
 import type { MediaRequestRepository } from '#domain/requests/interfaces/media-request-repository.interface'
+import type { MediaLookup } from '#domain/catalog/interfaces/media-lookup.interface'
+import type { UserDirectory } from '#domain/identity/interfaces/user-directory.interface'
 import type { DomainEvent } from '#domain/shared/domain-event'
 
 /** `APP_URL` should be the user-facing origin for these deep links to open the right page. */
@@ -16,7 +18,9 @@ const settingsUrl = `${appUrl}/settings`
  * webhook must never fail the use case that triggered it.
  *
  * `RequestProgressed` is deliberately not subscribed — it fires every 10
- * seconds for the whole life of a download.
+ * seconds for the whole life of a download. Notification bodies are plain
+ * text on purpose: ntfy only renders markdown inside its own app/web client,
+ * the raw `**stars**` show up as-is in the OS push banner (iOS/Android).
  */
 export function registerNotificationSubscribers(
   bus: EventBus,
@@ -24,12 +28,28 @@ export function registerNotificationSubscribers(
     notifier: Notifier
     settings: NotificationSettingsRepository
     requests: MediaRequestRepository
+    lookup: MediaLookup
+    users: UserDirectory
     onError: (message: string) => void
   },
 ): void {
-  async function titleOf(requestId: string): Promise<string> {
+  async function requestInfo(
+    requestId: string,
+  ): Promise<{ title: string; requestedBy: string; posterUrl?: string }> {
     const request = await deps.requests.findById(requestId)
-    return request?.title ?? 'A request'
+    if (!request) return { title: 'A request', requestedBy: 'someone' }
+
+    const requester = await deps.users.findById(request.requestedBy)
+
+    let posterUrl: string | undefined
+    try {
+      const detail = await deps.lookup.detail(request.externalId)
+      posterUrl = detail.posterRef?.remoteUrl
+    } catch {
+      posterUrl = undefined
+    }
+
+    return { title: request.title, requestedBy: requester?.email.value ?? 'someone', posterUrl }
   }
 
   function safely(handler: (event: DomainEvent) => Promise<void>) {
@@ -49,11 +69,13 @@ export function registerNotificationSubscribers(
       if (!settings.onRequestCreated || !settings.webhookUrl) return
 
       const { requestId } = event.payload as { requestId: string }
+      const { title, requestedBy, posterUrl } = await requestInfo(requestId)
       await deps.notifier.notify({
         title: '📨 New request',
-        body: `**${await titleOf(requestId)}** was just requested.`,
+        body: `${title} was just requested by ${requestedBy}.`,
         level: 'info',
         clickUrl: requestsUrl,
+        imageUrl: posterUrl,
         actions: [{ label: 'Open requests', url: requestsUrl }],
       })
     }),
@@ -66,11 +88,13 @@ export function registerNotificationSubscribers(
       if (!settings.onRequestAvailable || !settings.webhookUrl) return
 
       const { requestId } = event.payload as { requestId: string }
+      const { title, requestedBy, posterUrl } = await requestInfo(requestId)
       await deps.notifier.notify({
         title: '🎬 Request available',
-        body: `**${await titleOf(requestId)}** is ready to watch.`,
+        body: `${title} is ready to watch. Requested by ${requestedBy}.`,
         level: 'success',
         clickUrl: requestsUrl,
+        imageUrl: posterUrl,
         actions: [{ label: 'Open requests', url: requestsUrl }],
       })
     }),
@@ -83,11 +107,13 @@ export function registerNotificationSubscribers(
       if (!settings.onRequestFailed || !settings.webhookUrl) return
 
       const { requestId, reason } = event.payload as { requestId: string; reason?: string }
+      const { title, requestedBy, posterUrl } = await requestInfo(requestId)
       await deps.notifier.notify({
         title: '❌ Request failed',
-        body: `**${await titleOf(requestId)}** failed: ${reason ?? 'unknown reason'}`,
+        body: `${title} failed: ${reason ?? 'unknown reason'}. Requested by ${requestedBy}.`,
         level: 'error',
         clickUrl: requestsUrl,
+        imageUrl: posterUrl,
         actions: [{ label: 'Open requests', url: requestsUrl }],
       })
     }),
@@ -102,7 +128,7 @@ export function registerNotificationSubscribers(
       const { kind, error } = event.payload as { kind: string; error: { message: string } }
       await deps.notifier.notify({
         title: '🔌 Instance unreachable',
-        body: `**${kind}** is not answering: ${error.message}`,
+        body: `${kind} is not answering: ${error.message}`,
         level: 'error',
         clickUrl: settingsUrl,
         actions: [{ label: 'Open settings', url: settingsUrl }],
