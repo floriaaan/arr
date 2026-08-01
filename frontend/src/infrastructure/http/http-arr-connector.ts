@@ -427,6 +427,7 @@ export class HttpArrConnector implements ArrConnector {
   /** `/api/media-servers`, not `/api/settings/*` — readable by every signed-in user. */
   async listMediaServers() {
     const response = await this.http.get('/api/media-servers')
+    if (!response.ok) throw new Error((await toApiError(response)).message)
     const body = (await response.json()) as { mediaServers: unknown[] }
     return body.mediaServers.map((server) => mediaServerDtoSchema.parse(server))
   }
@@ -439,7 +440,8 @@ export class HttpArrConnector implements ArrConnector {
   }
 
   async deleteMediaServer(kind: MediaServerKind): Promise<void> {
-    await this.http.delete(`/api/settings/media-servers/${kind}`)
+    const response = await this.http.delete(`/api/settings/media-servers/${kind}`)
+    if (!response.ok) throw new Error((await toApiError(response)).message)
   }
 
   async discoverInstances(scope: DiscoveryScope) {
@@ -448,6 +450,7 @@ export class HttpArrConnector implements ArrConnector {
 
   async getNotificationSettings() {
     const response = await this.http.get('/api/settings/notifications')
+    if (!response.ok) throw new Error((await toApiError(response)).message)
     const body = (await response.json()) as { notifications: unknown }
     return notificationSettingsDtoSchema.parse(body.notifications)
   }

@@ -39,12 +39,20 @@ n'existe.
 
 ### Décisions
 
-1. **Un webhook générique d'abord, pas trois intégrations.** Une seule URL,
-   une charge utile JSON qui satisfait les trois cibles courantes du
-   self-hosted en même temps : `content` (Discord), `title` + `message`
-   (ntfy, Gotify). Un seul adapter couvre donc Discord, ntfy et Gotify sans
-   code par service. Pas de SMTP : ça ajouterait `@adonisjs/mail`, absent
-   aujourd'hui, pour un canal que personne n'a demandé.
+1. ~~Un webhook générique d'abord, pas trois intégrations.~~ **Révisé : ntfy
+   spécifiquement, pas un webhook générique.** La première version postait une
+   charge JSON à plat (`content`/`title`/`message`) directement sur l'URL
+   configurée, en espérant qu'elle satisfasse Discord, ntfy et Gotify à la
+   fois. En usage réel, ça ne fonctionnait pour aucun des trois de façon
+   satisfaisante — et surtout, ntfy ne parse un JSON structuré qu'à la racine
+   du serveur (`POST /`, `topic` en tant que champ JSON), pas sur l'URL du
+   topic : poster le JSON sur l'URL du topic publie le JSON entier tel quel
+   comme texte du message (cf. https://docs.ntfy.sh/publish/#publish-as-json).
+   `WebhookNotifier` cible maintenant explicitement l'API JSON de ntfy —
+   tags/emoji, priority, click, attach, actions — et rejette une URL qui n'a
+   pas la forme `https://host/topic`. Pas de SMTP : ça ajouterait
+   `@adonisjs/mail`, absent aujourd'hui, pour un canal que personne n'a
+   demandé.
 
 2. **Trois interrupteurs, pas un flux d'événements brut.** L'utilisateur
    choisit ce qu'il veut recevoir : requête disponible, requête en échec,
@@ -55,18 +63,35 @@ n'existe.
    `auth_settings` : un id fixe qui est la clé primaire, et c'est toute
    l'application de la contrainte.
 
-4. **L'URL de webhook est un secret** — elle est chiffrée en base via
-   `encryptSecret`, comme le client secret OIDC, et n'est **jamais** renvoyée
-   au client : le DTO expose `hasWebhookUrl: boolean`, comme
-   `ServarrInstanceDto.hasApiKey`. Une URL de webhook Discord est un jeton
-   d'écriture, pas une adresse publique.
+4. **L'URL de webhook (le topic ntfy) est un secret** — elle est chiffrée en
+   base via `encryptSecret`, comme le client secret OIDC, et n'est **jamais**
+   renvoyée au client : le DTO expose `hasWebhookUrl: boolean`, comme
+   `ServarrInstanceDto.hasApiKey`. Sur un topic ntfy ouvert, son nom est toute
+   la protection d'accès — même traitement pour le token/mot de passe de
+   l'authentification optionnelle du topic (`NotificationAuth`, décision 5).
+
+5. **Authentification optionnelle du topic** (`none` / `token` / `basic`,
+   `NotificationAuth`) — pour un topic ntfy self-hosted derrière un contrôle
+   d'accès : `token` devient `Authorization: Bearer`, `username`/`password`
+   deviennent `Authorization: Basic`. Token et mot de passe suivent la même
+   règle que l'URL du webhook : jamais renvoyés au client, omis en sauvegarde
+   = conservés.
 
 ### Modèle
 
 ```ts
 // domain/notifications/notification.vo.ts
 type NotificationLevel = 'info' | 'success' | 'error'
-interface Notification { title: string; body: string; level: NotificationLevel }
+interface NotificationAction { label: string; url: string }
+interface Notification {
+  title: string
+  body: string
+  level: NotificationLevel
+  clickUrl?: string   // ntfy `click` — tap ouvre cette URL
+  imageUrl?: string   // ntfy `attach` — non peuplé pour l'instant, aucun
+                       // abonné ne dispose encore d'une affiche
+  actions?: NotificationAction[]  // ntfy `actions`, rendu en boutons
+}
 
 // domain/notifications/interfaces/notifier.interface.ts
 interface Notifier { notify(notification: Notification): Promise<Result<void, NotificationError>> }
@@ -74,6 +99,8 @@ interface Notifier { notify(notification: Notification): Promise<Result<void, No
 // domain/notifications/notification-settings.aggregate.ts
 interface NotificationSettingsProps {
   webhookUrl: Url | null
+  auth: NotificationAuth   // none | token | basic — cf. décision 5
+  onRequestCreated: boolean
   onRequestAvailable: boolean
   onRequestFailed: boolean
   onInstanceUnreachable: boolean
@@ -88,7 +115,9 @@ interface NotificationSettingsProps {
 | `PUT` | `/api/settings/notifications` | `adminOnly` |
 | `POST` | `/api/settings/notifications/test` | `adminOnly` |
 
-`NotificationSettingsDto = { hasWebhookUrl, onRequestAvailable, onRequestFailed, onInstanceUnreachable }`.
+`NotificationSettingsDto = { hasWebhookUrl, authMode, hasToken, username, hasPassword, onRequestCreated, onRequestAvailable, onRequestFailed, onInstanceUnreachable }`
+(`username` n'est pas secret et est renvoyé tel quel ; `hasToken`/`hasPassword`
+suivent la règle de `hasWebhookUrl`).
 
 ## 3. Santé des instances
 

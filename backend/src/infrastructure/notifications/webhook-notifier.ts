@@ -40,13 +40,16 @@ export class WebhookNotifier implements Notifier {
 
     const target = resolveNtfyTarget(settings.webhookUrl.value)
     if (!target) {
+      // Never log or echo back the URL itself: like the webhook URL at rest,
+      // it's a write token (the topic name is the whole access control for
+      // an open ntfy topic) — same treatment `notification-settings.dto.ts`
+      // already gives it.
       logger.error(
-        { webhookUrl: settings.webhookUrl.value },
-        `Notification "${notification.title}" not sent: "${settings.webhookUrl.value}" does not look like an ntfy topic URL.`,
+        `Notification "${notification.title}" not sent: the configured webhook URL is not a valid ntfy topic URL.`,
       )
       return Result.err({
         type: 'delivery_failed',
-        message: `"${settings.webhookUrl.value}" does not look like an ntfy topic URL (https://host/topic).`,
+        message: 'The configured webhook URL is not a valid ntfy topic URL (https://host/topic).',
       })
     }
 
