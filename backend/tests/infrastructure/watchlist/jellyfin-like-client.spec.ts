@@ -87,7 +87,7 @@ test.group('JellyfinLikeClient — authenticate', () => {
     assert,
     cleanup,
   }) => {
-    let capturedHeaders: HeadersInit | undefined
+    let capturedHeaders: RequestInit['headers']
     cleanup(
       stubFetch((_url, init) => {
         capturedHeaders = init?.headers

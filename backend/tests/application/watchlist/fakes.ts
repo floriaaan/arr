@@ -63,7 +63,7 @@ export class FakeWatchlistProviderResolver implements WatchlistProviderResolver 
 }
 
 export class InMemoryWatchlistSeenItemsRepository implements WatchlistSeenItemsRepository {
-  private seen = new Set<string>()
+  private seen = new Map<string, { mediaRequestId: string | null; firstSeenAt: Date }>()
 
   private key(accountId: string, externalId: ExternalId): string {
     return `${accountId}:${externalId.scheme}:${externalId.value}`
@@ -73,8 +73,13 @@ export class InMemoryWatchlistSeenItemsRepository implements WatchlistSeenItemsR
     return this.seen.has(this.key(accountId, externalId))
   }
 
-  async markSeen(accountId: string, externalId: ExternalId): Promise<void> {
-    this.seen.add(this.key(accountId, externalId))
+  async markSeen(
+    accountId: string,
+    externalId: ExternalId,
+    mediaRequestId: string | null,
+    now: Date,
+  ): Promise<void> {
+    this.seen.set(this.key(accountId, externalId), { mediaRequestId, firstSeenAt: now })
   }
 }
 

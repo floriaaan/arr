@@ -10,6 +10,7 @@ import { serializeError } from '#presentation/shared/error-serializer'
 import { toUserMediaAccountDto } from './user-media-account.dto.js'
 import { linkMediaServerAccountValidator } from './link-media-server-account.validator.js'
 import { completePlexLinkValidator } from './complete-plex-link.validator.js'
+import { setWatchlistEnabledValidator } from './set-watchlist-enabled.validator.js'
 import type { HttpContext } from '@adonisjs/core/http'
 
 export default class WatchlistAccountsController {
@@ -89,13 +90,14 @@ export default class WatchlistAccountsController {
 
   async setEnabled(ctx: HttpContext) {
     const user = requireAuthenticatedUser(ctx)
+    const payload = await ctx.request.validateUsing(setWatchlistEnabledValidator)
     const repository = await app.container.make('watchlist.accountRepository')
     const clock = await app.container.make('shared.clock')
 
     const result = await new SetWatchlistEnabled(repository, clock).execute({
       id: ctx.params.id,
       userId: user.id,
-      enabled: Boolean(ctx.request.input('enabled')),
+      enabled: payload.enabled,
     })
     if (!result.ok) {
       const { status, body } = serializeError(result.error)
