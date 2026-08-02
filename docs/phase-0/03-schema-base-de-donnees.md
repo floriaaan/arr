@@ -4,7 +4,10 @@ PostgreSQL 16, une seule base, deux propriétaires de tables (cf.
 [ADR-0005](../adr/0005-better-auth-tables-identite.md)) :
 
 - **better-auth** possède `user`, `session`, `account`, `verification` — générées
-  par `npx @better-auth/cli generate` (Phase 3/4), jamais éditées à la main.
+  par `npx @better-auth/cli@latest generate` (Phase 3/4), jamais éditées à la
+  main. Le CLI s'invoque bien par `npx` et n'est **pas** une devDependency :
+  la version publiée épingle un `better-auth` obsolète et vulnérable
+  ([ADR-0009](../adr/0009-suppression-better-auth-cli.md)).
 - **Lucid** possède tout le reste, via des migrations classiques.
 
 ## Tables better-auth (générées, forme indicative)
