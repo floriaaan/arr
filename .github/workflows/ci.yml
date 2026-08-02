@@ -5,8 +5,14 @@ on:
     branches: [main]
   pull_request:
 
+# A newer push to the same branch makes the in-flight run obsolete.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
+    name: Lint, typecheck, tests, boundaries
     runs-on: ubuntu-latest
 
     services:
@@ -41,12 +47,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Before setup-node, so that `cache: pnpm` finds the pnpm shim on PATH
+      # and can resolve the store directory.
+      - name: Enable corepack
+        run: corepack enable
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-
-      - name: Enable corepack
-        run: corepack enable
+          cache: pnpm
 
       - uses: arduino/setup-task@v2
         with:
@@ -58,3 +67,32 @@ jobs:
 
       - name: Run checks (lint + typecheck + tests + boundary lint)
         run: task check
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    # `tsc --noEmit` in `task check` does not exercise the real build pipelines
+    # (AdonisJS assembler, Vite/TanStack Start), so a green check can still ship
+    # a broken build. No database needed here.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build both packages
+        run: task build
