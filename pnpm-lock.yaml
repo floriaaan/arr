@@ -150,9 +150,6 @@ importers:
       cmdk:
         specifier: ^1.1.1
         version: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      is-odd:
-        specifier: ^3.0.1
-        version: 3.0.1
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.8)
@@ -4379,17 +4376,9 @@ packages:
     resolution: {integrity: sha512-K55T22lfpQ63N4KEN57jZUAaAYqYHEe8veb/TycJRk9DdSCLLcovXz/mL6mOnhQaZsQGwPhuFopdQIlqGSEjiQ==}
     engines: {node: '>=18'}
 
-  is-number@6.0.0:
-    resolution: {integrity: sha512-Wu1VHeILBK8KAWJUAiSZQX94GmOE45Rg6/538fKwiloUu21KncEkYGPqob2oSZ5mUT73vLGrHQjKw3KMPwfDzg==}
-    engines: {node: '>=0.10.0'}
-
   is-number@7.0.0:
     resolution: {integrity: sha512-41Cifkg6e8TylSpdtTpeLVMqvSBEVzTttHvERD741+pnZ8ANv0004MRL43QKPDlK9cGvNp6NZWZUBlbGXYxxng==}
     engines: {node: '>=0.12.0'}
-
-  is-odd@3.0.1:
-    resolution: {integrity: sha512-CQpnWPrDwmP1+SMHXZhtLtJv90yiyVfluGsX5iNCVkrhQtU3TQHsUWPG9wkdk9Lgd5yNpAg9jQEo90CBaXgWMA==}
-    engines: {node: '>=4'}
 
   is-path-inside@4.0.0:
     resolution: {integrity: sha512-lJJV/5dYS+RcL8uQdBDW9c9uWFLLBNRyFhnAKXw5tVqLlKZ4RMGZKv+YQ/IA3OhD+RpbJa1LLFM1FQPGyIXvOA==}
@@ -10312,13 +10301,7 @@ snapshots:
       global-directory: 4.0.1
       is-path-inside: 4.0.0
 
-  is-number@6.0.0: {}
-
   is-number@7.0.0: {}
-
-  is-odd@3.0.1:
-    dependencies:
-      is-number: 6.0.0
 
   is-path-inside@4.0.0: {}
 
