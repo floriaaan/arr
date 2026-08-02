@@ -7,6 +7,7 @@ import { useCompletePlexLink } from '#application/watchlist/complete-plex-link.m
 import { useLinkMediaServerAccount } from '#application/watchlist/link-media-server-account.mutation'
 import { useSetWatchlistAccountEnabled } from '#application/watchlist/set-watchlist-account-enabled.mutation'
 import { useUnlinkMediaAccount } from '#application/watchlist/unlink-media-account.mutation'
+import { useMediaServers } from '#application/settings/media-servers.query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '#presentation/ui/card'
 import { Button } from '#presentation/ui/button'
 import { Badge } from '#presentation/ui/badge'
@@ -161,19 +162,28 @@ function AccountRow({
 function MediaServerCard({
   kind,
   account,
+  defaultBaseUrl,
 }: {
   kind: Extract<MediaAccountKind, 'jellyfin' | 'emby'>
   account?: UserMediaAccountDto
+  /** Pre-fills from Settings → Media servers, if that server's URL is already configured there. */
+  defaultBaseUrl?: string
 }) {
   const meta = KIND_META[kind]
   const Icon = meta.icon
   const [expanded, setExpanded] = useState(false)
-  const [baseUrl, setBaseUrl] = useState('')
+  const [baseUrl, setBaseUrl] = useState(defaultBaseUrl ?? '')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const link = useLinkMediaServerAccount()
   const setEnabled = useSetWatchlistAccountEnabled()
   const unlink = useUnlinkMediaAccount()
+
+  // The media servers query can still be loading on first render — fill in
+  // once it resolves, but never stomp on something the user already typed.
+  useEffect(() => {
+    if (defaultBaseUrl && baseUrl === '') setBaseUrl(defaultBaseUrl)
+  }, [defaultBaseUrl])
 
   function handleLink() {
     link.mutate(
@@ -270,6 +280,12 @@ export function LinkedAccountsPanel() {
   const accounts = useMyMediaAccounts()
   const byKind = new Map(accounts.data?.map((account) => [account.kind, account]))
 
+  // Settings → Media servers already has the admin-configured base URL for
+  // each kind, if any — reuse it here so linking doesn't ask for the same
+  // URL twice.
+  const mediaServers = useMediaServers()
+  const baseUrlByKind = new Map(mediaServers.data?.map((server) => [server.kind, server.baseUrl]))
+
   return (
     <div className="space-y-4">
       <div>
@@ -281,8 +297,16 @@ export function LinkedAccountsPanel() {
       </div>
       <div className="space-y-3">
         <PlexCard account={byKind.get('plex')} />
-        <MediaServerCard kind="jellyfin" account={byKind.get('jellyfin')} />
-        <MediaServerCard kind="emby" account={byKind.get('emby')} />
+        <MediaServerCard
+          kind="jellyfin"
+          account={byKind.get('jellyfin')}
+          defaultBaseUrl={baseUrlByKind.get('jellyfin')}
+        />
+        <MediaServerCard
+          kind="emby"
+          account={byKind.get('emby')}
+          defaultBaseUrl={baseUrlByKind.get('emby')}
+        />
       </div>
     </div>
   )
