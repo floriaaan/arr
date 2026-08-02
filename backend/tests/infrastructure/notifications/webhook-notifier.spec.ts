@@ -32,6 +32,7 @@ function settingsWith(webhookUrl: string | null, auth = NotificationAuth.none())
     onRequestAvailable: true,
     onRequestFailed: true,
     onInstanceUnreachable: true,
+    onRequestPendingApproval: true,
   })
   return settings
 }

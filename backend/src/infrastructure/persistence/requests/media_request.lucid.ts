@@ -46,6 +46,24 @@ export default class MediaRequestLucidModel extends BaseModel {
   @column()
   declare failureReason: string | null
 
+  @column()
+  declare origin: string
+
+  @column()
+  declare requiresApproval: boolean
+
+  @column.dateTime()
+  declare approvedAt: DateTime | null
+
+  @column()
+  declare approvedByUserId: string | null
+
+  @column.dateTime()
+  declare rejectedAt: DateTime | null
+
+  @column()
+  declare rejectionReason: string | null
+
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 

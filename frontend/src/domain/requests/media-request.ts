@@ -12,6 +12,12 @@ export interface MediaRequest {
   status: RequestStatus
   progress: RequestProgress | null
   failureReason: string | null
+  origin: 'manual' | 'watchlist'
+  requiresApproval: boolean
+  approvedAt: string | null
+  approvedByUserId: string | null
+  rejectedAt: string | null
+  rejectionReason: string | null
   createdAt: string
   updatedAt: string
 }

@@ -11,6 +11,7 @@ export interface NotificationSettingsProps {
   onRequestAvailable: boolean
   onRequestFailed: boolean
   onInstanceUnreachable: boolean
+  onRequestPendingApproval: boolean
 }
 
 /**
@@ -36,6 +37,7 @@ export class NotificationSettings extends AggregateRoot<string> {
       onRequestAvailable: true,
       onRequestFailed: true,
       onInstanceUnreachable: true,
+      onRequestPendingApproval: true,
     })
   }
 
@@ -65,6 +67,10 @@ export class NotificationSettings extends AggregateRoot<string> {
 
   get onInstanceUnreachable(): boolean {
     return this.props.onInstanceUnreachable
+  }
+
+  get onRequestPendingApproval(): boolean {
+    return this.props.onRequestPendingApproval
   }
 
   configure(props: NotificationSettingsProps): void {

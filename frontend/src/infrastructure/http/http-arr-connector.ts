@@ -14,6 +14,7 @@ import {
   mediaServerDtoSchema,
   discoveredInstanceSchema,
   notificationSettingsDtoSchema,
+  requestApprovalSettingsDtoSchema,
   qualityProfileRecordSchema,
   downloadClientRecordSchema,
   indexerRecordSchema,
@@ -44,6 +45,7 @@ import type {
   NotificationSettingsDraft,
   NotificationTestResult,
 } from '#domain/settings/notification-settings'
+import type { RequestApprovalSettingsDto } from '#domain/settings/request-approval-settings'
 import type { DownloadClientRecord } from '#domain/settings/download-client-record'
 import type { IndexerRecord } from '#domain/settings/indexer-record'
 import type { MediaKind } from '#domain/catalog/media-kind'
@@ -129,6 +131,20 @@ export class HttpArrConnector implements ArrConnector {
     const response = await this.http.post('/api/auth/admin/set-role', { userId, role })
     if (!response.ok) return { ok: false, error: await toApiError(response) }
     return { ok: true, value: setUserRoleResponseSchema.parse(await response.json()) }
+  }
+
+  async listUserRequestPreferences(): Promise<Record<string, boolean | null>> {
+    const response = await this.http.get('/api/settings/user-request-preferences')
+    if (!response.ok) throw new Error((await toApiError(response)).message)
+    const body = (await response.json()) as { preferences: Record<string, boolean | null> }
+    return body.preferences
+  }
+
+  async setUserAutoApprove(userId: string, autoApprove: boolean | null): Promise<void> {
+    const response = await this.http.put(`/api/settings/user-request-preferences/${userId}`, {
+      autoApprove,
+    })
+    if (!response.ok) throw new Error((await toApiError(response)).message)
   }
 
   async getOnboardingState(): Promise<{ status: OnboardingStatus }> {
@@ -474,6 +490,20 @@ export class HttpArrConnector implements ArrConnector {
     return body
   }
 
+  async getRequestApprovalSettings() {
+    const response = await this.http.get('/api/settings/request-approval')
+    if (!response.ok) throw new Error((await toApiError(response)).message)
+    const body = (await response.json()) as { requestApproval: unknown }
+    return requestApprovalSettingsDtoSchema.parse(body.requestApproval)
+  }
+
+  async saveRequestApprovalSettings(draft: RequestApprovalSettingsDto) {
+    const response = await this.http.put('/api/settings/request-approval', draft)
+    if (!response.ok) throw new Error((await toApiError(response)).message)
+    const body = (await response.json()) as { requestApproval: unknown }
+    return requestApprovalSettingsDtoSchema.parse(body.requestApproval)
+  }
+
   async getSso() {
     const response = await this.http.get('/api/settings/sso')
     const body = (await response.json()) as { oidc: unknown }
@@ -532,11 +562,16 @@ export class HttpArrConnector implements ArrConnector {
   }
 
   async cancelRequest(id: string) {
-    const response = await this.http.post(`/api/requests/${id}/cancel`)
+    return this.parseRequestActionResponse(await this.http.post(`/api/requests/${id}/cancel`))
+  }
+
+  /**
+   * 409 on cancel/approve/reject puts `currentStatus` as a sibling of
+   * `type`/`message`, not under `details` like every other error body — read
+   * it directly instead of losing it to `toApiError`'s stricter schema.
+   */
+  private async parseRequestActionResponse(response: Response) {
     if (!response.ok) {
-      // 409 on this endpoint puts `currentStatus` as a sibling of
-      // `type`/`message`, not under `details` like every other error body —
-      // read it directly instead of losing it to `toApiError`'s stricter schema.
       const body: unknown = await response.json().catch(() => null)
       const conflict = body as {
         error?: { type?: string; message?: string; currentStatus?: string }
@@ -545,7 +580,7 @@ export class HttpArrConnector implements ArrConnector {
         conflict.error?.type === 'not_cancellable'
           ? {
               type: conflict.error.type,
-              message: conflict.error.message ?? 'This request cannot be cancelled.',
+              message: conflict.error.message ?? 'This request cannot be updated.',
               details: { currentStatus: conflict.error.currentStatus },
               status: response.status,
             }
@@ -558,6 +593,16 @@ export class HttpArrConnector implements ArrConnector {
     }
     const body = (await response.json()) as { request: unknown }
     return { ok: true as const, value: mediaRequestDtoSchema.parse(body.request) }
+  }
+
+  async approveRequest(id: string) {
+    return this.parseRequestActionResponse(await this.http.post(`/api/requests/${id}/approve`))
+  }
+
+  async rejectRequest(id: string, reason: string) {
+    return this.parseRequestActionResponse(
+      await this.http.post(`/api/requests/${id}/reject`, { reason }),
+    )
   }
 
   async listRequestEpisodes(id: string) {

@@ -1,12 +1,23 @@
 import { useState } from 'react'
-import { Activity, CheckCircle2, Clapperboard, ListChecks, Music, Tv, XCircle } from 'lucide-react'
+import {
+  Activity,
+  CheckCircle2,
+  Clapperboard,
+  ListChecks,
+  Music,
+  Tv,
+  UserCheck,
+  XCircle,
+} from 'lucide-react'
 import { useRequests } from '#application/requests/requests.query'
+import { useSession } from '#application/identity/session.query'
 import { RequestCard } from './request-card'
 import { EmptyState } from '#presentation/shared/empty-state'
 import { ErrorState } from '#presentation/shared/error-state'
 import { Skeleton } from '#presentation/ui/skeleton'
 import { Card, CardContent } from '#presentation/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '#presentation/ui/tabs'
+import { Button } from '#presentation/ui/button'
 import { cn } from '#presentation/shared/utils'
 import { ACTIVE_REQUEST_STATUSES } from '#domain/requests/request-filter'
 import type { RequestFilter } from '#domain/requests/request-filter'
@@ -38,6 +49,9 @@ const STAT_CARDS = [
 
 export function RequestsTimeline({ filter = {} }: { filter?: RequestFilter }) {
   const [kindTab, setKindTab] = useState<KindTab>('all')
+  const [pendingApprovalOnly, setPendingApprovalOnly] = useState(false)
+  const session = useSession()
+  const isAdmin = session.data?.user?.role === 'admin'
   const { data, isLoading, isError, refetch } = useRequests(filter)
 
   if (isLoading) {
@@ -61,7 +75,9 @@ export function RequestsTimeline({ filter = {} }: { filter?: RequestFilter }) {
   }
 
   const stats = statsFrom(data)
-  const visible = data.filter((request) => kindTab === 'all' || request.kind === kindTab)
+  const visible = data
+    .filter((request) => kindTab === 'all' || request.kind === kindTab)
+    .filter((request) => !pendingApprovalOnly || request.requiresApproval)
 
   return (
     <div className="space-y-6">
@@ -79,16 +95,29 @@ export function RequestsTimeline({ filter = {} }: { filter?: RequestFilter }) {
         ))}
       </div>
 
-      <Tabs value={kindTab} onValueChange={(value) => setKindTab(value as KindTab)}>
-        <TabsList>
-          {KIND_TABS.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5">
-              <tab.icon className="size-3.5" />
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Tabs value={kindTab} onValueChange={(value) => setKindTab(value as KindTab)}>
+          <TabsList>
+            {KIND_TABS.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5">
+                <tab.icon className="size-3.5" />
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        {isAdmin ? (
+          <Button
+            type="button"
+            variant={pendingApprovalOnly ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setPendingApprovalOnly((value) => !value)}
+          >
+            <UserCheck className="size-4" />
+            Needs approval
+          </Button>
+        ) : null}
+      </div>
 
       {visible.length === 0 ? (
         <EmptyState title="Nothing here" description="No requests match this filter." />

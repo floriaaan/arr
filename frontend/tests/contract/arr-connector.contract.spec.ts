@@ -96,6 +96,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
             onRequestAvailable: true,
             onRequestFailed: true,
             onInstanceUnreachable: true,
+            onRequestPendingApproval: true,
           }
           return {
             'GET /api/settings/notifications': () => json({ notifications: settings }),
@@ -110,6 +111,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
                 onRequestAvailable: boolean
                 onRequestFailed: boolean
                 onInstanceUnreachable: boolean
+                onRequestPendingApproval: boolean
               }
               if (draft.authMode === 'token' && draft.token === undefined && !settings.hasToken) {
                 return json({ error: { type: 'validation_failed', message: 'A token is required.' } }, 400)
@@ -128,6 +130,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
                 onRequestAvailable: draft.onRequestAvailable,
                 onRequestFailed: draft.onRequestFailed,
                 onInstanceUnreachable: draft.onInstanceUnreachable,
+                onRequestPendingApproval: draft.onRequestPendingApproval,
               }
               return json({ notifications: settings })
             },
@@ -347,6 +350,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
       onRequestAvailable: true,
       onRequestFailed: false,
       onInstanceUnreachable: true,
+      onRequestPendingApproval: true,
     })
 
     expect(saved.ok).toBe(true)
@@ -372,6 +376,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
       onRequestAvailable: true,
       onRequestFailed: true,
       onInstanceUnreachable: true,
+      onRequestPendingApproval: true,
     })
 
     expect(saved.ok).toBe(true)
@@ -391,6 +396,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
       onRequestAvailable: true,
       onRequestFailed: true,
       onInstanceUnreachable: true,
+      onRequestPendingApproval: true,
     })
 
     expect(saved.ok).toBe(false)
@@ -405,6 +411,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
       onRequestAvailable: true,
       onRequestFailed: true,
       onInstanceUnreachable: true,
+      onRequestPendingApproval: true,
     })
 
     expect(saved.ok).toBe(true)

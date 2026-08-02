@@ -22,6 +22,7 @@ function baseInput() {
     onRequestAvailable: true,
     onRequestFailed: true,
     onInstanceUnreachable: true,
+    onRequestPendingApproval: true,
   }
 }
 

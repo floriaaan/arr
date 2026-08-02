@@ -3,6 +3,8 @@ import type { MediaRequestRepository } from '#domain/requests/interfaces/media-r
 import type { MediaProvisioning } from '#domain/requests/interfaces/media-provisioning.interface'
 import type { MediaLookup } from '#domain/catalog/interfaces/media-lookup.interface'
 import type { ServarrInstanceRepository } from '#domain/settings/interfaces/servarr-instance-repository.interface'
+import type { RequestApprovalSettingsRepository } from '#domain/requests/interfaces/request-approval-settings-repository.interface'
+import type { UserRequestPreferencesRepository } from '#domain/requests/interfaces/user-request-preferences-repository.interface'
 import type { IdGenerator } from '#domain/shared/id-generator.interface'
 import type { Clock } from '#domain/shared/clock.interface'
 import type { EventBus } from '#application/shared/event-bus'
@@ -11,15 +13,20 @@ import type { ServarrKind } from '#domain/settings/servarr-kind.vo'
 import type { ExternalIdScheme } from '#domain/catalog/external-id.vo'
 import type { ValidationError } from '#domain/shared/validation-error'
 import type { ProvisioningError } from '#domain/requests/provisioning-error.vo'
+import type { RequestOrigin } from '#domain/requests/request-origin.vo'
 import { Result } from '#domain/shared/result'
 import { ExternalId } from '#domain/catalog/external-id.vo'
 import { MediaRequest } from '#domain/requests/media-request.aggregate'
+import { resolveRequiresApproval } from './resolve-requires-approval.js'
 
 export interface CreateRequestInput {
   requestedBy: string
+  isAdmin: boolean
   kind: MediaKind
   externalId: { scheme: ExternalIdScheme; value: string }
   instanceId?: string
+  /** Defaults to `'manual'` — `SyncWatchlist` passes `'watchlist'`. */
+  origin?: RequestOrigin
 }
 
 const SERVARR_KIND_BY_MEDIA_KIND: Record<MediaKind, ServarrKind> = {
@@ -45,6 +52,8 @@ export class CreateRequest implements UseCase<
     private readonly provisioning: MediaProvisioning,
     private readonly lookup: MediaLookup,
     private readonly instanceRepository: ServarrInstanceRepository,
+    private readonly approvalSettings: RequestApprovalSettingsRepository,
+    private readonly userPreferences: UserRequestPreferencesRepository,
     private readonly idGenerator: IdGenerator,
     private readonly clock: Clock,
     private readonly eventBus: EventBus,
@@ -63,6 +72,13 @@ export class CreateRequest implements UseCase<
     const detail = await this.lookup.detail(externalId.value)
     if (detail.alreadyManaged) return Result.err('already_managed')
 
+    const requiresApproval = await resolveRequiresApproval(
+      { id: input.requestedBy, isAdmin: input.isAdmin },
+      input.kind,
+      this.approvalSettings,
+      this.userPreferences,
+    )
+
     const request = MediaRequest.request(
       this.idGenerator.next(),
       {
@@ -71,10 +87,17 @@ export class CreateRequest implements UseCase<
         externalId: externalId.value,
         title: detail.title,
         instanceId: instance.value,
+        origin: input.origin ?? 'manual',
+        requiresApproval,
       },
       this.clock.now(),
     )
     await this.repository.save(request)
+
+    if (requiresApproval) {
+      await this.eventBus.publish(request.pullDomainEvents())
+      return Result.ok(request)
+    }
 
     const provisioned = await this.provisioning.submit(request)
     if (!provisioned.ok) {

@@ -14,6 +14,7 @@ import type {
   NotificationSettingsDto,
   NotificationTestResult,
 } from '../settings/notification-settings'
+import type { RequestApprovalSettingsDto } from '../settings/request-approval-settings'
 import type { QualityProfileRecord } from '../settings/quality-profile-record'
 import type { DownloadClientRecord } from '../settings/download-client-record'
 import type { IndexerRecord } from '../settings/indexer-record'
@@ -75,6 +76,9 @@ export interface ArrConnector {
     userId: string,
     role: UserRole,
   ) => Promise<Result<{ user: UserAccount }, ApiError>>
+  // identity — per-user request approval override (cf. docs/phase-7-watchlist-sync, chantier 4)
+  listUserRequestPreferences: () => Promise<Record<string, boolean | null>>
+  setUserAutoApprove: (userId: string, autoApprove: boolean | null) => Promise<void>
 
   // settings — onboarding
   getOnboardingState: () => Promise<{ status: OnboardingStatus }>
@@ -211,6 +215,12 @@ export interface ArrConnector {
   ) => Promise<Result<NotificationSettingsDto, ApiError>>
   testNotification: () => Promise<NotificationTestResult>
 
+  // settings — request approval (cf. docs/phase-7-watchlist-sync, chantier 4)
+  getRequestApprovalSettings: () => Promise<RequestApprovalSettingsDto>
+  saveRequestApprovalSettings: (
+    draft: RequestApprovalSettingsDto,
+  ) => Promise<RequestApprovalSettingsDto>
+
   getSso: () => Promise<{
     issuerUrl: string
     clientId: string
@@ -236,6 +246,8 @@ export interface ArrConnector {
   ) => Promise<Result<MediaRequest, ApiError>>
   getRequest: (id: string) => Promise<MediaRequest | null>
   cancelRequest: (id: string) => Promise<Result<MediaRequest, ApiError>>
+  approveRequest: (id: string) => Promise<Result<MediaRequest, ApiError>>
+  rejectRequest: (id: string, reason: string) => Promise<Result<MediaRequest, ApiError>>
   /** Series only; empty for anything with nothing to unfold. Fetched on expand. */
   listRequestEpisodes: (id: string) => Promise<Result<RequestEpisode[], ApiError>>
 

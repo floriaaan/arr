@@ -82,6 +82,25 @@ export function registerNotificationSubscribers(
   )
 
   bus.subscribe(
+    'RequestPendingApproval',
+    safely(async (event) => {
+      const settings = await deps.settings.get()
+      if (!settings.onRequestPendingApproval || !settings.webhookUrl) return
+
+      const { requestId } = event.payload as { requestId: string }
+      const { title, requestedBy, posterUrl } = await requestInfo(requestId)
+      await deps.notifier.notify({
+        title: '⏳ Approval needed',
+        body: `${title} was requested by ${requestedBy} and is waiting for approval.`,
+        level: 'info',
+        clickUrl: requestsUrl,
+        imageUrl: posterUrl,
+        actions: [{ label: 'Review requests', url: requestsUrl }],
+      })
+    }),
+  )
+
+  bus.subscribe(
     'RequestCompleted',
     safely(async (event) => {
       const settings = await deps.settings.get()

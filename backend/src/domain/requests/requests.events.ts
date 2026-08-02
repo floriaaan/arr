@@ -73,3 +73,14 @@ export function requestCancelled(
 ): DomainEvent<RequestCancelledPayload> {
   return { name: 'RequestCancelled', occurredAt, payload }
 }
+
+export interface RequestPendingApprovalPayload {
+  requestId: string
+}
+
+export function requestPendingApproval(
+  payload: RequestPendingApprovalPayload,
+  occurredAt: Date,
+): DomainEvent<RequestPendingApprovalPayload> {
+  return { name: 'RequestPendingApproval', occurredAt, payload }
+}

@@ -10,6 +10,8 @@ router
     router.get('/:id', [RequestsController, 'show'])
     router.get('/:id/episodes', [RequestsController, 'episodes'])
     router.post('/:id/cancel', [RequestsController, 'cancel'])
+    router.post('/:id/approve', [RequestsController, 'approve'])
+    router.post('/:id/reject', [RequestsController, 'reject'])
   })
   .prefix('/api/requests')
   .use(middleware.authRequired())

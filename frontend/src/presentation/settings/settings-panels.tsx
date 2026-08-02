@@ -14,6 +14,7 @@ import {
   MonitorPlay,
   Bell,
   Send,
+  UserCheck,
 } from 'lucide-react'
 import { useInstances } from '#application/settings/instances.query'
 import { useDeleteInstance } from '#application/settings/delete-instance.mutation'
@@ -24,6 +25,8 @@ import { useMediaServers } from '#application/settings/media-servers.query'
 import { useNotificationSettings } from '#application/settings/notification-settings.query'
 import { useSaveNotificationSettings } from '#application/settings/save-notification-settings.mutation'
 import { useTestNotification } from '#application/settings/test-notification.mutation'
+import { useRequestApprovalSettings } from '#application/settings/request-approval-settings.query'
+import { useSaveRequestApprovalSettings } from '#application/settings/save-request-approval-settings.mutation'
 import { ServiceInstanceForm } from './service-instance-form'
 import { MediaServerForm } from './media-server-form'
 import { UsersPanel } from './users-panel'
@@ -48,6 +51,7 @@ import { MEDIA_SERVER_KINDS } from '#domain/settings/media-server'
 import type { ServarrKind, ServarrInstanceDto } from '#domain/settings/servarr-instance'
 import type { MediaServerDto, MediaServerKind } from '#domain/settings/media-server'
 import type { NotificationAuthMode } from '#domain/settings/notification-settings'
+import type { ApprovalPolicy } from '#domain/settings/request-approval-settings'
 
 const SERVARR_KINDS: readonly ServarrKind[] = ['radarr', 'sonarr', 'lidarr']
 
@@ -385,6 +389,9 @@ function NotificationsPanel() {
   const [onInstanceUnreachable, setOnInstanceUnreachable] = useState(
     notificationSettings.data?.onInstanceUnreachable ?? true,
   )
+  const [onRequestPendingApproval, setOnRequestPendingApproval] = useState(
+    notificationSettings.data?.onRequestPendingApproval ?? true,
+  )
 
   const hasWebhookUrl = notificationSettings.data?.hasWebhookUrl ?? false
   const hasToken = notificationSettings.data?.hasToken ?? false
@@ -401,6 +408,7 @@ function NotificationsPanel() {
         onRequestAvailable,
         onRequestFailed,
         onInstanceUnreachable,
+        onRequestPendingApproval,
       },
       {
         onSuccess: (result) => {
@@ -424,6 +432,7 @@ function NotificationsPanel() {
         onRequestAvailable,
         onRequestFailed,
         onInstanceUnreachable,
+        onRequestPendingApproval,
       },
       {
         onSuccess: () => {
@@ -541,6 +550,13 @@ function NotificationsPanel() {
               />
               <Label>Instance unreachable</Label>
             </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={onRequestPendingApproval}
+                onCheckedChange={setOnRequestPendingApproval}
+              />
+              <Label>Request needs approval</Label>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button onClick={handleSave} disabled={saveNotificationSettings.isPending}>
@@ -562,6 +578,90 @@ function NotificationsPanel() {
               </Button>
             ) : null}
           </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function PolicyRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: ApprovalPolicy
+  onChange: (value: ApprovalPolicy) => void
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <Label>{label}</Label>
+      <Select value={value} onValueChange={(next) => onChange(next as ApprovalPolicy)}>
+        <SelectTrigger className="w-48">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="auto">Auto-approve</SelectItem>
+          <SelectItem value="manual">Requires approval</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
+
+function ApprovalPanel() {
+  const queryClient = useQueryClient()
+  const approvalSettings = useRequestApprovalSettings()
+  const saveApprovalSettings = useSaveRequestApprovalSettings()
+
+  const [moviePolicy, setMoviePolicy] = useState<ApprovalPolicy>(
+    approvalSettings.data?.moviePolicy ?? 'auto',
+  )
+  const [seriesPolicy, setSeriesPolicy] = useState<ApprovalPolicy>(
+    approvalSettings.data?.seriesPolicy ?? 'auto',
+  )
+  const [albumPolicy, setAlbumPolicy] = useState<ApprovalPolicy>(
+    approvalSettings.data?.albumPolicy ?? 'auto',
+  )
+
+  function handleSave() {
+    saveApprovalSettings.mutate(
+      { moviePolicy, seriesPolicy, albumPolicy },
+      {
+        onSuccess: () => {
+          toast.success('Approval settings saved.')
+          void queryClient.invalidateQueries({ queryKey: ['request-approval-settings'] })
+        },
+      },
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight">Approval</h2>
+        <p className="text-sm text-muted-foreground">
+          Decide whether a new request goes straight to your services, or waits for an admin to
+          approve it — per media kind. Applies to every request, whether typed in the search bar
+          or picked up from a watchlist. Admins always bypass this.
+        </p>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Policy per kind</CardTitle>
+          <CardDescription>
+            "Requires approval" leaves a request pending until an admin approves or rejects it
+            from the requests list.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 border-t pt-6">
+          <PolicyRow label="Movies" value={moviePolicy} onChange={setMoviePolicy} />
+          <PolicyRow label="Series" value={seriesPolicy} onChange={setSeriesPolicy} />
+          <PolicyRow label="Music" value={albumPolicy} onChange={setAlbumPolicy} />
+          <Button onClick={handleSave} disabled={saveApprovalSettings.isPending}>
+            <Save className="size-4" />
+            {saveApprovalSettings.isPending ? 'Saving…' : 'Save'}
+          </Button>
         </CardContent>
       </Card>
     </div>
@@ -639,6 +739,10 @@ export function SettingsPanels() {
           <Bell className="size-4" />
           Notifications
         </TabsTrigger>
+        <TabsTrigger value="approval">
+          <UserCheck className="size-4" />
+          Approval
+        </TabsTrigger>
         <TabsTrigger value="sso">
           <KeyRound className="size-4" />
           Single sign-on
@@ -660,6 +764,9 @@ export function SettingsPanels() {
       </TabsContent>
       <TabsContent value="notifications" className="min-w-0">
         <NotificationsPanel />
+      </TabsContent>
+      <TabsContent value="approval" className="min-w-0">
+        <ApprovalPanel />
       </TabsContent>
       <TabsContent value="sso" className="min-w-0">
         <SsoPanel />

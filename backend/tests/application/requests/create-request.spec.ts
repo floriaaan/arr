@@ -16,6 +16,8 @@ import {
   InMemoryServarrInstanceRepository,
   InMemoryMediaRequestRepository,
   FakeMediaProvisioning,
+  InMemoryRequestApprovalSettingsRepository,
+  InMemoryUserRequestPreferencesRepository,
   SequentialIdGenerator,
   FixedClock,
 } from './fakes.js'
@@ -59,17 +61,30 @@ function setup() {
   const provisioning = new FakeMediaProvisioning()
   const lookup = new FakeMediaLookup()
   const instanceRepository = new InMemoryServarrInstanceRepository()
+  const approvalSettings = new InMemoryRequestApprovalSettingsRepository()
+  const userPreferences = new InMemoryUserRequestPreferencesRepository()
   const eventBus = new InMemoryEventBus()
   const useCase = new CreateRequest(
     requestRepository,
     provisioning,
     lookup,
     instanceRepository,
+    approvalSettings,
+    userPreferences,
     new SequentialIdGenerator(),
     new FixedClock(),
     eventBus,
   )
-  return { requestRepository, provisioning, lookup, instanceRepository, eventBus, useCase }
+  return {
+    requestRepository,
+    provisioning,
+    lookup,
+    instanceRepository,
+    approvalSettings,
+    userPreferences,
+    eventBus,
+    useCase,
+  }
 }
 
 test.group('CreateRequest', () => {
@@ -80,6 +95,7 @@ test.group('CreateRequest', () => {
 
     const result = await useCase.execute({
       requestedBy: 'user-1',
+      isAdmin: false,
       kind: 'movie',
       externalId: { scheme: 'tmdb', value: '550' },
     })
@@ -94,6 +110,7 @@ test.group('CreateRequest', () => {
 
     const result = await useCase.execute({
       requestedBy: 'user-1',
+      isAdmin: false,
       kind: 'movie',
       externalId: { scheme: 'tmdb', value: '550' },
     })
@@ -110,11 +127,13 @@ test.group('CreateRequest', () => {
 
     await useCase.execute({
       requestedBy: 'user-1',
+      isAdmin: false,
       kind: 'movie',
       externalId: { scheme: 'tmdb', value: '550' },
     })
     const result = await useCase.execute({
       requestedBy: 'user-2',
+      isAdmin: false,
       kind: 'movie',
       externalId: { scheme: 'tmdb', value: '550' },
     })
@@ -131,6 +150,7 @@ test.group('CreateRequest', () => {
 
     const first = await useCase.execute({
       requestedBy: 'user-1',
+      isAdmin: false,
       kind: 'movie',
       externalId: { scheme: 'tmdb', value: '550' },
     })
@@ -141,6 +161,7 @@ test.group('CreateRequest', () => {
 
     const second = await useCase.execute({
       requestedBy: 'user-1',
+      isAdmin: false,
       kind: 'movie',
       externalId: { scheme: 'tmdb', value: '550' },
     })
@@ -156,6 +177,7 @@ test.group('CreateRequest', () => {
 
     const first = await useCase.execute({
       requestedBy: 'user-1',
+      isAdmin: false,
       kind: 'movie',
       externalId: { scheme: 'tmdb', value: '550' },
     })
@@ -166,6 +188,7 @@ test.group('CreateRequest', () => {
 
     const second = await useCase.execute({
       requestedBy: 'user-1',
+      isAdmin: false,
       kind: 'movie',
       externalId: { scheme: 'tmdb', value: '550' },
     })
@@ -181,6 +204,7 @@ test.group('CreateRequest', () => {
 
     const result = await useCase.execute({
       requestedBy: 'user-1',
+      isAdmin: false,
       kind: 'movie',
       externalId: { scheme: 'tmdb', value: '550' },
     })
@@ -204,6 +228,7 @@ test.group('CreateRequest', () => {
 
     const result = await useCase.execute({
       requestedBy: 'user-1',
+      isAdmin: false,
       kind: 'movie',
       externalId: { scheme: 'tmdb', value: '550' },
     })
@@ -212,5 +237,71 @@ test.group('CreateRequest', () => {
     const persisted = await requestRepository.findById('id-1')
     assert.equal(persisted?.status, 'failed')
     assert.equal(persisted?.failureReason, 'Radarr is down')
+  })
+})
+
+test.group('CreateRequest — approval policy', () => {
+  test('a manual-policy kind stays pending and is never submitted', async ({ assert }) => {
+    const { lookup, instanceRepository, approvalSettings, useCase } = setup()
+    lookup.detailResult = aMediaDetail()
+    await anActiveRadarrInstance(instanceRepository)
+    const settings = await approvalSettings.get()
+    settings.configure({ moviePolicy: 'manual', seriesPolicy: 'auto', albumPolicy: 'auto' })
+    await approvalSettings.save(settings)
+
+    const result = await useCase.execute({
+      requestedBy: 'user-1',
+      isAdmin: false,
+      kind: 'movie',
+      externalId: { scheme: 'tmdb', value: '550' },
+    })
+
+    assert.isTrue(result.ok)
+    if (result.ok) {
+      assert.equal(result.value.status, 'pending')
+      assert.isTrue(result.value.requiresApproval)
+    }
+  })
+
+  test('an admin bypasses a manual policy', async ({ assert }) => {
+    const { lookup, instanceRepository, approvalSettings, provisioning, useCase } = setup()
+    lookup.detailResult = aMediaDetail()
+    await anActiveRadarrInstance(instanceRepository)
+    const settings = await approvalSettings.get()
+    settings.configure({ moviePolicy: 'manual', seriesPolicy: 'auto', albumPolicy: 'auto' })
+    await approvalSettings.save(settings)
+    provisioning.nextResult = Result.ok(ExternalRef.create('instance-1', 'remote-1'))
+
+    const result = await useCase.execute({
+      requestedBy: 'admin-1',
+      isAdmin: true,
+      kind: 'movie',
+      externalId: { scheme: 'tmdb', value: '550' },
+    })
+
+    assert.isTrue(result.ok)
+    if (result.ok) assert.equal(result.value.status, 'submitted')
+  })
+
+  test('a per-user override wins over the kind policy', async ({ assert }) => {
+    const { lookup, instanceRepository, approvalSettings, userPreferences, provisioning, useCase } =
+      setup()
+    lookup.detailResult = aMediaDetail()
+    await anActiveRadarrInstance(instanceRepository)
+    const settings = await approvalSettings.get()
+    settings.configure({ moviePolicy: 'manual', seriesPolicy: 'auto', albumPolicy: 'auto' })
+    await approvalSettings.save(settings)
+    await userPreferences.setAutoApprove('user-1', true)
+    provisioning.nextResult = Result.ok(ExternalRef.create('instance-1', 'remote-1'))
+
+    const result = await useCase.execute({
+      requestedBy: 'user-1',
+      isAdmin: false,
+      kind: 'movie',
+      externalId: { scheme: 'tmdb', value: '550' },
+    })
+
+    assert.isTrue(result.ok)
+    if (result.ok) assert.equal(result.value.status, 'submitted')
   })
 })
