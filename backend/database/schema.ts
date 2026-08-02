@@ -438,6 +438,48 @@ export class UserSchema extends BaseModel {
   declare updatedAt: DateTime
 }
 
+export class UserMediaAccountSchema extends BaseModel {
+  static $columns = [
+    'accessTokenEncrypted',
+    'baseUrl',
+    'createdAt',
+    'externalUserId',
+    'id',
+    'kind',
+    'lastSyncError',
+    'lastSyncedAt',
+    'updatedAt',
+    'userId',
+    'username',
+    'watchlistEnabled',
+  ] as const
+  $columns = UserMediaAccountSchema.$columns
+  @column()
+  declare accessTokenEncrypted: string
+  @column()
+  declare baseUrl: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare externalUserId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare lastSyncError: string | null
+  @column.dateTime()
+  declare lastSyncedAt: DateTime | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare userId: string
+  @column()
+  declare username: string
+  @column()
+  declare watchlistEnabled: boolean
+}
+
 export class UserRequestPreferenceSchema extends BaseModel {
   static $columns = ['autoApprove', 'createdAt', 'updatedAt', 'userId'] as const
   $columns = UserRequestPreferenceSchema.$columns
@@ -466,4 +508,52 @@ export class VerificationSchema extends BaseModel {
   declare updatedAt: DateTime
   @column()
   declare value: string
+}
+
+export class WatchlistSeenItemSchema extends BaseModel {
+  static $columns = [
+    'externalIdScheme',
+    'externalIdValue',
+    'firstSeenAt',
+    'id',
+    'mediaRequestId',
+    'userMediaAccountId',
+  ] as const
+  $columns = WatchlistSeenItemSchema.$columns
+  @column()
+  declare externalIdScheme: string
+  @column()
+  declare externalIdValue: string
+  @column.dateTime()
+  declare firstSeenAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare mediaRequestId: string | null
+  @column()
+  declare userMediaAccountId: string
+}
+
+export class WatchlistSettingSchema extends BaseModel {
+  static $columns = [
+    'createdAt',
+    'enabled',
+    'id',
+    'intervalMinutes',
+    'maxNewRequestsPerRun',
+    'updatedAt',
+  ] as const
+  $columns = WatchlistSettingSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare enabled: boolean
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare intervalMinutes: number
+  @column()
+  declare maxNewRequestsPerRun: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
 }

@@ -29,6 +29,15 @@ import type {
   NotificationTestResult,
 } from '#domain/settings/notification-settings'
 import type { RequestApprovalSettingsDto } from '#domain/settings/request-approval-settings'
+import type { WatchlistSettingsDto } from '#domain/settings/watchlist-settings'
+import type {
+  MediaAccountKind,
+  UserMediaAccountDto,
+  UserMediaAccountAdminDto,
+  PlexPin,
+  PlexLinkStart,
+  PlexLinkResult,
+} from '#domain/watchlist/user-media-account'
 import type { QualityProfileRecord } from '#domain/settings/quality-profile-record'
 import type { DownloadClientRecord } from '#domain/settings/download-client-record'
 import type { IndexerRecord } from '#domain/settings/indexer-record'
@@ -417,6 +426,12 @@ export class FakeArrConnector implements ArrConnector {
     albumPolicy: 'auto',
   }
   private readonly userAutoApprove = new Map<string, boolean | null>()
+  private readonly mediaAccounts = new Map<string, UserMediaAccountDto & { userId: string }>()
+  private watchlistSettings: WatchlistSettingsDto = {
+    enabled: true,
+    intervalMinutes: 60,
+    maxNewRequestsPerRun: 20,
+  }
   private ssoConfig: (OidcConfigInput & { claimsMapping?: Record<string, string> }) | null = null
   private readonly requests = new Map<string, MediaRequest>()
   private readonly removedLibraryItems = new Set<string>()
@@ -852,6 +867,115 @@ export class FakeArrConnector implements ArrConnector {
   ): Promise<RequestApprovalSettingsDto> {
     this.requestApprovalSettings = draft
     return this.requestApprovalSettings
+  }
+
+  async listMyMediaAccounts(): Promise<UserMediaAccountDto[]> {
+    const userId = this.user?.id ?? 'fake-user'
+    return [...this.mediaAccounts.values()].filter((account) => account.userId === userId)
+  }
+
+  /** No real PIN flow in fake mode — the pin is cosmetic, `completePlexLink` links immediately. */
+  async startPlexLink(): Promise<Result<PlexLinkStart, ApiError>> {
+    const pin: PlexPin = { id: 1, code: 'FAKE', clientIdentifier: 'fake-client' }
+    return {
+      ok: true,
+      value: { pin, authUrl: `https://app.plex.tv/auth#?code=${pin.code}` },
+    }
+  }
+
+  async completePlexLink(_pin: PlexPin): Promise<Result<PlexLinkResult, ApiError>> {
+    const userId = this.user?.id ?? 'fake-user'
+    const existing = [...this.mediaAccounts.values()].find(
+      (a) => a.userId === userId && a.kind === 'plex',
+    )
+    const account: UserMediaAccountDto & { userId: string } = {
+      id: existing?.id ?? crypto.randomUUID(),
+      userId,
+      kind: 'plex',
+      username: this.user?.email.split('@')[0] ?? 'plex-user',
+      baseUrl: null,
+      watchlistEnabled: true,
+      lastSyncedAt: null,
+      lastSyncError: null,
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
+    }
+    this.mediaAccounts.set(account.id, account)
+    return { ok: true, value: { status: 'linked', account } }
+  }
+
+  async linkMediaServerAccount(
+    kind: Extract<MediaAccountKind, 'jellyfin' | 'emby'>,
+    baseUrl: string,
+    username: string,
+    _password: string,
+  ): Promise<Result<UserMediaAccountDto, ApiError>> {
+    if (!/^https?:\/\//.test(baseUrl)) {
+      return {
+        ok: false,
+        error: { type: 'validation_failed', message: `"${baseUrl}" is not a valid URL`, status: 400 },
+      }
+    }
+    const userId = this.user?.id ?? 'fake-user'
+    const existing = [...this.mediaAccounts.values()].find(
+      (a) => a.userId === userId && a.kind === kind,
+    )
+    const account: UserMediaAccountDto & { userId: string } = {
+      id: existing?.id ?? crypto.randomUUID(),
+      userId,
+      kind,
+      username,
+      baseUrl,
+      watchlistEnabled: true,
+      lastSyncedAt: null,
+      lastSyncError: null,
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
+    }
+    this.mediaAccounts.set(account.id, account)
+    return { ok: true, value: account }
+  }
+
+  async setWatchlistAccountEnabled(
+    id: string,
+    enabled: boolean,
+  ): Promise<Result<UserMediaAccountDto, ApiError>> {
+    const account = this.mediaAccounts.get(id)
+    if (!account) return { ok: false, error: notFound('Account not found.') }
+    const updated = { ...account, watchlistEnabled: enabled }
+    this.mediaAccounts.set(id, updated)
+    return { ok: true, value: updated }
+  }
+
+  async unlinkMediaAccount(id: string): Promise<Result<void, ApiError>> {
+    this.mediaAccounts.delete(id)
+    return { ok: true, value: undefined }
+  }
+
+  async getWatchlistSettings(): Promise<WatchlistSettingsDto> {
+    return this.watchlistSettings
+  }
+
+  async saveWatchlistSettings(
+    draft: WatchlistSettingsDto,
+  ): Promise<Result<WatchlistSettingsDto, ApiError>> {
+    if (draft.intervalMinutes < 15) {
+      return {
+        ok: false,
+        error: {
+          type: 'validation_failed',
+          message: 'Interval must be at least 15 minutes.',
+          status: 400,
+        },
+      }
+    }
+    this.watchlistSettings = draft
+    return { ok: true, value: this.watchlistSettings }
+  }
+
+  async listAllMediaAccounts(): Promise<UserMediaAccountAdminDto[]> {
+    return [...this.mediaAccounts.values()].map((account) => {
+      const user = this.users.get(account.userId)
+      return { ...account, user: { id: account.userId, email: user?.email ?? null } }
+    })
   }
 
   async getSso() {

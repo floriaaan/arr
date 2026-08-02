@@ -15,6 +15,7 @@ import {
   Bell,
   Send,
   UserCheck,
+  ListVideo,
 } from 'lucide-react'
 import { useInstances } from '#application/settings/instances.query'
 import { useDeleteInstance } from '#application/settings/delete-instance.mutation'
@@ -27,6 +28,9 @@ import { useSaveNotificationSettings } from '#application/settings/save-notifica
 import { useTestNotification } from '#application/settings/test-notification.mutation'
 import { useRequestApprovalSettings } from '#application/settings/request-approval-settings.query'
 import { useSaveRequestApprovalSettings } from '#application/settings/save-request-approval-settings.mutation'
+import { useWatchlistSettings } from '#application/settings/watchlist-settings.query'
+import { useSaveWatchlistSettings } from '#application/settings/save-watchlist-settings.mutation'
+import { useAllMediaAccounts } from '#application/settings/all-media-accounts.query'
 import { ServiceInstanceForm } from './service-instance-form'
 import { MediaServerForm } from './media-server-form'
 import { UsersPanel } from './users-panel'
@@ -668,6 +672,115 @@ function ApprovalPanel() {
   )
 }
 
+function WatchlistPanel() {
+  const queryClient = useQueryClient()
+  const watchlistSettings = useWatchlistSettings()
+  const saveWatchlistSettings = useSaveWatchlistSettings()
+  const accounts = useAllMediaAccounts()
+
+  const [enabled, setEnabled] = useState(watchlistSettings.data?.enabled ?? true)
+  const [intervalMinutes, setIntervalMinutes] = useState(
+    watchlistSettings.data?.intervalMinutes ?? 60,
+  )
+  const [maxNewRequestsPerRun, setMaxNewRequestsPerRun] = useState(
+    watchlistSettings.data?.maxNewRequestsPerRun ?? 20,
+  )
+
+  function handleSave() {
+    saveWatchlistSettings.mutate(
+      { enabled, intervalMinutes, maxNewRequestsPerRun },
+      {
+        onSuccess: (result) => {
+          if (!result.ok) return toast.error(result.error.message)
+          toast.success('Watchlist settings saved.')
+          void queryClient.invalidateQueries({ queryKey: ['watchlist-settings'] })
+        },
+      },
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight">Watchlist sync</h2>
+        <p className="text-sm text-muted-foreground">
+          Turns items on a user's Plex Watchlist (or Jellyfin/Emby Favorites) into requests,
+          following the approval policy configured under "Approval".
+        </p>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Job settings</CardTitle>
+          <CardDescription>How often the sync runs and how much it can create at once.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 border-t pt-6">
+          <div className="flex items-center gap-2">
+            <Switch checked={enabled} onCheckedChange={setEnabled} />
+            <Label>Enable watchlist sync</Label>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Interval (minutes, min. 15)</Label>
+              <Input
+                type="number"
+                min={15}
+                value={intervalMinutes}
+                onChange={(event) => setIntervalMinutes(Number(event.target.value))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Max new requests per account per run</Label>
+              <Input
+                type="number"
+                min={1}
+                value={maxNewRequestsPerRun}
+                onChange={(event) => setMaxNewRequestsPerRun(Number(event.target.value))}
+              />
+            </div>
+          </div>
+          <Button onClick={handleSave} disabled={saveWatchlistSettings.isPending}>
+            <Save className="size-4" />
+            {saveWatchlistSettings.isPending ? 'Saving…' : 'Save'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="py-0">
+        <CardHeader className="border-b py-4">
+          <CardTitle>Linked accounts</CardTitle>
+          <CardDescription>Every Plex/Jellyfin/Emby account linked by any user.</CardDescription>
+        </CardHeader>
+        <CardContent className="divide-y px-0">
+          {accounts.data?.map((account) => (
+            <div key={account.id} className="flex items-center gap-4 px-6 py-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="truncate text-sm font-medium">{account.username}</p>
+                  <Badge variant="outline" className="capitalize">
+                    {account.kind}
+                  </Badge>
+                  {!account.watchlistEnabled ? <Badge variant="secondary">Paused</Badge> : null}
+                </div>
+                <p className="truncate text-xs text-muted-foreground">
+                  {account.user.email ?? account.user.id}
+                  {account.lastSyncError
+                    ? ` · ${account.lastSyncError}`
+                    : account.lastSyncedAt
+                      ? ` · synced ${new Date(account.lastSyncedAt).toLocaleString()}`
+                      : ' · not synced yet'}
+                </p>
+              </div>
+            </div>
+          ))}
+          {accounts.data?.length === 0 ? (
+            <p className="px-6 py-4 text-sm text-muted-foreground">No linked accounts yet.</p>
+          ) : null}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 function AuthPanel() {
   const authSettings = useEffectiveAuthSettings()
 
@@ -743,6 +856,10 @@ export function SettingsPanels() {
           <UserCheck className="size-4" />
           Approval
         </TabsTrigger>
+        <TabsTrigger value="watchlist">
+          <ListVideo className="size-4" />
+          Watchlist
+        </TabsTrigger>
         <TabsTrigger value="sso">
           <KeyRound className="size-4" />
           Single sign-on
@@ -767,6 +884,9 @@ export function SettingsPanels() {
       </TabsContent>
       <TabsContent value="approval" className="min-w-0">
         <ApprovalPanel />
+      </TabsContent>
+      <TabsContent value="watchlist" className="min-w-0">
+        <WatchlistPanel />
       </TabsContent>
       <TabsContent value="sso" className="min-w-0">
         <SsoPanel />

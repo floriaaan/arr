@@ -372,11 +372,42 @@ watchlist_settings.notifyOnPendingApproval).
 - Historique/audit détaillé des imports watchlist au-delà de
   `watchlist_seen_items` (pas d'écran "journal des imports").
 
-## Questions ouvertes à trancher avant implémentation
+## Questions ouvertes — tranchées, valeurs par défaut implémentées
 
-1. **§1** — Jellyfin/Emby "watchlist" = Favoris : OK, ou autre mapping voulu ?
+Le "vas-y" du 2026-08-02 valait feu vert sur les valeurs proposées ci-dessous ;
+tout est implémenté avec ces défauts, à ajuster après coup si besoin (settings
+admin pour §3/§4, plus dur à changer sans migration pour §1/§2).
+
+1. **§1** — Jellyfin/Emby "watchlist" = Favoris (`IsFavorite`). Implémenté tel quel.
 2. ~~**§4** — Approbation scoped watchlist-only vs globale~~ — **tranché :
-   globale, par kind.**
-3. **§5.2** — Intervalle par défaut 60 min / plancher 15 min : OK ?
-4. **§5.4 / §6.2** — Plafond par run à 20, et règle "jamais reproposé une
-   fois vu" : OK, ou tu veux un comportement différent ?
+   globale, par kind.** Implémenté.
+3. **§5.2** — Intervalle par défaut 60 min, plancher 15 min (rejeté sous ce
+   seuil par `SaveWatchlistSettings`). Réglable dans Settings → Watchlist.
+4. **§5.4 / §6.2** — Plafond par run à 20 par compte (réglable), et règle
+   "jamais reproposé une fois vu" implémentée via `watchlist_seen_items`
+   (clé unique par compte + externalId, jamais réévaluée).
+
+## État — implémenté
+
+Les deux lots sont mergés sur cette branche :
+
+- **Chantier 4 (approbation globale par kind)** : `RequestApprovalSettings`
+  (settings admin), override par utilisateur (panneau Users), gate dans
+  `CreateRequest`, `ApproveRequest`/`RejectRequest` + UI liste des requests.
+- **Chantiers 1–3, 5–8 (watchlist)** : liaison de compte self-service
+  (`/account`) avec flow PIN Plex et auth Jellyfin/Emby partagée
+  (`JellyfinLikeClient`), normalisation en `tmdb`/`tvdb`, commande
+  `watchlist:sync` (service `watchlist-sync` dans `compose.yml`), dédup via
+  `watchlist_seen_items`, réglages admin (Settings → Watchlist) avec
+  diagnostic des comptes liés, notification `RequestPendingApproval`.
+
+Couverture : 299 tests backend (domaine, use cases, clients Plex/Jellyfin
+via `fetch` stubbé), 58 tests frontend, `pnpm lint`/`pnpm boundaries`/
+`pnpm typecheck`/`pnpm build` verts des deux côtés, migrations exécutées
+contre Postgres local.
+
+Non testé en conditions réelles (pas d'accès à un vrai Plex/Jellyfin/Emby
+depuis cet environnement) : le flow PIN Plex bout-en-bout et l'auth
+Jellyfin/Emby contre un serveur réel — confiance modérée sur la forme exacte
+des réponses JSON (mêmes réserves que les endpoints *arr non documentés
+ailleurs dans ce repo), à valider au premier lien réel.

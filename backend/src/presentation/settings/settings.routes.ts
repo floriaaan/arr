@@ -8,6 +8,7 @@ const DiscoveryController = () => import('./discovery.controller.js')
 const NotificationsController = () => import('./notifications.controller.js')
 const RequestApprovalSettingsController = () => import('./request-approval-settings.controller.js')
 const UserRequestPreferencesController = () => import('./user-request-preferences.controller.js')
+const WatchlistSettingsController = () => import('./watchlist-settings.controller.js')
 
 /**
  * Public on purpose, and outside the `onboardingGuard` group below: the
@@ -101,6 +102,9 @@ router
     router.put('/request-approval', [RequestApprovalSettingsController, 'update'])
     router.get('/user-request-preferences', [UserRequestPreferencesController, 'index'])
     router.put('/user-request-preferences/:userId', [UserRequestPreferencesController, 'update'])
+    router.get('/watchlist', [WatchlistSettingsController, 'show'])
+    router.put('/watchlist', [WatchlistSettingsController, 'update'])
+    router.get('/watchlist/accounts', [WatchlistSettingsController, 'listAccounts'])
     router.get('/sso', [SettingsController, 'getSso'])
     router.put('/sso', [SettingsController, 'updateSso'])
     router.post('/sso/test', [SettingsController, 'testSso'])

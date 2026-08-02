@@ -15,6 +15,15 @@ import type {
   NotificationTestResult,
 } from '../settings/notification-settings'
 import type { RequestApprovalSettingsDto } from '../settings/request-approval-settings'
+import type { WatchlistSettingsDto } from '../settings/watchlist-settings'
+import type {
+  MediaAccountKind,
+  UserMediaAccountDto,
+  UserMediaAccountAdminDto,
+  PlexPin,
+  PlexLinkStart,
+  PlexLinkResult,
+} from '../watchlist/user-media-account'
 import type { QualityProfileRecord } from '../settings/quality-profile-record'
 import type { DownloadClientRecord } from '../settings/download-client-record'
 import type { IndexerRecord } from '../settings/indexer-record'
@@ -220,6 +229,29 @@ export interface ArrConnector {
   saveRequestApprovalSettings: (
     draft: RequestApprovalSettingsDto,
   ) => Promise<RequestApprovalSettingsDto>
+
+  // watchlist — self-service linked accounts (cf. docs/phase-7-watchlist-sync, chantier 2)
+  listMyMediaAccounts: () => Promise<UserMediaAccountDto[]>
+  startPlexLink: () => Promise<Result<PlexLinkStart, ApiError>>
+  completePlexLink: (pin: PlexPin) => Promise<Result<PlexLinkResult, ApiError>>
+  linkMediaServerAccount: (
+    kind: Extract<MediaAccountKind, 'jellyfin' | 'emby'>,
+    baseUrl: string,
+    username: string,
+    password: string,
+  ) => Promise<Result<UserMediaAccountDto, ApiError>>
+  setWatchlistAccountEnabled: (
+    id: string,
+    enabled: boolean,
+  ) => Promise<Result<UserMediaAccountDto, ApiError>>
+  unlinkMediaAccount: (id: string) => Promise<Result<void, ApiError>>
+
+  // watchlist — admin settings (cf. chantier 5, 7)
+  getWatchlistSettings: () => Promise<WatchlistSettingsDto>
+  saveWatchlistSettings: (
+    draft: WatchlistSettingsDto,
+  ) => Promise<Result<WatchlistSettingsDto, ApiError>>
+  listAllMediaAccounts: () => Promise<UserMediaAccountAdminDto[]>
 
   getSso: () => Promise<{
     issuerUrl: string

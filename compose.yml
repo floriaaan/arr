@@ -92,6 +92,33 @@ services:
     networks:
       - internal
 
+  watchlist-sync:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ['node', 'bin/console.js', 'watchlist:sync']
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3333
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL:-http://localhost:3333}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-arr}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-arr}
+      DB_DATABASE: ${POSTGRES_DB:-arr}
+    depends_on:
+      db:
+        condition: service_healthy
+    # Same shape as the reconciler, cf. docs/phase-7-watchlist-sync, chantier 5:
+    # its own process, reads linked Plex/Jellyfin/Emby watchlists on an
+    # interval and turns new items into requests.
+    networks:
+      - internal
+
   health:
     build:
       context: .
