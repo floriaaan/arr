@@ -21,9 +21,9 @@ remonte rien (backend, frontend, docs). Il n'existe aujourd'hui :
   **Hors périmètre**.
 
 Ce document propose un découpage en chantiers, dans le même esprit que la
-phase 6. Il y a plusieurs décisions produit structurantes (§1, §4, §7) qui
-changent la taille du lot selon la réponse — à trancher avant que je code
-quoi que ce soit.
+phase 6. Le point d'approbation (§4) est tranché : globale, par kind,
+réglable dans les settings. Il reste des décisions secondaires (§1, §5.2,
+§5.4/§6.2) à valider avant que je code quoi que ce soit.
 
 ## Portée
 
@@ -32,12 +32,17 @@ quoi que ce soit.
   `requests`, etc.
 - Extension de `MediaRequest` (origine, gate d'approbation) — pas de
   nouveau statut dans `RequestStatus`, des métadonnées en plus.
+- **Politique d'approbation globale, par `MediaKind`**, appliquée à toutes
+  les requests (manuelles et watchlist) via `CreateRequest`, avec override
+  par utilisateur — nouveau réglage `request_approval_settings` dans le
+  domaine `requests`, pas seulement `watchlist`.
 - Nouvelle commande Ace `watchlist:sync`, même forme que
   `requests:reconcile`, nouveau service `compose.yml`.
 - Nouvelle UI : page self-service "mes comptes liés" (pour tout
-  utilisateur) + panneau admin "Watchlist" dans les settings.
-- Quatre migrations (comptes liés, réglages, extension `media_requests`,
-  table de dédoublonnage).
+  utilisateur), panneau admin "Watchlist", panneau admin "Approbation",
+  extension du panneau Users.
+- Cinq migrations (comptes liés, réglages watchlist, réglages
+  d'approbation, extension `media_requests`, table de dédoublonnage).
 
 ---
 
@@ -151,57 +156,77 @@ Zod par provider, tests avec fixtures JSON).
 
 ## 4. Politique d'approbation
 
+**Tranché : approbation globale, réglable par kind, dans les settings.**
+S'applique à *toutes* les requests — manuelles (UI de recherche) et
+watchlist — pas seulement à celles issues du watchlist sync. C'est un
+changement de comportement assumé pour les requests manuelles
+(aujourd'hui : instantané pour tout utilisateur connecté) ; le défaut de
+migration (ci-dessous) est choisi pour ne rien casser au déploiement.
+
 ### Constat
 
-C'est le point qui décide de la taille du lot. Overseerr gate *toutes* les
-requests (manuelles et watchlist) derrière une permission `AUTO_APPROVE`
-par utilisateur. Ici, il n'existe **aucune** notion d'approbation nulle
-part : introduire ça pour les requests manuelles changerait un
-comportement existant (aujourd'hui, tout utilisateur connecté crée une
-request qui part immédiatement en `submitted`).
+Il n'existe **aucune** notion d'approbation aujourd'hui : `RequestStatus`
+n'a que `pending → submitted → downloading → importing →
+available/failed/cancelled`, et `CreateRequest.execute()` enchaîne
+`pending` → `submit()` sans jamais s'arrêter, pour tout appelant.
 
-### Décision proposée (à valider — c'est LE choix qui cadre tout le reste)
+### Décisions
 
-**Scope minimal : l'approbation ne s'applique qu'aux requests
-d'origine watchlist.** Les requests créées manuellement depuis l'UI de
-recherche continuent de partir directement en `submitted`, comme
-aujourd'hui — zéro régression sur l'existant.
-
-1. **Pas de nouveau statut dans `RequestStatus`.** On ajoute des
-   métadonnées sur `MediaRequest` : `origin: 'manual' | 'watchlist'`,
-   `requiresApproval: boolean`, `approvedAt`, `approvedByUserId`,
-   `rejectedAt`, `rejectionReason`. Le statut reste `pending`, mais
-   `CreateRequest` **n'appelle `provisioning.submit()` que si
-   `requiresApproval === false`**. Choisi plutôt qu'un statut
-   `pending_approval` séparé pour ne pas complexifier la state machine
-   existante ni le reconciler, qui ne regarde que les statuts actifs.
-2. **Qui décide `requiresApproval` ?** Un réglage global admin (§7,
-   "auto-approuver par défaut"), avec **override par utilisateur** dans le
-   panneau Users existant (à côté du toggle de rôle) : `autoApprove:
-   boolean | null` (`null` = suit le défaut global). Un admin qui lie son
-   propre compte est toujours auto-approuvé, cohérent avec
-   `canActOn` qui donne déjà tout pouvoir à l'admin ailleurs.
-3. **Actions admin** : `POST /api/requests/:id/approve` (appelle
+1. **Nouvel agrégat mono-ligne `RequestApprovalSettings`**, dans le
+   domaine `requests` (pas `watchlist` — c'est transverse aux deux
+   origines) : une politique **par `MediaKind`**,
+   `{ moviePolicy: 'auto' | 'manual', seriesPolicy: 'auto' | 'manual',
+   albumPolicy: 'auto' | 'manual' }`. Table `request_approval_settings`,
+   même forme mono-ligne que `notification_settings`.
+   **Défaut de migration : `auto` sur les trois kinds** — préserve le
+   comportement actuel tant que l'admin n'a pas explicitement activé la
+   validation manuelle sur un kind.
+2. **Pas de nouveau statut dans `RequestStatus`.** On ajoute des
+   métadonnées sur `MediaRequest` : `origin: 'manual' | 'watchlist'`
+   (informatif, n'influence plus l'approbation), `requiresApproval:
+   boolean`, `approvedAt`, `approvedByUserId`, `rejectedAt`,
+   `rejectionReason`. Le statut reste `pending`, mais `CreateRequest`
+   **n'appelle `provisioning.submit()` que si `requiresApproval ===
+   false`** — même mécanisme pour un appel manuel ou depuis
+   `sync-watchlist.use-case.ts`, un seul point de gate. Choisi plutôt
+   qu'un statut `pending_approval` séparé pour ne pas complexifier la
+   state machine existante ni le reconciler, qui ne regarde que les
+   statuts actifs.
+3. **Calcul de `requiresApproval` dans `CreateRequest`** :
+   - l'acteur est admin → toujours `false` (cohérent avec `canActOn` qui
+     donne déjà tout pouvoir à l'admin ailleurs) ;
+   - sinon, **override par utilisateur** (panneau Users existant, à côté
+     du toggle de rôle) : `autoApprove: boolean | null` — `true`/`false`
+     court-circuite la politique par kind pour cet utilisateur sur *tous*
+     les kinds, `null` (défaut) suit la politique du kind ;
+   - sinon, la politique du kind (`moviePolicy`/`seriesPolicy`/
+     `albumPolicy`) décide.
+4. **Actions admin** : `POST /api/requests/:id/approve` (appelle
    `provisioning.submit()`, comme `CreateRequest` l'aurait fait),
    `POST /api/requests/:id/reject { reason }` (→ `cancel()` avec la raison
    en `failureReason`). Nouveaux use cases `ApproveRequest`/
-   `RejectRequest`, réutilisant `request-actor.ts` pour req admin-only.
-4. **UI** : la liste des requests existante gagne un filtre "en attente
-   d'approbation" et deux boutons sur les cartes concernées — pas de
-   nouvelle page.
-
-Si tu préfères que l'approbation s'applique aussi aux requests manuelles
-(modèle Overseerr complet), c'est possible mais plus gros : ça touche
-`CreateRequest` pour tout le monde, l'UI de recherche/détail titre, et
-sort du cadre "je répare rien d'existant" qui a guidé la phase 6. Dis-le
-si c'est ce que tu veux.
+   `RejectRequest`, réutilisant `request-actor.ts` pour restreindre aux
+   admins.
+5. **UI** :
+   - Nouveau panneau settings "Approbation" (§7bis) : trois switches
+     (Films / Séries / Musique) auto vs validation manuelle.
+   - Panneau Users existant : toggle `autoApprove` par utilisateur (héritage
+     par défaut / forcé auto / forcé manuel).
+   - Liste des requests existante : filtre "en attente d'approbation" +
+     boutons Approuver/Rejeter sur les cartes concernées — pas de
+     nouvelle page.
 
 ### Fichiers
 
-`media-request.aggregate.ts`, `create-request.use-case.ts`, nouvelle
-migration `add_origin_and_approval_to_media_requests`, nouveaux use cases
+Nouvelle migration `create_request_approval_settings_table`, agrégat
+`domain/requests/request-approval-settings.aggregate.ts`, contrôleur
+`presentation/requests/request-approval-settings.controller.ts` ;
+`media-request.aggregate.ts`, `create-request.use-case.ts`, migration
+`add_origin_and_approval_to_media_requests`, nouveaux use cases
 `application/requests/{approve,reject}-request.use-case.ts`,
-`requests.controller.ts`/`requests.routes.ts`, `request-card.tsx`.
+`requests.controller.ts`/`requests.routes.ts`, `request-card.tsx`,
+`settings-panels.tsx` (nouvel onglet "Approbation" + extension
+`UsersPanel`).
 
 ---
 
@@ -279,23 +304,27 @@ Migration `create_watchlist_seen_items_table`, repository
 ### Décisions
 
 1. **`watchlist_settings`**, agrégat mono-ligne comme
-   `NotificationSettings` : `enabled` (coupe tout le job), `intervalMinutes`,
-   `autoApproveByDefault` (bool), `maxNewRequestsPerRun`,
-   `notifyOnPendingApproval` (bool, cf §8).
+   `NotificationSettings` : `enabled` (coupe tout le job),
+   `intervalMinutes`, `maxNewRequestsPerRun`. L'approbation n'y est plus —
+   elle vit dans `request_approval_settings` (§4.1), transverse aux
+   requests manuelles et watchlist.
 2. **Nouveau panneau "Watchlist" dans `settings-panels.tsx`**, calqué sur
    `NotificationsPanel` (Card + Switches + save), plus un tableau listant
    les comptes liés par utilisateur avec leur `lastSyncedAt`/
    `lastSyncError` pour le diagnostic admin (sans exposer les tokens,
    jamais renvoyés par l'API).
-3. **Panneau Users existant** étendu avec le toggle `autoApprove`
-   par utilisateur (§4.2).
+3. **Nouveau panneau "Approbation" dans `settings-panels.tsx`** (§4.5),
+   distinct du panneau Watchlist puisqu'il s'applique aussi aux requests
+   manuelles.
+4. **Panneau Users existant** étendu avec le toggle `autoApprove`
+   par utilisateur (§4.3).
 
 ### Fichiers
 
 Migration `create_watchlist_settings_table`, agrégat
 `domain/watchlist/watchlist-settings.aggregate.ts`, contrôleur
 `presentation/watchlist/watchlist-settings.controller.ts`,
-`settings-panels.tsx` (nouvel onglet + extension `UsersPanel`).
+`settings-panels.tsx` (deux nouveaux onglets + extension `UsersPanel`).
 
 ---
 
@@ -307,11 +336,11 @@ Migration `create_watchlist_settings_table`, agrégat
    auto-approuvé émet `mediaRequested` comme aujourd'hui →
    `onRequestCreated` s'applique tel quel, rien à faire.
 2. **Nouvel événement `requestPendingApproval`**, émis quand
-   `requiresApproval = true`. Nouveau toggle
-   `NotificationSettings.onRequestPendingApproval` (aligné sur
-   `notifyOnPendingApproval` de watchlist_settings — à fusionner en un
-   seul flag pour éviter la confusion, je propose de le garder uniquement
-   côté `NotificationSettings` et de retirer celui de §7.1).
+   `requiresApproval = true`, qu'elle vienne d'une request manuelle ou
+   watchlist. Nouveau toggle `NotificationSettings.onRequestPendingApproval`
+   — un seul flag, côté `NotificationSettings` (pas de doublon dans
+   `watchlist_settings`, qui ne porte plus rien sur l'approbation depuis
+   §4).
 3. Pas de notification "par utilisateur" (ex. "ta demande a été
    approuvée") : le système actuel est un webhook global admin, pas de
    notif par destinataire — hors périmètre, cohérent avec l'existant.
@@ -346,8 +375,8 @@ watchlist_settings.notifyOnPendingApproval).
 ## Questions ouvertes à trancher avant implémentation
 
 1. **§1** — Jellyfin/Emby "watchlist" = Favoris : OK, ou autre mapping voulu ?
-2. **§4** — Approbation scoped watchlist-only (recommandé) vs approbation
-   globale sur toutes les requests (plus gros chantier) ?
+2. ~~**§4** — Approbation scoped watchlist-only vs globale~~ — **tranché :
+   globale, par kind.**
 3. **§5.2** — Intervalle par défaut 60 min / plancher 15 min : OK ?
 4. **§5.4 / §6.2** — Plafond par run à 20, et règle "jamais reproposé une
    fois vu" : OK, ou tu veux un comportement différent ?
