@@ -81,6 +81,37 @@ export const servarrInstanceDtoSchema = z.object({
   seriesType: z.enum(['standard', 'daily', 'anime']).nullable(),
   minimumAvailability: z.enum(['announced', 'inCinemas', 'released', 'preDB']).nullable(),
   enabled: z.boolean(),
+  lastCheckedAt: z.string().nullable(),
+  healthy: z.boolean().nullable(),
+  detectedVersion: z.string().nullable(),
+  lastError: z.object({ type: z.string(), message: z.string() }).nullable(),
+})
+
+export const notificationSettingsDtoSchema = z.object({
+  hasWebhookUrl: z.boolean(),
+  authMode: z.enum(['none', 'token', 'basic']),
+  hasToken: z.boolean(),
+  username: z.string().nullable(),
+  hasPassword: z.boolean(),
+  onRequestCreated: z.boolean(),
+  onRequestAvailable: z.boolean(),
+  onRequestFailed: z.boolean(),
+  onInstanceUnreachable: z.boolean(),
+})
+
+export const mediaServerDtoSchema = z.object({
+  id: z.string(),
+  kind: z.enum(['plex', 'jellyfin', 'emby']),
+  baseUrl: z.string(),
+  enabled: z.boolean(),
+})
+
+export const discoveredInstanceSchema = z.object({
+  kind: z.enum(['radarr', 'sonarr', 'lidarr', 'plex', 'jellyfin', 'emby']),
+  baseUrl: z.string(),
+  detectedVersion: z.string().nullable(),
+  serverName: z.string().nullable(),
+  confidence: z.enum(['confirmed', 'port']),
 })
 
 export const instanceProfilesSchema = z.object({

@@ -8,6 +8,7 @@ router
     router.get('/', [RequestsController, 'index'])
     router.post('/', [RequestsController, 'store'])
     router.get('/:id', [RequestsController, 'show'])
+    router.get('/:id/episodes', [RequestsController, 'episodes'])
     router.post('/:id/cancel', [RequestsController, 'cancel'])
   })
   .prefix('/api/requests')

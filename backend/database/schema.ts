@@ -175,6 +175,23 @@ export class MediaRequestSchema extends BaseModel {
   declare updatedAt: DateTime
 }
 
+export class MediaServerSchema extends BaseModel {
+  static $columns = ['baseUrl', 'createdAt', 'enabled', 'id', 'kind', 'updatedAt'] as const
+  $columns = MediaServerSchema.$columns
+  @column()
+  declare baseUrl: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare enabled: boolean
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
 export class OnboardingStateSchema extends BaseModel {
   static $columns = [
     'adminCreatedAt',

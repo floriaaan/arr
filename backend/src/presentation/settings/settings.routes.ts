@@ -3,6 +3,9 @@ import { middleware } from '#start/kernel'
 
 const OnboardingController = () => import('./onboarding.controller.js')
 const SettingsController = () => import('./settings.controller.js')
+const MediaServersController = () => import('./media-servers.controller.js')
+const DiscoveryController = () => import('./discovery.controller.js')
+const NotificationsController = () => import('./notifications.controller.js')
 
 /**
  * Public on purpose, and outside the `onboardingGuard` group below: the
@@ -18,6 +21,20 @@ router
     router.post('/instances/test', [OnboardingController, 'testInstance'])
     router.post('/instances/profiles', [OnboardingController, 'instanceProfiles'])
     router.put('/instances/:kind', [OnboardingController, 'saveInstance'])
+    /**
+     * Deliberately does *not* go through `MarkServicesConfigured` like the
+     * route above: a media server is a convenience link target, it never
+     * makes the app functional on its own (cf. docs/phase-5-quality-of-life,
+     * chantier 2 décision 7). Explicitly named because the settings group
+     * below points at the very same controller method — Adonis derives route
+     * names from `controller.method` and refuses two routes with the same one.
+     */
+    router
+      .put('/media-servers/:kind', [MediaServersController, 'save'])
+      .as('onboarding.mediaServers.save')
+    /* Named explicitly: the settings group below reuses the same controller
+       method, and Adonis derives route names from `controller.method`. */
+    router.post('/discovery', [DiscoveryController, 'scan']).as('onboarding.discovery.scan')
     router.post('/sso/test', [OnboardingController, 'testSso'])
     router.put('/sso', [OnboardingController, 'saveSso'])
     router.post('/complete', [OnboardingController, 'complete'])
@@ -70,6 +87,14 @@ router
     router.put('/instances/:kind/indexers/:id', [SettingsController, 'updateIndexer'])
     router.delete('/instances/:kind/indexers/:id', [SettingsController, 'deleteIndexer'])
     router.post('/instances/:kind/indexers/test', [SettingsController, 'testIndexer'])
+    router
+      .put('/media-servers/:kind', [MediaServersController, 'save'])
+      .as('settings.mediaServers.save')
+    router.delete('/media-servers/:kind', [MediaServersController, 'destroy'])
+    router.post('/discovery', [DiscoveryController, 'scan']).as('settings.discovery.scan')
+    router.get('/notifications', [NotificationsController, 'show'])
+    router.put('/notifications', [NotificationsController, 'update'])
+    router.post('/notifications/test', [NotificationsController, 'test'])
     router.get('/sso', [SettingsController, 'getSso'])
     router.put('/sso', [SettingsController, 'updateSso'])
     router.post('/sso/test', [SettingsController, 'testSso'])
@@ -85,3 +110,11 @@ router
  * booleans + an enum, nothing sensitive.
  */
 router.get('/api/settings/auth', [SettingsController, 'getAuthSettings'])
+
+/**
+ * Outside `/api/settings` and only `authRequired`, unlike every write above:
+ * the media detail drawer renders "open in Plex/Jellyfin/Emby" links for
+ * every signed-in user, and a media server DTO carries no credential at all
+ * (cf. docs/phase-5-quality-of-life, chantier 2 décisions 5 et 6).
+ */
+router.get('/api/media-servers', [MediaServersController, 'index']).use(middleware.authRequired())

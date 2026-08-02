@@ -17,6 +17,17 @@ import type { OnboardingStatus } from '#domain/settings/onboarding-state'
 import type { ServarrKind, ServarrInstanceDto } from '#domain/settings/servarr-instance'
 import type { InstanceDraft } from '#domain/settings/instance-draft'
 import type { InstanceProfileDto, InstanceProfileDraft } from '#domain/settings/instance-profile'
+import type {
+  MediaServerDraft,
+  MediaServerDto,
+  MediaServerKind,
+} from '#domain/settings/media-server'
+import type { DiscoveredInstance, DiscoveryScope } from '#domain/settings/discovered-instance'
+import type {
+  NotificationSettingsDraft,
+  NotificationSettingsDto,
+  NotificationTestResult,
+} from '#domain/settings/notification-settings'
 import type { QualityProfileRecord } from '#domain/settings/quality-profile-record'
 import type { DownloadClientRecord } from '#domain/settings/download-client-record'
 import type { IndexerRecord } from '#domain/settings/indexer-record'
@@ -26,6 +37,7 @@ import type { MediaItem } from '#domain/catalog/media-item'
 import type { MediaDetail } from '#domain/catalog/media-detail'
 import type { MediaRequest } from '#domain/requests/media-request'
 import type { RequestFilter } from '#domain/requests/request-filter'
+import type { RequestEpisode } from '#domain/requests/request-episode'
 import type { LibraryItem } from '#domain/library/library-item'
 import type { CalendarEntry, CalendarEntryKind } from '#domain/calendar/calendar-entry'
 
@@ -357,6 +369,8 @@ interface PersistedOnboardingState {
   savedProfiles?: [ServarrKind, InstanceProfileDto[]][]
   /** Optional: absent in state persisted before this field existed. */
   qualityProfiles?: [ServarrKind, QualityProfileRecord[]][]
+  /** Optional: absent in state persisted before this field existed. */
+  mediaServers?: [MediaServerKind, MediaServerDto][]
 }
 
 /**
@@ -376,6 +390,25 @@ export class FakeArrConnector implements ArrConnector {
   private readonly qualityProfiles = new Map<ServarrKind, QualityProfileRecord[]>()
   private readonly downloadClients = new Map<ServarrKind, DownloadClientRecord[]>()
   private readonly indexers = new Map<ServarrKind, IndexerRecord[]>()
+  private readonly mediaServers = new Map<MediaServerKind, MediaServerDto>()
+  private notificationSettings: NotificationSettingsDto & {
+    webhookUrl: string | null
+    token: string | null
+    password: string | null
+  } = {
+    webhookUrl: null,
+    hasWebhookUrl: false,
+    authMode: 'none',
+    token: null,
+    hasToken: false,
+    username: null,
+    password: null,
+    hasPassword: false,
+    onRequestCreated: true,
+    onRequestAvailable: true,
+    onRequestFailed: true,
+    onInstanceUnreachable: true,
+  }
   private ssoConfig: (OidcConfigInput & { claimsMapping?: Record<string, string> }) | null = null
   private readonly requests = new Map<string, MediaRequest>()
   private readonly removedLibraryItems = new Set<string>()
@@ -430,6 +463,7 @@ export class FakeArrConnector implements ArrConnector {
       for (const [kind, profiles] of persisted.qualityProfiles ?? []) {
         this.qualityProfiles.set(kind, profiles)
       }
+      for (const [kind, server] of persisted.mediaServers ?? []) this.mediaServers.set(kind, server)
     } catch {
       window.localStorage.removeItem(ONBOARDING_STORAGE_KEY)
     }
@@ -444,6 +478,7 @@ export class FakeArrConnector implements ArrConnector {
       ssoConfig: this.ssoConfig,
       savedProfiles: [...this.savedProfiles.entries()],
       qualityProfiles: [...this.qualityProfiles.entries()],
+      mediaServers: [...this.mediaServers.entries()],
     }
     window.localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(persisted))
   }
@@ -609,8 +644,186 @@ export class FakeArrConnector implements ArrConnector {
     return this.testInstanceConnection(kind, baseUrl, apiKey)
   }
 
+  async saveOnboardingMediaServer(kind: MediaServerKind, draft: MediaServerDraft) {
+    return this.saveMediaServer(kind, draft)
+  }
+
+  async discoverOnboardingInstances(scope: DiscoveryScope) {
+    return this.discoverInstances(scope)
+  }
+
+  /**
+   * A plausible-looking result set, including one `confidence: 'port'` entry
+   * and one Emby-behind-a-reverse-proxy case, so the dialog's edge cases are
+   * exercisable without a network.
+   */
+  async discoverInstances(scope: DiscoveryScope) {
+    const host = scope.extraHost?.trim() || 'localhost'
+    const instances: DiscoveredInstance[] = [
+      {
+        kind: 'radarr',
+        baseUrl: `http://${host}:7878`,
+        detectedVersion: null,
+        serverName: null,
+        confidence: 'confirmed',
+      },
+      {
+        kind: 'sonarr',
+        baseUrl: `http://${host}:8989`,
+        detectedVersion: null,
+        serverName: null,
+        confidence: 'confirmed',
+      },
+      {
+        kind: 'lidarr',
+        baseUrl: `http://${host}:8686`,
+        detectedVersion: null,
+        serverName: null,
+        confidence: 'port',
+      },
+      {
+        kind: 'plex',
+        baseUrl: `http://${host}:32400`,
+        detectedVersion: '1.41.0.8992',
+        serverName: null,
+        confidence: 'confirmed',
+      },
+    ]
+
+    if (scope.scanSubnet) {
+      instances.push({
+        kind: 'jellyfin',
+        baseUrl: 'http://192.168.1.24:8096',
+        detectedVersion: '10.10.3',
+        serverName: 'Living room',
+        confidence: 'confirmed',
+      })
+    }
+
+    return { ok: true as const, value: instances }
+  }
+
+  async listMediaServers(): Promise<MediaServerDto[]> {
+    return [...this.mediaServers.values()]
+  }
+
+  async saveMediaServer(kind: MediaServerKind, draft: MediaServerDraft) {
+    if (!/^https?:\/\//.test(draft.baseUrl)) {
+      return {
+        ok: false as const,
+        error: {
+          type: 'validation_failed',
+          message: `"${draft.baseUrl}" is not a valid URL`,
+          status: 400,
+        },
+      }
+    }
+
+    const existing = this.mediaServers.get(kind)
+    const server: MediaServerDto = {
+      id: existing?.id ?? crypto.randomUUID(),
+      kind,
+      baseUrl: draft.baseUrl.replace(/\/+$/, ''),
+      enabled: draft.enabled,
+    }
+    this.mediaServers.set(kind, server)
+    this.persistOnboardingState()
+    return { ok: true as const, value: server }
+  }
+
+  async deleteMediaServer(kind: MediaServerKind): Promise<void> {
+    this.mediaServers.delete(kind)
+    this.persistOnboardingState()
+  }
+
   async fetchSettingsInstanceProfiles(kind: ServarrKind) {
     return this.fetchInstanceProfiles(kind)
+  }
+
+  async getNotificationSettings(): Promise<NotificationSettingsDto> {
+    const { webhookUrl: _webhookUrl, token: _token, password: _password, ...dto } =
+      this.notificationSettings
+    return dto
+  }
+
+  private resolveNotificationAuth(draft: NotificationSettingsDraft) {
+    const existing = this.notificationSettings
+
+    if (draft.authMode === 'none') {
+      return { ok: true as const, value: { mode: 'none' as const, token: null, username: null, password: null } }
+    }
+
+    if (draft.authMode === 'token') {
+      const token = draft.token !== undefined ? draft.token : existing.authMode === 'token' ? existing.token : null
+      if (!token) {
+        return {
+          ok: false as const,
+          error: { type: 'validation_failed', message: 'A token is required.', status: 400 },
+        }
+      }
+      return { ok: true as const, value: { mode: 'token' as const, token, username: null, password: null } }
+    }
+
+    const username =
+      draft.username !== undefined ? draft.username : existing.authMode === 'basic' ? existing.username : null
+    if (!username || username.trim() === '') {
+      return {
+        ok: false as const,
+        error: { type: 'validation_failed', message: 'Username must not be empty', status: 400 },
+      }
+    }
+    const password =
+      draft.password !== undefined ? draft.password : existing.authMode === 'basic' ? existing.password : null
+    if (!password) {
+      return {
+        ok: false as const,
+        error: { type: 'validation_failed', message: 'A password is required.', status: 400 },
+      }
+    }
+    return { ok: true as const, value: { mode: 'basic' as const, token: null, username, password } }
+  }
+
+  async saveNotificationSettings(draft: NotificationSettingsDraft) {
+    const webhookUrl =
+      draft.webhookUrl === undefined ? this.notificationSettings.webhookUrl : draft.webhookUrl
+    if (webhookUrl !== null && !/^https?:\/\//.test(webhookUrl)) {
+      return {
+        ok: false as const,
+        error: {
+          type: 'validation_failed',
+          message: `"${webhookUrl}" is not a valid URL`,
+          status: 400,
+        },
+      }
+    }
+
+    const auth = this.resolveNotificationAuth(draft)
+    if (!auth.ok) return auth
+
+    this.notificationSettings = {
+      webhookUrl,
+      hasWebhookUrl: webhookUrl !== null,
+      authMode: auth.value.mode,
+      token: auth.value.token,
+      hasToken: auth.value.token !== null,
+      username: auth.value.username,
+      password: auth.value.password,
+      hasPassword: auth.value.password !== null,
+      onRequestCreated: draft.onRequestCreated,
+      onRequestAvailable: draft.onRequestAvailable,
+      onRequestFailed: draft.onRequestFailed,
+      onInstanceUnreachable: draft.onInstanceUnreachable,
+    }
+    const { webhookUrl: _hidden, token: _hiddenToken, password: _hiddenPassword, ...dto } =
+      this.notificationSettings
+    return { ok: true as const, value: dto }
+  }
+
+  async testNotification(): Promise<NotificationTestResult> {
+    if (!this.notificationSettings.webhookUrl) {
+      return { ok: false, error: { message: 'No webhook URL configured.' } }
+    }
+    return { ok: true }
   }
 
   async getSso() {
@@ -773,6 +986,44 @@ export class FakeArrConnector implements ArrConnector {
     return { ok: true as const, value: undefined }
   }
 
+  /**
+   * Ten deterministic episodes covering every state the accordion renders, so
+   * the UI can be exercised without Sonarr. Empty for anything but a series,
+   * mirroring the real adapter.
+   */
+  async listRequestEpisodes(id: string) {
+    const request = this.requests.get(id)
+    if (!request) return { ok: false as const, error: notFound(`No request ${id}.`) }
+    if (request.kind !== 'series') return { ok: true as const, value: [] }
+
+    const seed = hashString(id)
+    const episodes: RequestEpisode[] = Array.from({ length: 10 }, (_, index) => {
+      const bucket = (seed + index) % 5
+      const state: RequestEpisode['state'] =
+        bucket === 0
+          ? 'missing'
+          : bucket === 1
+            ? 'downloading'
+            : bucket === 2
+              ? 'importing'
+              : bucket === 3
+                ? 'failed'
+                : 'available'
+
+      return {
+        seasonNumber: 1,
+        episodeNumber: index + 1,
+        title: `Episode ${index + 1}`,
+        airDate: new Date(Date.now() - (10 - index) * 86_400_000).toISOString(),
+        state,
+        percentage:
+          state === 'downloading' || state === 'importing' ? ((seed + index) % 90) + 5 : null,
+      }
+    })
+
+    return { ok: true as const, value: episodes }
+  }
+
   async listLibrary(kind?: MediaKind): Promise<LibraryItem[]> {
     return ALL_FIXTURES.filter(
       (item) =>
@@ -837,6 +1088,12 @@ export class FakeArrConnector implements ArrConnector {
       seriesType: draft.seriesType ?? null,
       minimumAvailability: draft.minimumAvailability ?? null,
       enabled: draft.enabled,
+      // A fake instance is always reachable — the health panel needs
+      // something plausible to render.
+      lastCheckedAt: new Date().toISOString(),
+      healthy: true,
+      detectedVersion: '5.0.0.0',
+      lastError: null,
     }
     this.instances.set(kind, instance)
 

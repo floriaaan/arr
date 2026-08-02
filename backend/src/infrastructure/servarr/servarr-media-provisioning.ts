@@ -18,4 +18,15 @@ export class ServarrMediaProvisioning implements MediaProvisioning {
     }
     return adapter.submit(request)
   }
+
+  async cancel(request: MediaRequest): Promise<Result<void, ProvisioningError>> {
+    const adapter = await this.registry.resolveByKind(request.kind)
+    if (!adapter) {
+      return Result.err({
+        type: 'instance_unavailable',
+        message: `No active instance for ${request.kind}`,
+      })
+    }
+    return adapter.cancel(request)
+  }
 }

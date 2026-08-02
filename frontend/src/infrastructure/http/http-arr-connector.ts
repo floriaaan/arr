@@ -11,6 +11,9 @@ import {
   servarrInstanceDtoSchema,
   instanceProfilesSchema,
   instanceProfileDtoSchema,
+  mediaServerDtoSchema,
+  discoveredInstanceSchema,
+  notificationSettingsDtoSchema,
   qualityProfileRecordSchema,
   downloadClientRecordSchema,
   indexerRecordSchema,
@@ -19,7 +22,7 @@ import {
   savedSsoConfigSchema,
 } from './schemas/settings.schema'
 import { mediaItemDtoSchema, mediaDetailDtoSchema } from './schemas/catalog.schema'
-import { mediaRequestDtoSchema } from './schemas/requests.schema'
+import { mediaRequestDtoSchema, requestEpisodeSchema } from './schemas/requests.schema'
 import { libraryItemDtoSchema, calendarEntryDtoSchema } from './schemas/library.schema'
 import type {
   ArrConnector,
@@ -35,6 +38,12 @@ import type { Session } from '#domain/identity/session'
 import type { ServarrKind } from '#domain/settings/servarr-instance'
 import type { InstanceDraft } from '#domain/settings/instance-draft'
 import type { InstanceProfileDraft } from '#domain/settings/instance-profile'
+import type { MediaServerDraft, MediaServerKind } from '#domain/settings/media-server'
+import type { DiscoveryScope } from '#domain/settings/discovered-instance'
+import type {
+  NotificationSettingsDraft,
+  NotificationTestResult,
+} from '#domain/settings/notification-settings'
 import type { DownloadClientRecord } from '#domain/settings/download-client-record'
 import type { IndexerRecord } from '#domain/settings/indexer-record'
 import type { MediaKind } from '#domain/catalog/media-kind'
@@ -165,6 +174,17 @@ export class HttpArrConnector implements ArrConnector {
     if (!response.ok) return { ok: false as const, error: await toApiError(response) }
     const body = (await response.json()) as { instance: unknown }
     return { ok: true as const, value: servarrInstanceDtoSchema.parse(body.instance) }
+  }
+
+  async saveOnboardingMediaServer(kind: MediaServerKind, draft: MediaServerDraft) {
+    const response = await this.http.put(`/api/onboarding/media-servers/${kind}`, draft)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { mediaServer: unknown }
+    return { ok: true as const, value: mediaServerDtoSchema.parse(body.mediaServer) }
+  }
+
+  async discoverOnboardingInstances(scope: DiscoveryScope) {
+    return this.parseDiscovery(await this.http.post('/api/onboarding/discovery', scope))
   }
 
   async testOidcDiscovery(
@@ -404,6 +424,56 @@ export class HttpArrConnector implements ArrConnector {
     return { ok: true as const, value: undefined }
   }
 
+  /** `/api/media-servers`, not `/api/settings/*` — readable by every signed-in user. */
+  async listMediaServers() {
+    const response = await this.http.get('/api/media-servers')
+    if (!response.ok) throw new Error((await toApiError(response)).message)
+    const body = (await response.json()) as { mediaServers: unknown[] }
+    return body.mediaServers.map((server) => mediaServerDtoSchema.parse(server))
+  }
+
+  async saveMediaServer(kind: MediaServerKind, draft: MediaServerDraft) {
+    const response = await this.http.put(`/api/settings/media-servers/${kind}`, draft)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { mediaServer: unknown }
+    return { ok: true as const, value: mediaServerDtoSchema.parse(body.mediaServer) }
+  }
+
+  async deleteMediaServer(kind: MediaServerKind): Promise<void> {
+    const response = await this.http.delete(`/api/settings/media-servers/${kind}`)
+    if (!response.ok) throw new Error((await toApiError(response)).message)
+  }
+
+  async discoverInstances(scope: DiscoveryScope) {
+    return this.parseDiscovery(await this.http.post('/api/settings/discovery', scope))
+  }
+
+  async getNotificationSettings() {
+    const response = await this.http.get('/api/settings/notifications')
+    if (!response.ok) throw new Error((await toApiError(response)).message)
+    const body = (await response.json()) as { notifications: unknown }
+    return notificationSettingsDtoSchema.parse(body.notifications)
+  }
+
+  async saveNotificationSettings(draft: NotificationSettingsDraft) {
+    const response = await this.http.put('/api/settings/notifications', draft)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { notifications: unknown }
+    return { ok: true as const, value: notificationSettingsDtoSchema.parse(body.notifications) }
+  }
+
+  /** 200 with `{ ok: false }` on a failed delivery, like the instance test endpoints. */
+  async testNotification(): Promise<NotificationTestResult> {
+    const response = await this.http.post('/api/settings/notifications/test')
+    if (!response.ok) {
+      return { ok: false, error: { message: (await toApiError(response)).message } }
+    }
+    const body = (await response.json()) as
+      | { ok: true }
+      | { ok: false; error: { message: string } }
+    return body
+  }
+
   async getSso() {
     const response = await this.http.get('/api/settings/sso')
     const body = (await response.json()) as { oidc: unknown }
@@ -490,6 +560,16 @@ export class HttpArrConnector implements ArrConnector {
     return { ok: true as const, value: mediaRequestDtoSchema.parse(body.request) }
   }
 
+  async listRequestEpisodes(id: string) {
+    const response = await this.http.get(`/api/requests/${id}/episodes`)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { episodes: unknown[] }
+    return {
+      ok: true as const,
+      value: body.episodes.map((episode) => requestEpisodeSchema.parse(episode)),
+    }
+  }
+
   async listLibrary(kind?: MediaKind): Promise<LibraryItem[]> {
     const qs = kind ? `?${new URLSearchParams({ kind }).toString()}` : ''
     const response = await this.http.get(`/api/library${qs}`)
@@ -516,6 +596,15 @@ export class HttpArrConnector implements ArrConnector {
     const response = await this.http.get(`/api/calendar?${qs.toString()}`)
     const body = (await response.json()) as { entries: unknown[] }
     return body.entries.map((entry) => toCalendarEntry(calendarEntryDtoSchema.parse(entry)))
+  }
+
+  private async parseDiscovery(response: Response) {
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { instances: unknown[] }
+    return {
+      ok: true as const,
+      value: body.instances.map((instance) => discoveredInstanceSchema.parse(instance)),
+    }
   }
 
   private async parseConnectionTestResult(response: Response): Promise<ConnectionTestResult> {

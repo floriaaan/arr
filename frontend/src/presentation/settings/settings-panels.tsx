@@ -3,8 +3,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   Clapperboard,
-  Tv,
-  Music,
   ChevronDown,
   KeyRound,
   ShieldCheck,
@@ -13,41 +11,62 @@ import {
   Save,
   ShieldOff,
   Users,
+  MonitorPlay,
+  Bell,
+  Send,
 } from 'lucide-react'
 import { useInstances } from '#application/settings/instances.query'
 import { useDeleteInstance } from '#application/settings/delete-instance.mutation'
 import { useSso } from '#application/settings/sso.query'
 import { useSaveOidc } from '#application/settings/save-oidc.mutation'
 import { useEffectiveAuthSettings } from '#application/settings/auth-settings.query'
+import { useMediaServers } from '#application/settings/media-servers.query'
+import { useNotificationSettings } from '#application/settings/notification-settings.query'
+import { useSaveNotificationSettings } from '#application/settings/save-notification-settings.mutation'
+import { useTestNotification } from '#application/settings/test-notification.mutation'
 import { ServiceInstanceForm } from './service-instance-form'
+import { MediaServerForm } from './media-server-form'
 import { UsersPanel } from './users-panel'
+import { MEDIA_SERVER_META } from '#presentation/shared/media-server-meta'
+import { SERVARR_META } from '#presentation/shared/servarr-meta'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '#presentation/ui/tabs'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '#presentation/ui/card'
 import { Button } from '#presentation/ui/button'
 import { Input } from '#presentation/ui/input'
 import { Label } from '#presentation/ui/label'
 import { Badge } from '#presentation/ui/badge'
+import { Switch } from '#presentation/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#presentation/ui/select'
 import { cn } from '#presentation/shared/utils'
+import { MEDIA_SERVER_KINDS } from '#domain/settings/media-server'
 import type { ServarrKind, ServarrInstanceDto } from '#domain/settings/servarr-instance'
-
-const SERVARR_META: Record<
-  ServarrKind,
-  { label: string; description: string; icon: typeof Clapperboard }
-> = {
-  radarr: { label: 'Radarr', description: 'Movies', icon: Clapperboard },
-  sonarr: { label: 'Sonarr', description: 'TV shows', icon: Tv },
-  lidarr: { label: 'Lidarr', description: 'Music', icon: Music },
-}
+import type { MediaServerDto, MediaServerKind } from '#domain/settings/media-server'
+import type { NotificationAuthMode } from '#domain/settings/notification-settings'
 
 const SERVARR_KINDS: readonly ServarrKind[] = ['radarr', 'sonarr', 'lidarr']
 
 function InstanceStatusBadge({ existing }: { existing?: ServarrInstanceDto }) {
   if (!existing) return <Badge variant="outline">Not configured</Badge>
-  return existing.enabled ? (
-    <Badge>Enabled</Badge>
-  ) : (
-    <Badge variant="secondary">Disabled</Badge>
-  )
+  if (!existing.enabled) return <Badge variant="secondary">Disabled</Badge>
+  if (existing.healthy === false) return <Badge variant="destructive">Unreachable</Badge>
+  return <Badge>Enabled</Badge>
+}
+
+function instanceHealthLabel(existing: ServarrInstanceDto): string | null {
+  if (!existing.enabled || existing.lastCheckedAt === null) return null
+  const checkedAt = new Date(existing.lastCheckedAt).toLocaleString()
+  if (existing.healthy === false) {
+    return existing.lastError ? `${existing.lastError.message} · checked ${checkedAt}` : `Unreachable · checked ${checkedAt}`
+  }
+  return existing.detectedVersion
+    ? `${existing.detectedVersion} · checked ${checkedAt}`
+    : `Checked ${checkedAt}`
 }
 
 function ServiceCard({
@@ -70,7 +89,7 @@ function ServiceCard({
       <button
         type="button"
         onClick={() => setExpanded((value) => !value)}
-        className="flex w-full items-center gap-4 px-6 py-4 text-left"
+        className="tap-scale flex w-full items-center gap-4 px-6 py-4 text-left"
       >
         <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
           <Icon className="size-4.5" />
@@ -83,6 +102,11 @@ function ServiceCard({
           <CardDescription className="truncate">
             {existing?.baseUrl ?? `Connect your ${meta.description.toLowerCase()} manager`}
           </CardDescription>
+          {existing && instanceHealthLabel(existing) ? (
+            <CardDescription className="truncate text-xs">
+              {instanceHealthLabel(existing)}
+            </CardDescription>
+          ) : null}
         </div>
         <ChevronDown
           className={cn('size-4 shrink-0 text-muted-foreground transition-transform', expanded && 'rotate-180')}
@@ -141,6 +165,101 @@ function ServicesPanel() {
             />
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+function MediaServerCard({
+  kind,
+  existing,
+  onChanged,
+}: {
+  kind: MediaServerKind
+  existing?: MediaServerDto
+  onChanged: () => void
+}) {
+  const [expanded, setExpanded] = useState(!existing)
+  const meta = MEDIA_SERVER_META[kind]
+  const Icon = meta.icon
+
+  return (
+    <Card className="py-0">
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        className="tap-scale flex w-full items-center gap-4 px-6 py-4 text-left"
+      >
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+          <Icon className="size-4.5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <CardTitle>{meta.label}</CardTitle>
+            {existing ? (
+              existing.enabled ? (
+                <Badge>Linked</Badge>
+              ) : (
+                <Badge variant="secondary">Hidden</Badge>
+              )
+            ) : (
+              <Badge variant="outline">Not configured</Badge>
+            )}
+          </div>
+          <CardDescription className="truncate">
+            {existing?.baseUrl ?? `Link your ${meta.description}`}
+          </CardDescription>
+        </div>
+        <ChevronDown
+          className={cn(
+            'size-4 shrink-0 text-muted-foreground transition-transform',
+            expanded && 'rotate-180',
+          )}
+        />
+      </button>
+
+      {expanded ? (
+        <CardContent className="space-y-4 border-t py-6">
+          <MediaServerForm
+            kind={kind}
+            existing={existing}
+            duringOnboarding={false}
+            onSaved={onChanged}
+            onRemoved={onChanged}
+          />
+        </CardContent>
+      ) : null}
+    </Card>
+  )
+}
+
+function MediaServersPanel() {
+  const queryClient = useQueryClient()
+  const mediaServers = useMediaServers()
+
+  function invalidate() {
+    void queryClient.invalidateQueries({ queryKey: ['media-servers'] })
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight">Media servers</h2>
+        <p className="text-sm text-muted-foreground">
+          Declare where you watch. Each linked server adds an "open in…" button on the detail of
+          every title already in your library. No API key is stored, and nothing is ever sent to
+          them — these are plain links.
+        </p>
+      </div>
+      <div className="space-y-3">
+        {MEDIA_SERVER_KINDS.map((kind) => (
+          <MediaServerCard
+            key={kind}
+            kind={kind}
+            existing={mediaServers.data?.find((server) => server.kind === kind)}
+            onChanged={invalidate}
+          />
+        ))}
       </div>
     </div>
   )
@@ -237,6 +356,218 @@ function SsoPanel() {
   )
 }
 
+function NotificationsPanel() {
+  const queryClient = useQueryClient()
+  const notificationSettings = useNotificationSettings()
+  const saveNotificationSettings = useSaveNotificationSettings()
+  const testNotification = useTestNotification()
+
+  function invalidate() {
+    void queryClient.invalidateQueries({ queryKey: ['notification-settings'] })
+  }
+
+  const [webhookUrl, setWebhookUrl] = useState('')
+  const [authMode, setAuthMode] = useState<NotificationAuthMode>(
+    notificationSettings.data?.authMode ?? 'none',
+  )
+  const [token, setToken] = useState('')
+  const [username, setUsername] = useState(notificationSettings.data?.username ?? '')
+  const [password, setPassword] = useState('')
+  const [onRequestCreated, setOnRequestCreated] = useState(
+    notificationSettings.data?.onRequestCreated ?? true,
+  )
+  const [onRequestAvailable, setOnRequestAvailable] = useState(
+    notificationSettings.data?.onRequestAvailable ?? true,
+  )
+  const [onRequestFailed, setOnRequestFailed] = useState(
+    notificationSettings.data?.onRequestFailed ?? true,
+  )
+  const [onInstanceUnreachable, setOnInstanceUnreachable] = useState(
+    notificationSettings.data?.onInstanceUnreachable ?? true,
+  )
+
+  const hasWebhookUrl = notificationSettings.data?.hasWebhookUrl ?? false
+  const hasToken = notificationSettings.data?.hasToken ?? false
+  const hasPassword = notificationSettings.data?.hasPassword ?? false
+
+  function handleSave() {
+    saveNotificationSettings.mutate(
+      {
+        ...(webhookUrl ? { webhookUrl } : {}),
+        authMode,
+        ...(authMode === 'token' && token ? { token } : {}),
+        ...(authMode === 'basic' ? { username, ...(password ? { password } : {}) } : {}),
+        onRequestCreated,
+        onRequestAvailable,
+        onRequestFailed,
+        onInstanceUnreachable,
+      },
+      {
+        onSuccess: (result) => {
+          if (!result.ok) return toast.error(result.error.message)
+          toast.success('Notification settings saved.')
+          setWebhookUrl('')
+          setToken('')
+          setPassword('')
+          invalidate()
+        },
+      },
+    )
+  }
+
+  function handleClear() {
+    saveNotificationSettings.mutate(
+      {
+        webhookUrl: null,
+        authMode,
+        onRequestCreated,
+        onRequestAvailable,
+        onRequestFailed,
+        onInstanceUnreachable,
+      },
+      {
+        onSuccess: () => {
+          toast.success('Webhook cleared.')
+          invalidate()
+        },
+      },
+    )
+  }
+
+  function handleTest() {
+    testNotification.mutate(undefined, {
+      onSuccess: (result) => {
+        if (!result.ok) return toast.error(result.error.message)
+        toast.success('Test notification sent.')
+      },
+    })
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight">Notifications</h2>
+        <p className="text-sm text-muted-foreground">
+          Push a notification to an ntfy topic when a request is created, becomes available,
+          fails, or an instance goes unreachable.
+        </p>
+      </div>
+      <Card>
+        <CardHeader className="flex-row items-center gap-3 space-y-0">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+            <Bell className="size-4.5" />
+          </div>
+          <div className="flex-1">
+            <CardTitle>ntfy</CardTitle>
+            <CardDescription>Pushed to the topic below.</CardDescription>
+          </div>
+          <Badge variant={hasWebhookUrl ? 'default' : 'outline'}>
+            {hasWebhookUrl ? 'Configured' : 'Not configured'}
+          </Badge>
+        </CardHeader>
+        <CardContent className="space-y-4 border-t pt-6">
+          <div className="space-y-2">
+            <Label>Topic URL</Label>
+            <Input
+              placeholder={hasWebhookUrl ? 'Re-enter to change' : 'https://ntfy.sh/my-topic'}
+              value={webhookUrl}
+              onChange={(event) => setWebhookUrl(event.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Authentication</Label>
+            <Select
+              value={authMode}
+              onValueChange={(value) => setAuthMode(value as NotificationAuthMode)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="token">Token (Bearer)</SelectItem>
+                <SelectItem value="basic">Username / password</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              For a self-hosted ntfy topic behind access control — token auth or username/password.
+            </p>
+          </div>
+          {authMode === 'token' ? (
+            <div className="space-y-2">
+              <Label>Token</Label>
+              <Input
+                type="password"
+                placeholder={hasToken ? 'Re-enter to change' : 'tk_...'}
+                value={token}
+                onChange={(event) => setToken(event.target.value)}
+              />
+            </div>
+          ) : null}
+          {authMode === 'basic' ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Username</Label>
+                <Input value={username} onChange={(event) => setUsername(event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Password</Label>
+                <Input
+                  type="password"
+                  placeholder={hasPassword ? 'Re-enter to change' : ''}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+              </div>
+            </div>
+          ) : null}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Switch checked={onRequestCreated} onCheckedChange={setOnRequestCreated} />
+              <Label>Request created</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={onRequestAvailable} onCheckedChange={setOnRequestAvailable} />
+              <Label>Request available</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={onRequestFailed} onCheckedChange={setOnRequestFailed} />
+              <Label>Request failed</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={onInstanceUnreachable}
+                onCheckedChange={setOnInstanceUnreachable}
+              />
+              <Label>Instance unreachable</Label>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={handleSave} disabled={saveNotificationSettings.isPending}>
+              <Save className="size-4" />
+              {saveNotificationSettings.isPending ? 'Saving…' : 'Save'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleTest}
+              disabled={!hasWebhookUrl || testNotification.isPending}
+            >
+              <Send className="size-4" />
+              {testNotification.isPending ? 'Sending…' : 'Send test'}
+            </Button>
+            {hasWebhookUrl ? (
+              <Button type="button" variant="outline" onClick={handleClear}>
+                Clear webhook
+              </Button>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 function AuthPanel() {
   const authSettings = useEffectiveAuthSettings()
 
@@ -300,6 +631,14 @@ export function SettingsPanels() {
           <Clapperboard className="size-4" />
           Services
         </TabsTrigger>
+        <TabsTrigger value="media-servers">
+          <MonitorPlay className="size-4" />
+          Media servers
+        </TabsTrigger>
+        <TabsTrigger value="notifications">
+          <Bell className="size-4" />
+          Notifications
+        </TabsTrigger>
         <TabsTrigger value="sso">
           <KeyRound className="size-4" />
           Single sign-on
@@ -315,6 +654,12 @@ export function SettingsPanels() {
       </TabsList>
       <TabsContent value="services" className="min-w-0">
         <ServicesPanel />
+      </TabsContent>
+      <TabsContent value="media-servers" className="min-w-0">
+        <MediaServersPanel />
+      </TabsContent>
+      <TabsContent value="notifications" className="min-w-0">
+        <NotificationsPanel />
       </TabsContent>
       <TabsContent value="sso" className="min-w-0">
         <SsoPanel />

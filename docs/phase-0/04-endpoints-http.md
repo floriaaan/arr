@@ -44,6 +44,21 @@ HTTP approprié (`400` validation, `401` non authentifié, `403` non autorisé, 
   - 200 → `{ instance: ServarrInstanceDto }` (`apiKey` jamais renvoyé en clair,
     seulement `hasApiKey: true`)
 
+- `PUT /api/onboarding/media-servers/:kind` (`:kind ∈ {plex, jellyfin, emby}`)
+  - body : `{ baseUrl: string; enabled: boolean }`
+  - 200 → `{ mediaServer: MediaServerDto }`
+  - Contrairement à `PUT /api/onboarding/instances/:kind`, ne fait **pas**
+    avancer `OnboardingState` : un serveur média est un simple lien de confort
+    (cf. [phase 5](../phase-5-quality-of-life/00-overview-et-decisions.md)).
+
+- `POST /api/onboarding/discovery`
+  - body : `{ extraHost?: string; scanSubnet?: boolean }`
+  - 200 → `{ instances: DiscoveredInstanceDto[] }`
+  `DiscoveredInstanceDto = { kind: 'radarr'|'sonarr'|'lidarr'|'plex'|'jellyfin'|'emby'; baseUrl: string; detectedVersion: string | null; serverName: string | null; confidence: 'confirmed' | 'port' }`
+  Sonde le réseau à la recherche d'instances (cf.
+  [phase 5 / addendum](../phase-5-quality-of-life/01-discovery-et-palette-unifiee.md)) —
+  ne renvoie que des URL, jamais de clé d'API, et n'écrit rien.
+
 - `POST /api/onboarding/sso/test`
   - body : `{ issuerUrl: string; clientId: string; clientSecret: string }`
   - 200 → `{ ok: true; discovery: { authorizationEndpoint, tokenEndpoint, userinfoEndpoint } } | { ok: false; error: {...} }`
@@ -64,6 +79,10 @@ et avec un contrôle `admin_only_middleware` :
 - `GET /api/settings/instances` → `{ instances: ServarrInstanceDto[] }`
 - `PUT /api/settings/instances/:kind`, `DELETE /api/settings/instances/:kind`
 - `POST /api/settings/instances/:kind/test-connection`
+- `POST /api/settings/discovery` → `{ instances: DiscoveredInstanceDto[] }` (même
+  forme que `/api/onboarding/discovery`)
+- `PUT /api/settings/media-servers/:kind` → `{ mediaServer: MediaServerDto }`,
+  `DELETE /api/settings/media-servers/:kind` → 204
 - `GET /api/settings/sso`, `PUT /api/settings/sso`, `POST /api/settings/sso/test`
 
 - `GET /api/settings/auth` — **public**, sans `admin_only_middleware` : la page de
@@ -72,6 +91,16 @@ et avec un contrôle `admin_only_middleware` :
   réponse (booléens + enum).
   → `{ passwordLoginEnabled: boolean; oidcConfigured: boolean; source: 'database' | 'environment' }`
   (lecture seule côté UI quand `source === 'environment'`)
+
+## Media servers (`/api/media-servers`) — authentifié (pas admin)
+
+- `GET /api/media-servers` → `{ mediaServers: MediaServerDto[] }`
+  `MediaServerDto = { id: string; kind: 'plex' | 'jellyfin' | 'emby'; baseUrl: string; enabled: boolean }`
+  Hors `/api/settings` et sans `admin_only_middleware`, volontairement : le
+  détail d'un item affiche des liens "ouvrir dans Plex/Jellyfin/Emby" pour
+  tout utilisateur connecté, et le DTO ne porte aucun secret (aucune clé
+  d'API n'est stockée pour un serveur média). Les écritures restent admin,
+  cf. section Settings ci-dessus.
 
 ## Catalog (`/api/catalog/*`) — authentifié
 
@@ -97,10 +126,27 @@ et avec un contrôle `admin_only_middleware` :
   - 502 → `{ error: { type: 'provisioning_failed'; message } }`
 
 - `GET /api/requests/:id` → `{ request: MediaRequestDto }`
+  - 403 → `{ error: { type: 'forbidden' } }` si la requête appartient à un
+    autre utilisateur (les admins voient tout)
+
+- `GET /api/requests/:id/episodes` → `{ episodes: RequestEpisodeDto[] }`
+  `RequestEpisodeDto = { seasonNumber: number; episodeNumber: number; title: string; airDate: string | null; state: 'available' | 'downloading' | 'importing' | 'missing' | 'failed'; percentage: number | null }`
+  Endpoint dédié plutôt qu'un champ du DTO de requête : une page de 50
+  requêtes déclencherait sinon 50 appels *arr. Vide pour un film. Mêmes règles
+  d'autorisation que `GET /api/requests/:id`.
 
 - `POST /api/requests/:id/cancel`
-  - 200 → `{ request: MediaRequestDto }`
+  - 200 → `{ request: MediaRequestDto }` — l'annulation est aussi propagée à
+    l'instance *arr (retrait de la file + démonitorage) ; si l'instance est
+    injoignable, l'annulation locale est conservée quand même et l'échec est
+    seulement loggé (cf.
+    [phase 6](../phase-6-fiabilite-requests/00-overview-et-decisions.md))
+  - 403 → `{ error: { type: 'forbidden' } }` (idem `GET`)
   - 409 → `{ error: { type: 'not_cancellable'; currentStatus } }`
+
+`GET /api/requests` reste volontairement non filtré par utilisateur : sur une
+instance partagée, voir ce que les autres ont demandé est utile. Seules les
+**écritures** sont restreintes au propriétaire (ou à un admin).
 
 `MediaRequestDto = { id, requestedBy: { id, email }, kind, externalId, title, status, progress: RequestProgressDto | null, failureReason: string | null, createdAt, updatedAt }`
 

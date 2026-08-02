@@ -18,6 +18,9 @@ import type {
 } from '#domain/settings/interfaces/servarr-quality-profile-manager.interface'
 import type { ServarrInstanceRepository } from '#domain/settings/interfaces/servarr-instance-repository.interface'
 import type { ServarrInstance } from '#domain/settings/servarr-instance.aggregate'
+import type { MediaServerRepository } from '#domain/settings/interfaces/media-server-repository.interface'
+import type { MediaServer } from '#domain/settings/media-server.aggregate'
+import type { MediaServerKind } from '#domain/settings/media-server-kind.vo'
 import type { InstanceProfileRepository } from '#domain/settings/interfaces/instance-profile-repository.interface'
 import type { InstanceProfile } from '#domain/settings/instance-profile.aggregate'
 import type {
@@ -164,6 +167,26 @@ export class InMemoryServarrInstanceRepository implements ServarrInstanceReposit
 
   async save(instance: ServarrInstance): Promise<void> {
     this.byId.set(instance.id, instance)
+  }
+
+  async delete(id: string): Promise<void> {
+    this.byId.delete(id)
+  }
+}
+
+export class InMemoryMediaServerRepository implements MediaServerRepository {
+  private byId = new Map<string, MediaServer>()
+
+  async findAll(): Promise<MediaServer[]> {
+    return [...this.byId.values()]
+  }
+
+  async findByKind(kind: MediaServerKind): Promise<MediaServer | null> {
+    return [...this.byId.values()].find((server) => server.kind === kind) ?? null
+  }
+
+  async save(server: MediaServer): Promise<void> {
+    this.byId.set(server.id, server)
   }
 
   async delete(id: string): Promise<void> {

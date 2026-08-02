@@ -8,6 +8,7 @@ import type { MediaRequest } from '#domain/requests/media-request.aggregate'
 import type { ExternalRef } from '#domain/requests/external-ref.vo'
 import type { ProvisioningError } from '#domain/requests/provisioning-error.vo'
 import type { ProgressSnapshot } from '#domain/requests/interfaces/download-progress.interface'
+import type { RequestEpisode } from '#domain/requests/request-episode.entity'
 import type { ConnectionError } from '#domain/settings/connection-error.vo'
 
 /**
@@ -21,7 +22,10 @@ export interface ServarrKindAdapter {
   search(term: string): Promise<MediaItem[]>
   detail(externalId: ExternalId): Promise<MediaDetail>
   submit(request: MediaRequest): Promise<Result<ExternalRef, ProvisioningError>>
+  cancel(request: MediaRequest): Promise<Result<void, ProvisioningError>>
   fetchProgress(refs: ExternalRef[]): Promise<ProgressSnapshot[]>
+  /** Empty for kinds with nothing to unfold (movies, albums for now). */
+  listEpisodes(remoteId: string): Promise<RequestEpisode[]>
   list(): Promise<LibraryItem[]>
   calendar(start: Date, end: Date): Promise<CalendarEntry[]>
   remove(externalId: ExternalId, deleteFiles: boolean): Promise<Result<void, ConnectionError>>

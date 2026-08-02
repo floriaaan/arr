@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '#presentation/ui/dialog'
 import { Input } from '#presentation/ui/input'
-import { Tabs, TabsList, TabsTrigger } from '#presentation/ui/tabs'
 import { SearchResults } from '#presentation/catalog/search-results'
 import { MediaDetailDrawer } from '#presentation/catalog/media-detail-drawer'
 import { useDebouncedValue } from './use-debounced-value'
@@ -11,7 +10,9 @@ import type { ExternalId } from '#domain/catalog/external-id'
 
 /**
  * The app's only way to discover new media (no dedicated `/search` route,
- * cf. docs/phase-5) — open it, pick a kind, type, pick a result.
+ * cf. docs/phase-5) — open it, type, pick a result. The three kinds are
+ * searched together: having to pick one up front only ever hid results the
+ * user was looking for (cf. docs/phase-5-quality-of-life/01).
  */
 export function CommandPalette({
   open,
@@ -20,10 +21,9 @@ export function CommandPalette({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const [kind, setKind] = useState<MediaKind>('movie')
   const [term, setTerm] = useState('')
   const debouncedTerm = useDebouncedValue(term, 300)
-  const [selected, setSelected] = useState<ExternalId | null>(null)
+  const [selected, setSelected] = useState<{ externalId: ExternalId; kind: MediaKind } | null>(null)
 
   return (
     <>
@@ -33,19 +33,11 @@ export function CommandPalette({
             <DialogTitle>Search the catalog</DialogTitle>
           </DialogHeader>
 
-          <Tabs value={kind} onValueChange={(value) => setKind(value as MediaKind)}>
-            <TabsList>
-              <TabsTrigger value="movie">Movies</TabsTrigger>
-              <TabsTrigger value="series">Series</TabsTrigger>
-              <TabsTrigger value="album">Albums</TabsTrigger>
-            </TabsList>
-          </Tabs>
-
           <div className="relative">
             <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               autoFocus
-              placeholder={`Search ${kind}s…`}
+              placeholder="Search movies, series and albums…"
               value={term}
               onChange={(event) => setTerm(event.target.value)}
               className="pl-9"
@@ -53,16 +45,18 @@ export function CommandPalette({
           </div>
 
           <SearchResults
-            kind={kind}
             term={debouncedTerm}
-            onSelect={(item) => setSelected(item.externalId)}
+            /* The kind now comes from the picked result rather than a tab —
+               which is what used to make "open a series while the Movies tab
+               is active" impossible. */
+            onSelect={(item) => setSelected({ externalId: item.externalId, kind: item.kind })}
           />
         </DialogContent>
       </Dialog>
 
       <MediaDetailDrawer
-        externalId={selected}
-        kind={kind}
+        externalId={selected?.externalId ?? null}
+        kind={selected?.kind ?? 'movie'}
         onOpenChange={(isOpen) => {
           if (!isOpen) setSelected(null)
         }}

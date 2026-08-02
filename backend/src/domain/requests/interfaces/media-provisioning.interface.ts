@@ -11,4 +11,13 @@ import type { ProvisioningError } from '../provisioning-error.vo.js'
  */
 export interface MediaProvisioning {
   submit(request: MediaRequest): Promise<Result<ExternalRef, ProvisioningError>>
+
+  /**
+   * Undoes a `submit`: drops whatever this request has in the download queue
+   * and stops the *arr from immediately searching for it again. Without it,
+   * cancelling here left the *arr downloading regardless (cf.
+   * docs/phase-6-fiabilite-requests, chantier 3). Never deletes files — that
+   * has its own explicit path on the library side.
+   */
+  cancel(request: MediaRequest): Promise<Result<void, ProvisioningError>>
 }

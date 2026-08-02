@@ -4,6 +4,7 @@ import { ListRequests } from '#application/requests/list-requests.use-case'
 import { GetRequest } from '#application/requests/get-request.use-case'
 import { CreateRequest } from '#application/requests/create-request.use-case'
 import { CancelRequest } from '#application/requests/cancel-request.use-case'
+import { ListRequestEpisodes } from '#application/requests/list-request-episodes.use-case'
 import { requireAuthenticatedUser } from '#presentation/shared/auth-context'
 import { serializeError } from '#presentation/shared/error-serializer'
 import { toMediaRequestDto, toMediaRequestDtoList } from './request.dto.js'
@@ -60,6 +61,7 @@ export default class RequestsController {
     const instanceRepository = await app.container.make('settings.instanceRepository')
     const idGenerator = await app.container.make('shared.idGenerator')
     const clock = await app.container.make('shared.clock')
+    const eventBus = await app.container.make('shared.eventBus')
 
     const useCase = new CreateRequest(
       repository,
@@ -68,6 +70,7 @@ export default class RequestsController {
       instanceRepository,
       idGenerator,
       clock,
+      eventBus,
     )
     const result = await useCase.execute({ requestedBy: user.id, ...payload })
     if (!result.ok) {
@@ -87,22 +90,55 @@ export default class RequestsController {
   }
 
   async show(ctx: HttpContext) {
+    const user = requireAuthenticatedUser(ctx)
     const repository = await app.container.make('requests.repository')
-    const request = await new GetRequest(repository).execute({ id: ctx.params.id })
-    if (!request) {
-      const { status, body } = serializeError('not_found')
+
+    const result = await new GetRequest(repository).execute({
+      id: ctx.params.id,
+      actor: { id: user.id, isAdmin: user.role === 'admin' },
+    })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
       return ctx.response.status(status).send(body)
     }
 
     const userDirectory = await app.container.make('identity.userDirectory')
-    return ctx.response.json({ request: await toMediaRequestDto(request, userDirectory) })
+    return ctx.response.json({ request: await toMediaRequestDto(result.value, userDirectory) })
+  }
+
+  /**
+   * Deliberately its own endpoint rather than a field on the request DTO: a
+   * page of 50 requests would otherwise fire 50 *arr calls (cf.
+   * docs/phase-6-fiabilite-requests, chantier 5 décision 1).
+   */
+  async episodes(ctx: HttpContext) {
+    const user = requireAuthenticatedUser(ctx)
+    const repository = await app.container.make('requests.repository')
+    const episodes = await app.container.make('requests.episodes')
+
+    const result = await new ListRequestEpisodes(repository, episodes).execute({
+      id: ctx.params.id,
+      actor: { id: user.id, isAdmin: user.role === 'admin' },
+    })
+    if (!result.ok) {
+      const { status, body } = serializeError(result.error)
+      return ctx.response.status(status).send(body)
+    }
+
+    return ctx.response.json({ episodes: result.value })
   }
 
   async cancel(ctx: HttpContext) {
+    const user = requireAuthenticatedUser(ctx)
     const repository = await app.container.make('requests.repository')
     const clock = await app.container.make('shared.clock')
+    const provisioning = await app.container.make('requests.provisioning')
+    const eventBus = await app.container.make('shared.eventBus')
 
-    const result = await new CancelRequest(repository, clock).execute({ id: ctx.params.id })
+    const result = await new CancelRequest(repository, clock, provisioning, eventBus).execute({
+      id: ctx.params.id,
+      actor: { id: user.id, isAdmin: user.role === 'admin' },
+    })
     if (!result.ok) {
       if (typeof result.error === 'string') {
         const { status, body } = serializeError(result.error)
@@ -117,7 +153,17 @@ export default class RequestsController {
       })
     }
 
+    // The cancellation stands either way; the *arr just didn't confirm it.
+    if (result.value.provisioningError) {
+      ctx.logger.warn(
+        { requestId: ctx.params.id, reason: result.value.provisioningError },
+        'Request cancelled locally but the *arr instance refused',
+      )
+    }
+
     const userDirectory = await app.container.make('identity.userDirectory')
-    return ctx.response.json({ request: await toMediaRequestDto(result.value, userDirectory) })
+    return ctx.response.json({
+      request: await toMediaRequestDto(result.value.request, userDirectory),
+    })
   }
 }

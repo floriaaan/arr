@@ -58,6 +58,104 @@ describe.each<{ name: string; create: () => ArrConnector }>([
             return json({ userId: 'user-1' }, 201)
           }
         })(),
+        // Stateful on purpose: the media server contract below is about the
+        // save → list → delete round-trip, not about a single payload shape.
+        ...(() => {
+          const servers = new Map<string, unknown>()
+          return {
+            'GET /api/media-servers': () => json({ mediaServers: [...servers.values()] }),
+            'PUT /api/settings/media-servers/plex': (init: RequestInit | undefined) => {
+              const draft = JSON.parse(String(init?.body)) as {
+                baseUrl: string
+                enabled: boolean
+              }
+              // Mirrors the backend's `Url` VO, which strips trailing slashes.
+              const mediaServer = {
+                id: 'media-server-1',
+                kind: 'plex',
+                baseUrl: draft.baseUrl.replace(/\/+$/, ''),
+                enabled: draft.enabled,
+              }
+              servers.set('plex', mediaServer)
+              return json({ mediaServer })
+            },
+            'DELETE /api/settings/media-servers/plex': () => {
+              servers.delete('plex')
+              return new Response(null, { status: 204 })
+            },
+          }
+        })(),
+        ...(() => {
+          let settings = {
+            hasWebhookUrl: false,
+            authMode: 'none' as 'none' | 'token' | 'basic',
+            hasToken: false,
+            username: null as string | null,
+            hasPassword: false,
+            onRequestCreated: true,
+            onRequestAvailable: true,
+            onRequestFailed: true,
+            onInstanceUnreachable: true,
+          }
+          return {
+            'GET /api/settings/notifications': () => json({ notifications: settings }),
+            'PUT /api/settings/notifications': (init: RequestInit | undefined) => {
+              const draft = JSON.parse(String(init?.body)) as {
+                webhookUrl?: string | null
+                authMode: 'none' | 'token' | 'basic'
+                token?: string
+                username?: string
+                password?: string
+                onRequestCreated: boolean
+                onRequestAvailable: boolean
+                onRequestFailed: boolean
+                onInstanceUnreachable: boolean
+              }
+              if (draft.authMode === 'token' && draft.token === undefined && !settings.hasToken) {
+                return json({ error: { type: 'validation_failed', message: 'A token is required.' } }, 400)
+              }
+              if (draft.authMode === 'basic' && draft.password === undefined && !settings.hasPassword) {
+                return json({ error: { type: 'validation_failed', message: 'A password is required.' } }, 400)
+              }
+              settings = {
+                hasWebhookUrl:
+                  draft.webhookUrl === undefined ? settings.hasWebhookUrl : draft.webhookUrl !== null,
+                authMode: draft.authMode,
+                hasToken: draft.authMode === 'token' ? true : false,
+                username: draft.authMode === 'basic' ? (draft.username ?? settings.username) : null,
+                hasPassword: draft.authMode === 'basic' ? true : false,
+                onRequestCreated: draft.onRequestCreated,
+                onRequestAvailable: draft.onRequestAvailable,
+                onRequestFailed: draft.onRequestFailed,
+                onInstanceUnreachable: draft.onInstanceUnreachable,
+              }
+              return json({ notifications: settings })
+            },
+            'POST /api/settings/notifications/test': () =>
+              settings.hasWebhookUrl
+                ? json({ ok: true })
+                : json({ ok: false, error: { message: 'No webhook URL configured.' } }),
+          }
+        })(),
+        'POST /api/settings/discovery': () =>
+          json({
+            instances: [
+              {
+                kind: 'radarr',
+                baseUrl: 'http://localhost:7878',
+                detectedVersion: null,
+                serverName: null,
+                confidence: 'confirmed',
+              },
+              {
+                kind: 'jellyfin',
+                baseUrl: 'http://localhost:8096',
+                detectedVersion: '10.10.3',
+                serverName: 'Living room',
+                confidence: 'confirmed',
+              },
+            ],
+          }),
         'GET /api/catalog/search': () =>
           json({
             results: [
@@ -75,6 +173,7 @@ describe.each<{ name: string; create: () => ArrConnector }>([
         'POST /api/requests': () =>
           json({ error: { type: 'no_active_instance', message: 'No active instance.' } }, 409),
         'GET /api/requests/does-not-exist': () => NOT_FOUND_INSTANCE,
+        'GET /api/requests/does-not-exist/episodes': () => NOT_FOUND_INSTANCE,
         'POST /api/requests/does-not-exist/cancel': () =>
           json({ error: { type: 'not_found', message: 'Request not found.' } }, 404),
         'GET /api/library': () =>
@@ -175,6 +274,12 @@ describe.each<{ name: string; create: () => ArrConnector }>([
     if (!result.ok) expect(result.error.type).toBe('not_found')
   })
 
+  test('asking for the episodes of an unknown request fails, it does not return []', async () => {
+    const result = await connector.listRequestEpisodes('does-not-exist')
+
+    expect(result.ok).toBe(false)
+  })
+
   test('library items expose a ready-to-use posterUrl, never the raw ref', async () => {
     const items = await connector.listLibrary()
     expect(items.length).toBeGreaterThan(0)
@@ -182,6 +287,132 @@ describe.each<{ name: string; create: () => ArrConnector }>([
       expect(item).not.toHaveProperty('posterRef')
       if (item.posterUrl !== null) expect(typeof item.posterUrl).toBe('string')
     }
+  })
+
+  test('starts with no media server declared', async () => {
+    expect(await connector.listMediaServers()).toEqual([])
+  })
+
+  test('saving a media server normalizes its url and makes it listable', async () => {
+    const saved = await connector.saveMediaServer('plex', {
+      baseUrl: 'http://plex.local:32400/',
+      enabled: true,
+    })
+
+    expect(saved.ok).toBe(true)
+    if (!saved.ok) return
+    expect(saved.value.kind).toBe('plex')
+    expect(saved.value.baseUrl).toBe('http://plex.local:32400')
+
+    const servers = await connector.listMediaServers()
+    expect(servers).toHaveLength(1)
+    expect(servers[0]?.baseUrl).toBe('http://plex.local:32400')
+  })
+
+  test('deleting a media server removes it from the list', async () => {
+    await connector.saveMediaServer('plex', {
+      baseUrl: 'http://plex.local:32400',
+      enabled: true,
+    })
+
+    await connector.deleteMediaServer('plex')
+
+    expect(await connector.listMediaServers()).toEqual([])
+  })
+
+  test('discovery only ever proposes base urls, never a credential', async () => {
+    const result = await connector.discoverInstances({ scanSubnet: false })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.length).toBeGreaterThan(0)
+    for (const instance of result.value) {
+      expect(instance.baseUrl).toMatch(/^https?:\/\//)
+      expect(instance).not.toHaveProperty('apiKey')
+      expect(['confirmed', 'port']).toContain(instance.confidence)
+    }
+  })
+
+  test('notification settings start unconfigured, never exposing a webhook url', async () => {
+    const settings = await connector.getNotificationSettings()
+    expect(settings.hasWebhookUrl).toBe(false)
+    expect(settings).not.toHaveProperty('webhookUrl')
+  })
+
+  test('saving notification settings makes the webhook present without ever echoing it back', async () => {
+    const saved = await connector.saveNotificationSettings({
+      webhookUrl: 'https://ntfy.sh/my-topic',
+      authMode: 'none',
+      onRequestCreated: true,
+      onRequestAvailable: true,
+      onRequestFailed: false,
+      onInstanceUnreachable: true,
+    })
+
+    expect(saved.ok).toBe(true)
+    if (!saved.ok) return
+    expect(saved.value.hasWebhookUrl).toBe(true)
+    expect(saved.value.onRequestFailed).toBe(false)
+    expect(saved.value).not.toHaveProperty('webhookUrl')
+
+    const refetched = await connector.getNotificationSettings()
+    expect(refetched.hasWebhookUrl).toBe(true)
+  })
+
+  test('testing notifications without a configured webhook fails', async () => {
+    const result = await connector.testNotification()
+    expect(result.ok).toBe(false)
+  })
+
+  test('configuring token auth makes the token present without ever echoing it back', async () => {
+    const saved = await connector.saveNotificationSettings({
+      authMode: 'token',
+      token: 'tk_abc123',
+      onRequestCreated: true,
+      onRequestAvailable: true,
+      onRequestFailed: true,
+      onInstanceUnreachable: true,
+    })
+
+    expect(saved.ok).toBe(true)
+    if (!saved.ok) return
+    expect(saved.value.authMode).toBe('token')
+    expect(saved.value.hasToken).toBe(true)
+    expect(saved.value).not.toHaveProperty('token')
+
+    const refetched = await connector.getNotificationSettings()
+    expect(refetched.hasToken).toBe(true)
+  })
+
+  test('switching to token auth without a token fails', async () => {
+    const saved = await connector.saveNotificationSettings({
+      authMode: 'token',
+      onRequestCreated: true,
+      onRequestAvailable: true,
+      onRequestFailed: true,
+      onInstanceUnreachable: true,
+    })
+
+    expect(saved.ok).toBe(false)
+  })
+
+  test('configuring basic auth exposes the username but never the password', async () => {
+    const saved = await connector.saveNotificationSettings({
+      authMode: 'basic',
+      username: 'alice',
+      password: 'hunter2',
+      onRequestCreated: true,
+      onRequestAvailable: true,
+      onRequestFailed: true,
+      onInstanceUnreachable: true,
+    })
+
+    expect(saved.ok).toBe(true)
+    if (!saved.ok) return
+    expect(saved.value.authMode).toBe('basic')
+    expect(saved.value.username).toBe('alice')
+    expect(saved.value.hasPassword).toBe(true)
+    expect(saved.value).not.toHaveProperty('password')
   })
 
   test('calendar entries fall within the requested range and expose a posterUrl', async () => {

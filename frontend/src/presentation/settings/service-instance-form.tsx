@@ -7,7 +7,7 @@ import { useSaveInstance } from '#application/settings/save-instance.mutation'
 import { Input } from '#presentation/ui/input'
 import { Label } from '#presentation/ui/label'
 import { Button } from '#presentation/ui/button'
-import { Switch } from '#presentation/ui/switch'
+import { DiscoveryDialog } from './discovery-dialog'
 import {
   Select,
   SelectContent,
@@ -42,7 +42,6 @@ export function ServiceInstanceForm({
   const [languageProfileId, setLanguageProfileId] = useState(
     existing?.languageProfileId ?? undefined,
   )
-  const [enabled, setEnabled] = useState(existing?.enabled ?? true)
 
   const testInstance = useTestInstance()
   const fetchProfiles = useFetchInstanceProfiles()
@@ -78,7 +77,7 @@ export function ServiceInstanceForm({
           qualityProfileId: qualityProfileId ?? 0,
           metadataProfileId,
           languageProfileId,
-          enabled,
+          enabled: true,
         },
       },
       {
@@ -95,74 +94,69 @@ export function ServiceInstanceForm({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Base URL</Label>
+      <div className="space-y-2">
+        <Label>Base URL</Label>
+        <div className="flex gap-2">
           <Input
+            className="flex-1"
             placeholder="http://localhost:7878"
             value={baseUrl}
             onChange={(event) => setBaseUrl(event.target.value)}
           />
-        </div>
-        <div className="space-y-2">
-          <Label>API key</Label>
-          <Input
-            type="password"
-            placeholder={existing?.hasApiKey ? 'Re-enter to change' : ''}
-            value={apiKey}
-            onChange={(event) => setApiKey(event.target.value)}
+          <DiscoveryDialog
+            kind={kind}
+            duringOnboarding={duringOnboarding}
+            onPick={setBaseUrl}
+            triggerClassName="h-9"
           />
         </div>
       </div>
-
-      <Button
-        type="button"
-        variant="outline"
-        onClick={handleTest}
-        disabled={!baseUrl || !apiKey || testInstance.isPending}
-      >
-        {testInstance.isPending ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <PlugZap className="size-4" />
-        )}
-        {testInstance.isPending ? 'Testing…' : 'Test connection'}
-      </Button>
+      <div className="space-y-2">
+        <Label>API key</Label>
+        <Input
+          type="password"
+          placeholder={existing?.hasApiKey ? 'Re-enter to change' : ''}
+          value={apiKey}
+          onChange={(event) => setApiKey(event.target.value)}
+        />
+      </div>
 
       {profiles ? (
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Root folder</Label>
-            <Select value={rootFolderPath} onValueChange={setRootFolderPath}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a root folder" />
-              </SelectTrigger>
-              <SelectContent>
-                {profiles.rootFolders.map((folder) => (
-                  <SelectItem key={folder.path} value={folder.path}>
-                    {folder.path}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Quality profile</Label>
-            <Select
-              value={qualityProfileId?.toString()}
-              onValueChange={(value) => setQualityProfileId(Number(value))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a quality profile" />
-              </SelectTrigger>
-              <SelectContent>
-                {profiles.qualityProfiles.map((profile) => (
-                  <SelectItem key={profile.id} value={profile.id.toString()}>
-                    {profile.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Root folder</Label>
+              <Select value={rootFolderPath} onValueChange={setRootFolderPath}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a root folder" />
+                </SelectTrigger>
+                <SelectContent>
+                  {profiles.rootFolders.map((folder) => (
+                    <SelectItem key={folder.path} value={folder.path}>
+                      {folder.path}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Quality profile</Label>
+              <Select
+                value={qualityProfileId?.toString()}
+                onValueChange={(value) => setQualityProfileId(Number(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a quality profile" />
+                </SelectTrigger>
+                <SelectContent>
+                  {profiles.qualityProfiles.map((profile) => (
+                    <SelectItem key={profile.id} value={profile.id.toString()}>
+                      {profile.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {kind === 'lidarr' && profiles.metadataProfiles ? (
@@ -209,12 +203,20 @@ export function ServiceInstanceForm({
         </div>
       ) : null}
 
-      <div className="flex items-center gap-2">
-        <Switch checked={enabled} onCheckedChange={setEnabled} />
-        <Label>Enabled</Label>
-      </div>
-
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleTest}
+          disabled={!baseUrl || !apiKey || testInstance.isPending}
+        >
+          {testInstance.isPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <PlugZap className="size-4" />
+          )}
+          {testInstance.isPending ? 'Testing…' : 'Test connection'}
+        </Button>
         <Button onClick={handleSave} disabled={!canSave || saveInstance.isPending}>
           {saveInstance.isPending ? (
             <Loader2 className="size-4 animate-spin" />

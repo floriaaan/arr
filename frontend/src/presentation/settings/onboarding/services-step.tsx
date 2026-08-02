@@ -1,13 +1,14 @@
 import { useState } from 'react'
-import { Check } from 'lucide-react'
+import { ArrowRight, Check, ChevronLeft } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '#presentation/ui/tabs'
 import { Button } from '#presentation/ui/button'
 import { ServiceInstanceForm } from '#presentation/settings/service-instance-form'
+import { SERVARR_META } from '#presentation/shared/servarr-meta'
 
 const SERVARR_KINDS = ['radarr', 'sonarr', 'lidarr'] as const
 type Kind = (typeof SERVARR_KINDS)[number]
 
-export function ServicesStep({ onNext }: { onNext: () => void }) {
+export function ServicesStep({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const [configured, setConfigured] = useState<Record<Kind, boolean>>({
     radarr: false,
     sonarr: false,
@@ -25,12 +26,16 @@ export function ServicesStep({ onNext }: { onNext: () => void }) {
 
       <Tabs defaultValue="radarr">
         <TabsList className="w-full">
-          {SERVARR_KINDS.map((kind) => (
-            <TabsTrigger key={kind} value={kind} className="capitalize">
-              {kind}
-              {configured[kind] ? <Check className="size-3.5 text-primary" /> : null}
-            </TabsTrigger>
-          ))}
+          {SERVARR_KINDS.map((kind) => {
+            const Icon = SERVARR_META[kind].icon
+            return (
+              <TabsTrigger key={kind} value={kind} className="capitalize">
+                <Icon className="size-3.5" />
+                {kind}
+                {configured[kind] ? <Check className="size-3.5 text-primary" /> : null}
+              </TabsTrigger>
+            )
+          })}
         </TabsList>
         {SERVARR_KINDS.map((kind) => (
           <TabsContent key={kind} value={kind} forceMount className="data-[state=inactive]:hidden">
@@ -43,7 +48,16 @@ export function ServicesStep({ onNext }: { onNext: () => void }) {
         ))}
       </Tabs>
 
-      <Button onClick={onNext}>Continue</Button>
+      <div className="flex w-full items-center justify-between gap-2">
+        <Button type="button" variant="ghost" onClick={onBack}>
+          <ChevronLeft className="size-4" />
+          Back
+        </Button>
+        <Button onClick={onNext}>
+          Continue
+          <ArrowRight className="size-4" />
+        </Button>
+      </div>
     </div>
   )
 }

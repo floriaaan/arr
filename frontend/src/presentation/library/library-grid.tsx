@@ -139,7 +139,7 @@ export function LibraryGrid() {
             <List className="size-4" />
           </Button>
         </div>
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative w-full flex-1 sm:w-auto sm:min-w-[200px]">
           <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search library…"

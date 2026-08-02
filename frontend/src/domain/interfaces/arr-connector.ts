@@ -7,6 +7,13 @@ import type { OnboardingStatus } from '../settings/onboarding-state'
 import type { ServarrKind, ServarrInstanceDto } from '../settings/servarr-instance'
 import type { InstanceDraft } from '../settings/instance-draft'
 import type { InstanceProfileDto, InstanceProfileDraft } from '../settings/instance-profile'
+import type { MediaServerDraft, MediaServerDto, MediaServerKind } from '../settings/media-server'
+import type { DiscoveredInstance, DiscoveryScope } from '../settings/discovered-instance'
+import type {
+  NotificationSettingsDraft,
+  NotificationSettingsDto,
+  NotificationTestResult,
+} from '../settings/notification-settings'
 import type { QualityProfileRecord } from '../settings/quality-profile-record'
 import type { DownloadClientRecord } from '../settings/download-client-record'
 import type { IndexerRecord } from '../settings/indexer-record'
@@ -17,6 +24,7 @@ import type { MediaItem } from '../catalog/media-item'
 import type { MediaDetail } from '../catalog/media-detail'
 import type { MediaRequest } from '../requests/media-request'
 import type { RequestFilter } from '../requests/request-filter'
+import type { RequestEpisode } from '../requests/request-episode'
 import type { LibraryItem } from '../library/library-item'
 import type { CalendarEntry } from '../calendar/calendar-entry'
 
@@ -88,6 +96,13 @@ export interface ArrConnector {
     kind: ServarrKind,
     draft: InstanceDraft,
   ) => Promise<Result<ServarrInstanceDto, ApiError>>
+  saveOnboardingMediaServer: (
+    kind: MediaServerKind,
+    draft: MediaServerDraft,
+  ) => Promise<Result<MediaServerDto, ApiError>>
+  discoverOnboardingInstances: (
+    scope: DiscoveryScope,
+  ) => Promise<Result<DiscoveredInstance[], ApiError>>
   testOidcDiscovery: (
     issuerUrl: string,
     clientId: string,
@@ -175,6 +190,27 @@ export interface ArrConnector {
   deleteIndexer: (kind: ServarrKind, id: number) => Promise<Result<void, ApiError>>
   testIndexer: (kind: ServarrKind, payload: IndexerRecord) => Promise<Result<void, ApiError>>
 
+  // settings — media servers (cf. docs/phase-5-quality-of-life)
+  // Reading is open to every signed-in user (the media detail drawer links to
+  // them); only the writes are admin-gated, backend-side.
+  listMediaServers: () => Promise<MediaServerDto[]>
+  saveMediaServer: (
+    kind: MediaServerKind,
+    draft: MediaServerDraft,
+  ) => Promise<Result<MediaServerDto, ApiError>>
+  deleteMediaServer: (kind: MediaServerKind) => Promise<void>
+
+  // settings — network discovery (cf. docs/phase-5-quality-of-life/01)
+  // Proposes base URLs only; never reads an API key, never writes anything.
+  discoverInstances: (scope: DiscoveryScope) => Promise<Result<DiscoveredInstance[], ApiError>>
+
+  // settings — notifications (cf. docs/phase-6-fiabilite-requests/02)
+  getNotificationSettings: () => Promise<NotificationSettingsDto>
+  saveNotificationSettings: (
+    draft: NotificationSettingsDraft,
+  ) => Promise<Result<NotificationSettingsDto, ApiError>>
+  testNotification: () => Promise<NotificationTestResult>
+
   getSso: () => Promise<{
     issuerUrl: string
     clientId: string
@@ -200,6 +236,8 @@ export interface ArrConnector {
   ) => Promise<Result<MediaRequest, ApiError>>
   getRequest: (id: string) => Promise<MediaRequest | null>
   cancelRequest: (id: string) => Promise<Result<MediaRequest, ApiError>>
+  /** Series only; empty for anything with nothing to unfold. Fetched on expand. */
+  listRequestEpisodes: (id: string) => Promise<Result<RequestEpisode[], ApiError>>
 
   // library
   listLibrary: (kind?: MediaKind) => Promise<LibraryItem[]>

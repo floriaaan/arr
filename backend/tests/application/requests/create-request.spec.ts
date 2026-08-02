@@ -1,4 +1,5 @@
 import { test } from '@japa/runner'
+import { InMemoryEventBus } from '#application/shared/event-bus'
 import { CreateRequest } from '#application/requests/create-request.use-case'
 import { MediaDetail } from '#domain/catalog/media-detail.entity'
 import { ExternalId } from '#domain/catalog/external-id.vo'
@@ -58,6 +59,7 @@ function setup() {
   const provisioning = new FakeMediaProvisioning()
   const lookup = new FakeMediaLookup()
   const instanceRepository = new InMemoryServarrInstanceRepository()
+  const eventBus = new InMemoryEventBus()
   const useCase = new CreateRequest(
     requestRepository,
     provisioning,
@@ -65,8 +67,9 @@ function setup() {
     instanceRepository,
     new SequentialIdGenerator(),
     new FixedClock(),
+    eventBus,
   )
-  return { requestRepository, provisioning, lookup, instanceRepository, useCase }
+  return { requestRepository, provisioning, lookup, instanceRepository, eventBus, useCase }
 }
 
 test.group('CreateRequest', () => {
@@ -118,6 +121,56 @@ test.group('CreateRequest', () => {
 
     assert.isFalse(result.ok)
     assert.equal(!result.ok ? result.error : undefined, 'already_requested')
+  })
+
+  test('allows re-requesting a title whose previous request failed', async ({ assert }) => {
+    const { lookup, instanceRepository, provisioning, requestRepository, useCase } = setup()
+    lookup.detailResult = aMediaDetail()
+    await anActiveRadarrInstance(instanceRepository)
+    provisioning.nextResult = Result.ok(ExternalRef.create('instance-1', 'remote-1'))
+
+    const first = await useCase.execute({
+      requestedBy: 'user-1',
+      kind: 'movie',
+      externalId: { scheme: 'tmdb', value: '550' },
+    })
+    assert.isTrue(first.ok)
+    if (!first.ok) return
+    first.value.fail('Download failed', new Date())
+    await requestRepository.save(first.value)
+
+    const second = await useCase.execute({
+      requestedBy: 'user-1',
+      kind: 'movie',
+      externalId: { scheme: 'tmdb', value: '550' },
+    })
+
+    assert.isTrue(second.ok)
+  })
+
+  test('allows re-requesting a title whose previous request was cancelled', async ({ assert }) => {
+    const { lookup, instanceRepository, provisioning, requestRepository, useCase } = setup()
+    lookup.detailResult = aMediaDetail()
+    await anActiveRadarrInstance(instanceRepository)
+    provisioning.nextResult = Result.ok(ExternalRef.create('instance-1', 'remote-1'))
+
+    const first = await useCase.execute({
+      requestedBy: 'user-1',
+      kind: 'movie',
+      externalId: { scheme: 'tmdb', value: '550' },
+    })
+    assert.isTrue(first.ok)
+    if (!first.ok) return
+    first.value.cancel(new Date())
+    await requestRepository.save(first.value)
+
+    const second = await useCase.execute({
+      requestedBy: 'user-1',
+      kind: 'movie',
+      externalId: { scheme: 'tmdb', value: '550' },
+    })
+
+    assert.isTrue(second.ok)
   })
 
   test('submits and persists the request on success', async ({ assert }) => {

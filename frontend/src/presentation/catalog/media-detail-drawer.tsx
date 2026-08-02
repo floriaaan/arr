@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Clock,
   Download,
+  ExternalLink,
   Eye,
   EyeOff,
   Folder,
@@ -23,6 +24,7 @@ import { useRemoveLibraryItem } from '#application/library/remove-library-item.m
 import { useSession } from '#application/identity/session.query'
 import { useInstances } from '#application/settings/instances.query'
 import { useInstanceCatalog } from '#application/settings/instance-catalog.query'
+import { useMediaServers } from '#application/settings/media-servers.query'
 import {
   Dialog,
   DialogContent,
@@ -46,6 +48,8 @@ import { Skeleton } from '#presentation/ui/skeleton'
 import { MEDIA_KIND_ICONS } from '#presentation/shared/media-kind-icons'
 import { formatSize } from '#presentation/shared/format-size'
 import { SERVARR_LABEL } from '#presentation/shared/servarr-meta'
+import { MEDIA_SERVER_META } from '#presentation/shared/media-server-meta'
+import { buildMediaServerSearchUrl } from '#domain/settings/media-server-link'
 import type { MediaKind } from '#domain/catalog/media-kind'
 import type { ExternalId } from '#domain/catalog/external-id'
 import type { LibraryItem } from '#domain/library/library-item'
@@ -85,6 +89,7 @@ export function MediaDetailDrawer({
   const session = useSession()
   const queryClient = useQueryClient()
   const instances = useInstances()
+  const mediaServers = useMediaServers()
 
   const isOpen = externalId !== null
   const isAdmin = session.data?.user?.role === 'admin'
@@ -256,6 +261,37 @@ export function MediaDetailDrawer({
                     </div>
                   </div>
                 </>
+              )
+            })()}
+
+            {(() => {
+              const value = detail.data.value
+              const linkedServers = (mediaServers.data ?? []).filter((server) => server.enabled)
+              // Linking to a media server's search for something that isn't
+              // downloaded yet would just open an empty result page.
+              if (!value.alreadyManaged || linkedServers.length === 0) return null
+
+              return (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Watch on</span>
+                  {linkedServers.map((server) => {
+                    const meta = MEDIA_SERVER_META[server.kind]
+                    const Icon = meta.icon
+                    return (
+                      <Button key={server.id} variant="outline" size="sm" asChild>
+                        <a
+                          href={buildMediaServerSearchUrl(server, value.title)}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                        >
+                          <Icon className="size-4" />
+                          {meta.label}
+                          <ExternalLink className="size-3.5 text-muted-foreground" />
+                        </a>
+                      </Button>
+                    )
+                  })}
+                </div>
               )
             })()}
 

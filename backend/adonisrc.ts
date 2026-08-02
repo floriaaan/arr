@@ -52,6 +52,7 @@ export default defineConfig({
     () => import('#providers/catalog_provider'),
     () => import('#providers/requests_provider'),
     () => import('#providers/images_provider'),
+    () => import('#providers/notifications_provider'),
   ],
 
   /*

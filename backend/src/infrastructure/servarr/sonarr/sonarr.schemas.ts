@@ -27,7 +27,16 @@ export const SonarrSeriesSchema = z.object({
   network: z.string().optional(),
   status: z.string().optional(),
   statistics: z
-    .object({ episodeFileCount: z.number().optional(), sizeOnDisk: z.number().optional() })
+    .object({
+      episodeFileCount: z.number().optional(),
+      /**
+       * Aired episodes. `totalEpisodeCount` would include unaired ones, which
+       * would leave any ongoing series permanently "in progress"
+       * (cf. docs/phase-6-fiabilite-requests, chantier 4 décision 3).
+       */
+      episodeCount: z.number().optional(),
+      sizeOnDisk: z.number().optional(),
+    })
     .optional(),
 })
 
@@ -42,7 +51,7 @@ export const SonarrSeriesLookupArraySchema = SonarrSeriesLookupSchema.array()
 export type SonarrSeriesLookup = z.infer<typeof SonarrSeriesLookupSchema>
 
 /** `GET /api/v3/calendar?includeSeries=true` — one entry per episode. */
-export const SonarrCalendarEpisodeSchema = z.object({
+export const SonarrEpisodeSchema = z.object({
   id: z.number(),
   seriesId: z.number(),
   title: z.string().nullable().optional(),
@@ -51,10 +60,17 @@ export const SonarrCalendarEpisodeSchema = z.object({
   episodeNumber: z.number().optional(),
   monitored: z.boolean().optional(),
   hasFile: z.boolean().optional(),
+})
+
+export const SonarrEpisodeArraySchema = SonarrEpisodeSchema.array()
+
+/** `GET /api/v3/calendar` returns the same episode plus its parent series. */
+export const SonarrCalendarEpisodeSchema = SonarrEpisodeSchema.extend({
   series: SonarrSeriesSchema.optional(),
 })
 
 export const SonarrCalendarEpisodeArraySchema = SonarrCalendarEpisodeSchema.array()
+export type SonarrEpisode = z.infer<typeof SonarrEpisodeSchema>
 export type SonarrCalendarEpisode = z.infer<typeof SonarrCalendarEpisodeSchema>
 
 export const SonarrQualityProfileArraySchema = z
@@ -65,6 +81,7 @@ export const SonarrRootFolderArraySchema = z.object({ id: z.number(), path: z.st
 export const SonarrQueueRecordSchema = z.object({
   id: z.number(),
   seriesId: z.number().nullable().optional(),
+  episodeId: z.number().nullable().optional(),
   title: z.string().nullable().optional(),
   size: z.number().optional(),
   sizeleft: z.number().optional(),

@@ -1,5 +1,6 @@
 import { type BaseServarrClient } from '../base-servarr-client.js'
 import { classifyProvisioningError, classifyConnectionError } from '../errors.js'
+import { removeFromQueue, unmonitorItem } from '../cancel-provisioning.js'
 import { isoDate } from '../date-range.js'
 import {
   RadarrMovieArraySchema,
@@ -27,6 +28,7 @@ import { ExternalRef } from '#domain/requests/external-ref.vo'
 import type { ProvisioningError } from '#domain/requests/provisioning-error.vo'
 import { Result } from '#domain/shared/result'
 import type { ProgressSnapshot } from '#domain/requests/interfaces/download-progress.interface'
+import type { RequestEpisode } from '#domain/requests/request-episode.entity'
 import type { ConnectionError } from '#domain/settings/connection-error.vo'
 
 export class RadarrAdapter implements ServarrKindAdapter {
@@ -82,6 +84,31 @@ export class RadarrAdapter implements ServarrKindAdapter {
     }
   }
 
+  async cancel(request: MediaRequest): Promise<Result<void, ProvisioningError>> {
+    const remoteId = request.externalRef?.remoteId
+    if (!remoteId) return Result.ok(undefined)
+
+    try {
+      const raw = await this.client.request({ path: '/api/v3/queue', query: { pageSize: '250' } })
+      const queue = RadarrQueueResponseSchema.parse(raw)
+      await removeFromQueue(
+        this.client,
+        '/api/v3',
+        queue.records.filter((r) => String(r.movieId) === remoteId).map((r) => r.id),
+      )
+
+      const movieRaw = await this.client.request({ path: `/api/v3/movie/${remoteId}` })
+      await unmonitorItem(
+        this.client,
+        `/api/v3/movie/${remoteId}`,
+        movieRaw as Record<string, unknown>,
+      )
+      return Result.ok(undefined)
+    } catch (error) {
+      return Result.err(classifyProvisioningError(error))
+    }
+  }
+
   async fetchProgress(refs: ExternalRef[]): Promise<ProgressSnapshot[]> {
     const raw = await this.client.request({ path: '/api/v3/queue', query: { pageSize: '250' } })
     const queue = RadarrQueueResponseSchema.parse(raw)
@@ -116,6 +143,11 @@ export class RadarrAdapter implements ServarrKindAdapter {
       }
     }
     return snapshots
+  }
+
+  /** A movie has nothing to unfold */
+  async listEpisodes(): Promise<RequestEpisode[]> {
+    return []
   }
 
   async list(): Promise<LibraryItem[]> {

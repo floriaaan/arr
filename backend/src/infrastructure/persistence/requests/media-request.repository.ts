@@ -8,6 +8,16 @@ import type { ExternalId } from '#domain/catalog/external-id.vo'
 
 const ACTIVE_STATUSES = ['submitted', 'downloading', 'importing']
 
+/**
+ * Statuses that make a title "already requested". `available` stays in the
+ * list — re-requesting something already in the library is meaningless — but
+ * `cancelled` and `failed` deliberately do not, so a bad grab no longer
+ * condemns a title forever (cf. docs/phase-6-fiabilite-requests, chantier 2).
+ * Mirrors the partial unique index in
+ * `1785081146200_relax_media_requests_unique_to_live_statuses.ts`.
+ */
+const LIVE_STATUSES = ['pending', 'submitted', 'downloading', 'importing', 'available']
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export class LucidMediaRequestRepository implements MediaRequestRepository {
@@ -37,6 +47,7 @@ export class LucidMediaRequestRepository implements MediaRequestRepository {
       .where('kind', kind)
       .where('externalIdScheme', externalId.scheme)
       .where('externalIdValue', externalId.value)
+      .whereIn('status', LIVE_STATUSES)
       .first()
     return row ? toDomain(row) : null
   }

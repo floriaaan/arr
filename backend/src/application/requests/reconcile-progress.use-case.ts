@@ -5,6 +5,7 @@ import type {
   ProgressSnapshot,
 } from '#domain/requests/interfaces/download-progress.interface'
 import type { Clock } from '#domain/shared/clock.interface'
+import type { EventBus } from '#application/shared/event-bus'
 import type { MediaRequest } from '#domain/requests/media-request.aggregate'
 import type { ExternalRef } from '#domain/requests/external-ref.vo'
 import { RequestProgress } from '#domain/requests/request-progress.vo'
@@ -24,6 +25,7 @@ export class ReconcileProgress implements UseCase<void, ReconcileSummary> {
     private readonly repository: MediaRequestRepository,
     private readonly downloadProgress: DownloadProgress,
     private readonly clock: Clock,
+    private readonly eventBus: EventBus,
   ) {}
 
   async execute(): Promise<ReconcileSummary> {
@@ -47,6 +49,7 @@ export class ReconcileProgress implements UseCase<void, ReconcileSummary> {
       this.applySnapshot(request, snapshot)
       if (request.status !== previousStatus) updated += 1
       await this.repository.save(request)
+      await this.eventBus.publish(request.pullDomainEvents())
     }
 
     return { checked: requests.length, updated }

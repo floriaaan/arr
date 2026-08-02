@@ -4,9 +4,11 @@ import { createConnector, getCookieHeader } from '../../../providers/create-conn
 import { WelcomeStep } from '#presentation/settings/onboarding/welcome-step'
 import { AdminStep } from '#presentation/settings/onboarding/admin-step'
 import { ServicesStep } from '#presentation/settings/onboarding/services-step'
+import { MediaServersStep } from '#presentation/settings/onboarding/media-servers-step'
 import { SsoStep } from '#presentation/settings/onboarding/sso-step'
 import { SummaryStep } from '#presentation/settings/onboarding/summary-step'
 import { Card, CardContent } from '#presentation/ui/card'
+import { ThemeToggle } from '#presentation/shared/theme-toggle'
 import { cn } from '#presentation/shared/utils'
 
 export const Route = createFileRoute('/setup/')({
@@ -18,13 +20,14 @@ export const Route = createFileRoute('/setup/')({
   component: SetupRoute,
 })
 
-const STEPS = ['welcome', 'admin', 'services', 'sso', 'summary'] as const
+const STEPS = ['welcome', 'admin', 'services', 'media-servers', 'sso', 'summary'] as const
 type Step = (typeof STEPS)[number]
 
 const STEP_LABELS: Record<Step, string> = {
   welcome: 'Welcome',
   admin: 'Admin account',
   services: 'Services',
+  'media-servers': 'Media servers',
   sso: 'Single sign-on',
   summary: 'Summary',
 }
@@ -39,10 +42,19 @@ function SetupRoute() {
     if (nextStep) setStep(nextStep)
   }
 
+  function back() {
+    const currentIndex = STEPS.indexOf(step)
+    const previousStep = STEPS[currentIndex - 1]
+    if (previousStep) setStep(previousStep)
+  }
+
   const currentIndex = STEPS.indexOf(step)
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="fixed top-4 right-4 z-10 w-32">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-lg space-y-6">
         <div className="text-center">
           <div className="display-title text-xl font-semibold tracking-tight">arr</div>
@@ -68,11 +80,14 @@ function SetupRoute() {
               </p>
             </div>
             {step === 'welcome' ? <WelcomeStep onNext={next} /> : null}
-            {step === 'admin' ? <AdminStep onNext={next} /> : null}
-            {step === 'services' ? <ServicesStep onNext={next} /> : null}
-            {step === 'sso' ? <SsoStep onNext={next} /> : null}
+            {step === 'admin' ? <AdminStep onNext={next} onBack={back} /> : null}
+            {step === 'services' ? <ServicesStep onNext={next} onBack={back} /> : null}
+            {step === 'media-servers' ? (
+              <MediaServersStep onNext={next} onBack={back} />
+            ) : null}
+            {step === 'sso' ? <SsoStep onNext={next} onBack={back} /> : null}
             {step === 'summary' ? (
-              <SummaryStep onComplete={() => void navigate({ to: '/login' })} />
+              <SummaryStep onComplete={() => void navigate({ to: '/login' })} onBack={back} />
             ) : null}
           </CardContent>
         </Card>
