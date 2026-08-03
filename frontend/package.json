@@ -59,7 +59,7 @@
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
     "dependency-cruiser": "^18.1.0",
-    "eslint": "^9.20.0",
+    "eslint": "^10.8.0",
     "jsdom": "^30.0.1",
     "prettier": "^3.8.1",
     "typescript": "^7.0.2",
