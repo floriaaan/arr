@@ -1,12 +1,14 @@
 version: 2
 
 updates:
-  # pnpm workspace: the root holds the lockfile, each package its own manifest.
+  # Workspace pnpm : Dependabot résout tous les manifests du workspace depuis
+  # la racine seule. Lister /backend et /frontend en plus ne couvre rien de
+  # plus — ça pousse Dependabot à ouvrir une deuxième (parfois troisième) PR
+  # quasi identique pour tout paquet présent dans plusieurs manifests, chaque
+  # répertoire étant traité comme un écosystème à part alors qu'ils partagent
+  # le même lockfile.
   - package-ecosystem: npm
-    directories:
-      - '/'
-      - '/backend'
-      - '/frontend'
+    directory: '/'
     schedule:
       interval: weekly
       day: monday
