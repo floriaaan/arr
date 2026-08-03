@@ -28,6 +28,7 @@ export class LucidNotificationSettingsRepository implements NotificationSettings
       onRequestAvailable: row.onRequestAvailable,
       onRequestFailed: row.onRequestFailed,
       onInstanceUnreachable: row.onInstanceUnreachable,
+      onRequestPendingApproval: row.onRequestPendingApproval,
     })
   }
 
@@ -63,6 +64,7 @@ export class LucidNotificationSettingsRepository implements NotificationSettings
     model.onRequestAvailable = settings.onRequestAvailable
     model.onRequestFailed = settings.onRequestFailed
     model.onInstanceUnreachable = settings.onInstanceUnreachable
+    model.onRequestPendingApproval = settings.onRequestPendingApproval
     await model.save()
   }
 }

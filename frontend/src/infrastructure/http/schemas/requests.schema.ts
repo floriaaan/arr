@@ -31,6 +31,12 @@ export const mediaRequestDtoSchema = z.object({
   status: requestStatusSchema,
   progress: requestProgressSchema.nullable(),
   failureReason: z.string().nullable(),
+  origin: z.enum(['manual', 'watchlist']),
+  requiresApproval: z.boolean(),
+  approvedAt: z.string().nullable(),
+  approvedByUserId: z.string().nullable(),
+  rejectedAt: z.string().nullable(),
+  rejectionReason: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 })

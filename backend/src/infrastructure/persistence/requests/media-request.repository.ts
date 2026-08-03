@@ -37,6 +37,8 @@ export class LucidMediaRequestRepository implements MediaRequestRepository {
     if (filter.status) query.where('status', filter.status)
     if (filter.kind) query.where('kind', filter.kind)
     if (filter.requestedBy) query.where('requestedByUserId', filter.requestedBy)
+    if (filter.requiresApproval !== undefined)
+      query.where('requiresApproval', filter.requiresApproval)
 
     const rows = await query.orderBy('createdAt', 'desc')
     return rows.map(toDomain)

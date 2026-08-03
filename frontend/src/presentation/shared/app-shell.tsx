@@ -13,6 +13,7 @@ import {
   Download,
   Radar,
   Menu,
+  UserCog,
 } from 'lucide-react'
 import { Button } from '#presentation/ui/button'
 import { Badge } from '#presentation/ui/badge'
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { to: '/requests', label: 'Requests', icon: ListChecks },
   { to: '/library', label: 'Library', icon: LibraryBig },
   { to: '/calendar', label: 'Calendar', icon: CalendarDays },
+  { to: '/account', label: 'Account', icon: UserCog },
 ] as const
 
 const ADMIN_NAV_ITEMS = [

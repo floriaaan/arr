@@ -10,7 +10,7 @@ function anExternalId() {
   return result.value
 }
 
-function aRequest() {
+function aRequest(overrides: { origin?: 'manual' | 'watchlist'; requiresApproval?: boolean } = {}) {
   return MediaRequest.request(
     '1',
     {
@@ -19,6 +19,8 @@ function aRequest() {
       externalId: anExternalId(),
       title: 'Fight Club',
       instanceId: 'instance-1',
+      origin: overrides.origin ?? 'manual',
+      requiresApproval: overrides.requiresApproval ?? false,
     },
     new Date('2026-01-01T00:00:00Z'),
   )
@@ -47,6 +49,14 @@ test.group('MediaRequest — factory', () => {
     const events = request.pullDomainEvents()
     assert.lengthOf(events, 1)
     assert.equal(events[0]?.name, 'MediaRequested')
+  })
+
+  test('request() also emits RequestPendingApproval when it requires approval', ({ assert }) => {
+    const request = aRequest({ requiresApproval: true })
+
+    const events = request.pullDomainEvents()
+    assert.lengthOf(events, 2)
+    assert.equal(events[1]?.name, 'RequestPendingApproval')
   })
 })
 
@@ -224,6 +234,65 @@ test.group('MediaRequest — cancel()', () => {
     request.complete(new Date())
 
     const result = request.cancel(new Date())
+
+    assert.isFalse(result.ok)
+  })
+})
+
+test.group('MediaRequest — approval gate', () => {
+  test('submit() is refused while requiresApproval is true', ({ assert }) => {
+    const request = aRequest({ requiresApproval: true })
+
+    const result = request.submit(aRef(), new Date())
+
+    assert.isFalse(result.ok)
+    assert.equal(request.status, 'pending')
+  })
+
+  test('approve() lifts the gate without submitting', ({ assert }) => {
+    const request = aRequest({ requiresApproval: true })
+
+    const result = request.approve('admin-1', new Date())
+
+    assert.isTrue(result.ok)
+    assert.isFalse(request.requiresApproval)
+    assert.equal(request.approvedByUserId, 'admin-1')
+    assert.equal(request.status, 'pending')
+  })
+
+  test('submit() succeeds once approved', ({ assert }) => {
+    const request = aRequest({ requiresApproval: true })
+    request.approve('admin-1', new Date())
+
+    const result = request.submit(aRef(), new Date())
+
+    assert.isTrue(result.ok)
+    assert.equal(request.status, 'submitted')
+  })
+
+  test('approve() is refused when no approval is pending', ({ assert }) => {
+    const request = aRequest()
+
+    const result = request.approve('admin-1', new Date())
+
+    assert.isFalse(result.ok)
+  })
+
+  test('reject() cancels the request and records the reason', ({ assert }) => {
+    const request = aRequest({ requiresApproval: true })
+
+    const result = request.reject('Not interesting enough', new Date())
+
+    assert.isTrue(result.ok)
+    assert.equal(request.status, 'cancelled')
+    assert.equal(request.rejectionReason, 'Not interesting enough')
+    assert.isNotNull(request.rejectedAt)
+  })
+
+  test('reject() is refused when no approval is pending', ({ assert }) => {
+    const request = aRequest()
+
+    const result = request.reject('too late', new Date())
 
     assert.isFalse(result.ok)
   })

@@ -11,6 +11,7 @@ export interface NotificationSettingsDto {
   onRequestAvailable: boolean
   onRequestFailed: boolean
   onInstanceUnreachable: boolean
+  onRequestPendingApproval: boolean
 }
 
 /**
@@ -30,5 +31,6 @@ export function toNotificationSettingsDto(settings: NotificationSettings): Notif
     onRequestAvailable: settings.onRequestAvailable,
     onRequestFailed: settings.onRequestFailed,
     onInstanceUnreachable: settings.onInstanceUnreachable,
+    onRequestPendingApproval: settings.onRequestPendingApproval,
   }
 }

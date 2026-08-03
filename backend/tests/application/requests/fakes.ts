@@ -15,6 +15,9 @@ import type { RequestFilter } from '#domain/requests/request-filter.vo'
 import type { MediaProvisioning } from '#domain/requests/interfaces/media-provisioning.interface'
 import type { ExternalRef } from '#domain/requests/external-ref.vo'
 import type { ProvisioningError } from '#domain/requests/provisioning-error.vo'
+import type { RequestApprovalSettingsRepository } from '#domain/requests/interfaces/request-approval-settings-repository.interface'
+import type { UserRequestPreferencesRepository } from '#domain/requests/interfaces/user-request-preferences-repository.interface'
+import { RequestApprovalSettings } from '#domain/requests/request-approval-settings.aggregate'
 import type {
   DownloadProgress,
   ProgressSnapshot,
@@ -90,6 +93,11 @@ export class InMemoryMediaRequestRepository implements MediaRequestRepository {
       if (filter.status && request.status !== filter.status) return false
       if (filter.kind && request.kind !== filter.kind) return false
       if (filter.requestedBy && request.requestedBy !== filter.requestedBy) return false
+      if (
+        filter.requiresApproval !== undefined &&
+        request.requiresApproval !== filter.requiresApproval
+      )
+        return false
       return true
     })
   }
@@ -134,6 +142,34 @@ export class FakeMediaProvisioning implements MediaProvisioning {
   async cancel(request: MediaRequest): Promise<Result<void, ProvisioningError>> {
     this.cancelledRequestIds.push(request.id)
     return this.cancelResult
+  }
+}
+
+export class InMemoryRequestApprovalSettingsRepository implements RequestApprovalSettingsRepository {
+  private settings = RequestApprovalSettings.create('settings-1')
+
+  async get(): Promise<RequestApprovalSettings> {
+    return this.settings
+  }
+
+  async save(settings: RequestApprovalSettings): Promise<void> {
+    this.settings = settings
+  }
+}
+
+export class InMemoryUserRequestPreferencesRepository implements UserRequestPreferencesRepository {
+  private byUserId = new Map<string, boolean | null>()
+
+  async getAutoApprove(userId: string): Promise<boolean | null> {
+    return this.byUserId.get(userId) ?? null
+  }
+
+  async setAutoApprove(userId: string, autoApprove: boolean | null): Promise<void> {
+    this.byUserId.set(userId, autoApprove)
+  }
+
+  async listAll(): Promise<Record<string, boolean | null>> {
+    return Object.fromEntries(this.byUserId.entries())
   }
 }
 

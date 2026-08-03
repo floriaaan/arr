@@ -14,6 +14,7 @@ export interface NotificationSettingsDto {
   onRequestAvailable: boolean
   onRequestFailed: boolean
   onInstanceUnreachable: boolean
+  onRequestPendingApproval: boolean
 }
 
 export interface NotificationSettingsDraft {
@@ -30,6 +31,7 @@ export interface NotificationSettingsDraft {
   onRequestAvailable: boolean
   onRequestFailed: boolean
   onInstanceUnreachable: boolean
+  onRequestPendingApproval: boolean
 }
 
 export type NotificationTestResult = { ok: true } | { ok: false; error: { message: string } }

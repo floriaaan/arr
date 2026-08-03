@@ -4,11 +4,14 @@ import { ListRequests } from '#application/requests/list-requests.use-case'
 import { GetRequest } from '#application/requests/get-request.use-case'
 import { CreateRequest } from '#application/requests/create-request.use-case'
 import { CancelRequest } from '#application/requests/cancel-request.use-case'
+import { ApproveRequest } from '#application/requests/approve-request.use-case'
+import { RejectRequest } from '#application/requests/reject-request.use-case'
 import { ListRequestEpisodes } from '#application/requests/list-request-episodes.use-case'
 import { requireAuthenticatedUser } from '#presentation/shared/auth-context'
 import { serializeError } from '#presentation/shared/error-serializer'
 import { toMediaRequestDto, toMediaRequestDtoList } from './request.dto.js'
 import { createRequestValidator } from './create-request.validator.js'
+import { rejectRequestValidator } from './reject-request.validator.js'
 import type { RequestFilter } from '#domain/requests/request-filter.vo'
 import type { RequestStatus } from '#domain/requests/request-status.vo'
 import type { MediaKind } from '#domain/catalog/media-kind.vo'
@@ -43,6 +46,9 @@ export default class RequestsController {
     if (qs.requestedBy === 'me') {
       filter.requestedBy = user.id
     }
+    if (qs.requiresApproval === 'true') {
+      filter.requiresApproval = true
+    }
 
     const repository = await app.container.make('requests.repository')
     const userDirectory = await app.container.make('identity.userDirectory')
@@ -59,6 +65,8 @@ export default class RequestsController {
     const provisioning = await app.container.make('requests.provisioning')
     const lookup = await app.container.make('catalog.mediaLookup')
     const instanceRepository = await app.container.make('settings.instanceRepository')
+    const approvalSettings = await app.container.make('requests.approvalSettingsRepository')
+    const userPreferences = await app.container.make('requests.userPreferencesRepository')
     const idGenerator = await app.container.make('shared.idGenerator')
     const clock = await app.container.make('shared.clock')
     const eventBus = await app.container.make('shared.eventBus')
@@ -68,11 +76,17 @@ export default class RequestsController {
       provisioning,
       lookup,
       instanceRepository,
+      approvalSettings,
+      userPreferences,
       idGenerator,
       clock,
       eventBus,
     )
-    const result = await useCase.execute({ requestedBy: user.id, ...payload })
+    const result = await useCase.execute({
+      requestedBy: user.id,
+      isAdmin: user.role === 'admin',
+      ...payload,
+    })
     if (!result.ok) {
       if (isProvisioningError(result.error)) {
         return ctx.response.status(502).send({
@@ -165,5 +179,64 @@ export default class RequestsController {
     return ctx.response.json({
       request: await toMediaRequestDto(result.value.request, userDirectory),
     })
+  }
+
+  async approve(ctx: HttpContext) {
+    const user = requireAuthenticatedUser(ctx)
+    const repository = await app.container.make('requests.repository')
+    const provisioning = await app.container.make('requests.provisioning')
+    const clock = await app.container.make('shared.clock')
+    const eventBus = await app.container.make('shared.eventBus')
+
+    const result = await new ApproveRequest(repository, provisioning, clock, eventBus).execute({
+      id: ctx.params.id,
+      actor: { id: user.id, isAdmin: user.role === 'admin' },
+    })
+    if (!result.ok) {
+      if (typeof result.error === 'string' || 'type' in result.error) {
+        const { status, body } = serializeError(result.error)
+        return ctx.response.status(status).send(body)
+      }
+      return ctx.response.status(409).send({
+        error: {
+          type: 'not_cancellable',
+          message: 'This request cannot be approved from its current state.',
+          currentStatus: result.error.from,
+        },
+      })
+    }
+
+    const userDirectory = await app.container.make('identity.userDirectory')
+    return ctx.response.json({ request: await toMediaRequestDto(result.value, userDirectory) })
+  }
+
+  async reject(ctx: HttpContext) {
+    const user = requireAuthenticatedUser(ctx)
+    const payload = await ctx.request.validateUsing(rejectRequestValidator)
+    const repository = await app.container.make('requests.repository')
+    const clock = await app.container.make('shared.clock')
+    const eventBus = await app.container.make('shared.eventBus')
+
+    const result = await new RejectRequest(repository, clock, eventBus).execute({
+      id: ctx.params.id,
+      actor: { id: user.id, isAdmin: user.role === 'admin' },
+      reason: payload.reason,
+    })
+    if (!result.ok) {
+      if (typeof result.error === 'string') {
+        const { status, body } = serializeError(result.error)
+        return ctx.response.status(status).send(body)
+      }
+      return ctx.response.status(409).send({
+        error: {
+          type: 'not_cancellable',
+          message: 'This request cannot be rejected from its current state.',
+          currentStatus: result.error.from,
+        },
+      })
+    }
+
+    const userDirectory = await app.container.make('identity.userDirectory')
+    return ctx.response.json({ request: await toMediaRequestDto(result.value, userDirectory) })
   }
 }

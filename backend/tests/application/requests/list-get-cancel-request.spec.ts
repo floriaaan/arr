@@ -31,6 +31,8 @@ function aRequest(
       externalId: anExternalId(overrides.id ?? '550'),
       title: 'Fight Club',
       instanceId: 'instance-1',
+      origin: 'manual',
+      requiresApproval: false,
     },
     new Date(),
   )
