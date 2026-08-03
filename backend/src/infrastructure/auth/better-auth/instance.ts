@@ -22,6 +22,7 @@ function buildAuthInstance(
 ) {
   return betterAuth({
     database: { db, type: 'postgres' },
+    secret: env.get('BETTER_AUTH_SECRET').release(),
     /**
      * Without these, better-auth derives its notion of "trusted" purely
      * from the incoming request, which is fine for plain cookie-based

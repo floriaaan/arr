@@ -24,6 +24,34 @@ services:
     networks:
       - internal
 
+  # One-off: applies pending migrations before backend/reconciler/watchlist-sync/health
+  # start. Without it, a first boot leaves every table missing — nothing else
+  # in this stack runs migrations.
+  migrate:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ['node', 'bin/console.js', 'migration:run', '--force']
+    restart: 'no'
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3333
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL:-http://localhost:3333}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-arr}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-arr}
+      DB_DATABASE: ${POSTGRES_DB:-arr}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+
   backend:
     build:
       context: .
@@ -36,6 +64,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       APP_KEY: ${APP_KEY}
       APP_URL: ${APP_URL:-http://localhost:3333}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: ${POSTGRES_USER:-arr}
@@ -48,6 +77,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
@@ -59,9 +90,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    # Not published to the host on purpose — only the frontend is exposed.
-    # The frontend's own server proxies /api/* to this service over the
-    # internal network (cf. docs/adr).
+    # Not published to the host on purpose — only nginx is exposed, and routes
+    # /api/* to this service (cf. .docker/nginx/nginx.conf). The frontend's own
+    # server only proxies /api in `vite dev`, not in the built image.
     networks:
       - internal
 
@@ -78,6 +109,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       APP_KEY: ${APP_KEY}
       APP_URL: ${APP_URL:-http://localhost:3333}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: ${POSTGRES_USER:-arr}
@@ -86,6 +118,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     # cf. docs/adr/0003 — its own process/service, polls *arr instances for
     # download progress and updates MediaRequest state (nothing else did,
     # so request progress silently never advanced past "submitted").
@@ -105,6 +139,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       APP_KEY: ${APP_KEY}
       APP_URL: ${APP_URL:-http://localhost:3333}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: ${POSTGRES_USER:-arr}
@@ -113,6 +148,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     # Same shape as the reconciler, cf. docs/phase-7-watchlist-sync, chantier 5:
     # its own process, reads linked Plex/Jellyfin/Emby watchlists on an
     # interval and turns new items into requests.
@@ -132,6 +169,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       APP_KEY: ${APP_KEY}
       APP_URL: ${APP_URL:-http://localhost:3333}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: ${POSTGRES_USER:-arr}
@@ -140,6 +178,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     # Same pattern as the reconciler: an instance was health-checked once, on
     # save, and never again — so "Disabled" could mean either "an admin turned
     # it off" or "unreachable for a week" (cf.
@@ -156,10 +196,27 @@ services:
       NODE_ENV: production
       PORT: 3000
       BACKEND_URL: http://backend:3333
-    ports:
-      - '${FRONTEND_PORT:-3000}:3000'
     depends_on:
       backend:
+        condition: service_healthy
+    # Not published to the host on purpose — only nginx is exposed, cf. below.
+    networks:
+      - internal
+
+  # Single host entrypoint: /api/* to backend, everything else to frontend
+  # (cf. .docker/nginx/nginx.conf) — the built frontend image doesn't proxy
+  # /api itself, only `vite dev` does.
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - ./.docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - '${NGINX_PORT:-80}:80'
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
         condition: service_healthy
     networks:
       - internal

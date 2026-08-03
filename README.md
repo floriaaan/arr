@@ -80,14 +80,16 @@ task dev:fake
 ### Full stack, locally, via Docker
 
 ```bash
-cp .env.example .env   # set APP_KEY
-task up                # builds + starts db, backend, frontend, reconciler, health
+cp .env.example .env   # set APP_KEY and BETTER_AUTH_SECRET
+task up                # builds + starts db, migrate, backend, frontend, reconciler, health, nginx
 task logs
 task down
 ```
 
-Only the frontend is exposed on the host; it proxies `/api/*` to the backend
-over the internal Docker network.
+Only `nginx` is exposed on the host (port 80 by default, `NGINX_PORT` to
+change it): it routes `/api/*` to the backend and everything else to the
+frontend, per `.docker/nginx/nginx.conf`. A one-off `migrate` service applies
+pending migrations before backend/reconciler/watchlist-sync/health start.
 
 ## Deploying — drop-in docker-compose
 
@@ -121,6 +123,32 @@ services:
     networks:
       - arr-internal
 
+  # One-off: applies pending migrations before arr-backend/arr-reconciler/
+  # arr-watchlist-sync/arr-health start. Nothing else in this stack runs
+  # migrations — skip it and every table is missing on first boot.
+  arr-migrate:
+    image: ghcr.io/floriaaan/arr-backend:latest
+    command: ['node', 'bin/console.js', 'migration:run', '--force']
+    restart: 'no'
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3333
+      LOG_LEVEL: info
+      APP_KEY: ${ARR_APP_KEY:?generate one with `openssl rand -base64 32`}
+      APP_URL: https://arr.example.com
+      BETTER_AUTH_SECRET: ${ARR_BETTER_AUTH_SECRET:?generate one with `openssl rand -base64 32`}
+      DB_HOST: arr-db
+      DB_PORT: 5432
+      DB_USER: arr
+      DB_PASSWORD: ${ARR_DB_PASSWORD:?set a real password}
+      DB_DATABASE: arr
+    depends_on:
+      arr-db:
+        condition: service_healthy
+    networks:
+      - arr-internal
+
   arr-backend: &arr-backend
     image: ghcr.io/floriaaan/arr-backend:latest
     restart: unless-stopped
@@ -131,6 +159,7 @@ services:
       LOG_LEVEL: info
       APP_KEY: ${ARR_APP_KEY:?generate one with `openssl rand -base64 32`}
       APP_URL: https://arr.example.com
+      BETTER_AUTH_SECRET: ${ARR_BETTER_AUTH_SECRET:?generate one with `openssl rand -base64 32`}
       DB_HOST: arr-db
       DB_PORT: 5432
       DB_USER: arr
@@ -154,6 +183,8 @@ services:
     depends_on:
       arr-db:
         condition: service_healthy
+      arr-migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
@@ -165,7 +196,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    # Not published to the host — only arr-frontend needs to be. It proxies
+    # Not published to the host — only arr-nginx needs to be. It routes
     # /api/* to this service over the internal network.
     networks:
       - arr-internal
@@ -194,21 +225,70 @@ services:
       NODE_ENV: production
       PORT: 3000
       BACKEND_URL: http://arr-backend:3333
-    ports:
-      - '3000:3000' # or drop this and put it behind your reverse proxy instead
     depends_on:
       arr-backend:
+        condition: service_healthy
+    # Not published to the host — only arr-nginx needs to be, cf. below.
+    networks:
+      - arr-internal
+
+  # Single host entrypoint: /api/* to arr-backend, everything else to
+  # arr-frontend — the built frontend image only proxies /api in `vite dev`,
+  # not in production, hence the 404s on every /api/* call without this.
+  arr-nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - '80:80' # or drop this and put it behind your reverse proxy instead
+    depends_on:
+      arr-backend:
+        condition: service_healthy
+      arr-frontend:
         condition: service_healthy
     networks:
       - arr-internal
 ```
 
-```bash
-ARR_APP_KEY=$(openssl rand -base64 32) ARR_DB_PASSWORD=change-me docker compose up -d
+Save this next to `docker-compose.yml` as `nginx.conf` — same file as this
+repo's [`.docker/nginx/nginx.conf`](./.docker/nginx/nginx.conf):
+
+```nginx
+server {
+    listen 80;
+    server_name _;
+
+    client_max_body_size 20m;
+
+    location /api/ {
+        proxy_pass http://arr-backend:3333;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        proxy_pass http://arr-frontend:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
 ```
 
-Put `arr-frontend` behind whatever reverse proxy already fronts the rest of
-your stack (Traefik, Caddy, nginx…) and point it at `APP_URL`.
+```bash
+ARR_APP_KEY=$(openssl rand -base64 32) ARR_BETTER_AUTH_SECRET=$(openssl rand -base64 32) ARR_DB_PASSWORD=change-me docker compose up -d
+```
+
+Put `arr-nginx` behind whatever reverse proxy already fronts the rest of
+your stack (Traefik, Caddy, nginx…) and point it at `APP_URL`, or drop its
+`ports:` mapping and let that existing reverse proxy publish port 80/443
+directly.
 
 ## Configuration
 
@@ -223,6 +303,7 @@ Key variables:
 | Variable                                                          | Default                                      | Role                                                                                                                        |
 | ------------------------------------------------------------------ | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `APP_KEY`                                                         | —                                             | **Required.** AdonisJS encryption key (sessions, cookies, stored API keys).                                                 |
+| `BETTER_AUTH_SECRET`                                              | —                                             | **Required.** better-auth session/cookie signing key.                                                                       |
 | `APP_URL`                                                         | `http://localhost:3333`                       | Public URL of the backend.                                                                                                  |
 | `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_DATABASE` | `localhost` / `5432` / `arr` / `arr` / `arr`  | PostgreSQL connection.                                                                                                      |
 | `CORS_ORIGIN`                                                     | `http://localhost:3000`                       | Frontend origin — also better-auth's `trustedOrigins`, required for SSO.                                                    |
@@ -231,7 +312,7 @@ Key variables:
 | `DISABLE_PASSWORD_LOGIN`                                          | `false`                                       | Forces SSO as the only sign-in method.                                                                                      |
 | `SONARR_URL` / `SONARR_API_KEY`, `RADARR_URL` / `RADARR_API_KEY`, `LIDARR_URL` / `LIDARR_API_KEY` | empty | Optional: pre-create that instance at boot instead of adding it from the onboarding UI. Skipped if an instance of that kind already exists — never overwrites one saved from the UI. Doesn't skip the admin-account onboarding step. |
 | `VITE_CONNECTOR`                                                  | `http`                                        | `http` = real backend, `fake` = offline fake connector.                                                                     |
-| `FRONTEND_PORT` / `BACKEND_PORT`                                  | `3000` / `3333`                               | Ports published by Compose.                                                                                                 |
+| `NGINX_PORT`                                                      | `80`                                          | Host port published by the `nginx` service — the only container exposed.                                                   |
 
 ## Commands
 

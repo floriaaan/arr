@@ -42,6 +42,7 @@ jobs:
       HOST: localhost
       LOG_LEVEL: info
       APP_KEY: ci-test-app-key-not-for-production-use
+      BETTER_AUTH_SECRET: ci-test-better-auth-secret-not-for-production-use
       APP_URL: http://localhost:3333
       DB_HOST: localhost
       DB_PORT: 5432
