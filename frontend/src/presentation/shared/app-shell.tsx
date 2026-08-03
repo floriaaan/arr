@@ -5,7 +5,6 @@ import {
   Search,
   Settings,
   LogOut,
-  Clapperboard,
   ListChecks,
   LibraryBig,
   CalendarDays,
@@ -39,7 +38,8 @@ const ADMIN_NAV_ITEMS = [
   { to: '/settings', label: 'Settings', icon: Settings },
 ] as const
 
-const NAV_LINK_CLASS = 'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors'
+const NAV_LINK_CLASS =
+  'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors'
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false)
@@ -76,9 +76,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const sidebar = (
     <>
       <div className="flex items-center gap-2 px-4 py-4">
-        <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-          <Clapperboard className="size-4" />
-        </div>
+        <img src="/logo.svg" alt="" className="size-7 rounded-md" />
         <span className="display-title text-base font-semibold">arr</span>
       </div>
 
@@ -172,6 +170,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               {sidebar}
             </SheetContent>
           </Sheet>
+          <img src="/logo.svg" alt="" className="size-6 rounded-md" />
           <span className="display-title text-base font-semibold">arr</span>
           <Button
             variant="ghost"

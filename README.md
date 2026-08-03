@@ -1,130 +1,250 @@
-# arr
+<p align="center">
+  <img src="./frontend/public/logo.svg" alt="arr logo" width="96" height="96" />
+</p>
 
-[![CI](https://github.com/floriaaan/arr/actions/workflows/ci.yml/badge.svg)](https://github.com/floriaaan/arr/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/floriaaan/arr/actions/workflows/codeql.yml/badge.svg)](https://github.com/floriaaan/arr/actions/workflows/codeql.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+<h1 align="center">arr</h1>
 
-Une façade unique au-dessus de tes instances \*arr. `arr` agrège **Radarr**,
-**Sonarr** et **Lidarr** derrière une seule interface : on cherche un film, une
-série ou un album, on le demande, et on suit sa progression — de la requête au
-téléchargement jusqu'à l'import — sans jamais ouvrir les trois applications.
+<p align="center">One search box, one request queue, one login — for Radarr, Sonarr and Lidarr.</p>
 
-Ce que ça apporte par rapport aux applications natives :
+<p align="center">
+  <a href="https://github.com/floriaaan/arr/actions/workflows/ci.yml"><img src="https://github.com/floriaaan/arr/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/floriaaan/arr/actions/workflows/codeql.yml"><img src="https://github.com/floriaaan/arr/actions/workflows/codeql.yml/badge.svg" alt="CodeQL" /></a>
+  <a href="https://github.com/floriaaan/arr/actions/workflows/docker.yml"><img src="https://github.com/floriaaan/arr/actions/workflows/docker.yml/badge.svg" alt="Docker" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT" /></a>
+</p>
 
-- **Catalogue et requêtes unifiés** — une recherche, une file de requêtes, quel
-  que soit le service cible.
-- **Progression réelle** — un réconciliateur interroge en continu les instances
-  \*arr, donc une requête ne reste jamais bloquée sur « soumise » (cf.
-  [ADR-0003](./docs/adr/0003-reconciliation-progression.md)).
-- **Bibliothèque et calendrier** — ce qui est déjà disponible, ce qui sort bientôt.
-- **Onboarding guidé** — découverte réseau des instances, test de connexion,
-  choix des profils de qualité et des dossiers racine depuis l'UI.
-- **Auth intégrée** — email/mot de passe et/ou SSO OIDC (PocketID et compatibles),
-  avec des rôles administrateur / utilisateur.
-- **Santé des instances** — une instance injoignable est signalée comme telle,
-  et non confondue avec une instance volontairement désactivée.
+Running Radarr, Sonarr and Lidarr side by side means three tabs, three logins,
+and three places to check before you know whether anything actually happened.
+`arr` puts a single interface in front of all three: search once, request in
+one click, and watch it move from "requested" to "in your library" without
+touching any of the underlying apps.
+
+- **One catalog, one queue** — search and request across every connected
+  service from the same screen.
+- **Requests that actually move** — a background reconciler keeps polling
+  your \*arr instances, so a request never sits stuck on "submitted" while the
+  download is long done.
+- **Library and calendar** — what's already available, what's airing or
+  releasing next, in one place.
+- **Guided onboarding** — network discovery, connection tests, quality
+  profiles and root folders, all configured from the UI, no config files.
+- **Built-in auth** — email/password and/or OIDC SSO (PocketID and
+  compatible providers), with admin/user roles out of the box.
+- **Honest instance health** — an unreachable instance is reported as
+  unreachable, never silently confused with one an admin turned off on
+  purpose.
 
 ## Stack
 
-| Couche           | Technologie                                                                                           |
-| ---------------- | ----------------------------------------------------------------------------------------------------- |
-| Backend          | [AdonisJS 7](https://adonisjs.com) (Node ≥ 24), Lucid ORM, VineJS                                     |
-| Frontend         | [TanStack Start](https://tanstack.com/start) + React 19, TanStack Router/Query, Tailwind 4, shadcn/ui |
-| Base de données  | PostgreSQL 16                                                                                         |
-| Authentification | [better-auth](https://better-auth.com) (email/password + OIDC générique)                              |
-| Monorepo         | pnpm workspaces, [Task](https://taskfile.dev) comme lanceur de commandes                              |
-| Qualité          | ESLint, Prettier, TypeScript strict, Japa (back), Vitest (front), dependency-cruiser                  |
+| Layer          | Technology                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------ |
+| Backend        | [AdonisJS 7](https://adonisjs.com) (Node ≥ 24), Lucid ORM, VineJS                                      |
+| Frontend       | [TanStack Start](https://tanstack.com/start) + React 19, TanStack Router/Query, Tailwind 4, shadcn/ui  |
+| Database       | PostgreSQL 16                                                                                           |
+| Auth           | [better-auth](https://better-auth.com) (email/password + generic OIDC)                                 |
+| Monorepo       | pnpm workspaces, [Task](https://taskfile.dev) as the command runner                                    |
+| Quality        | ESLint, Prettier, strict TypeScript, Japa (backend), Vitest (frontend), dependency-cruiser              |
 
-## Démarrage rapide
+## Quick start
 
-Prérequis : **Node ≥ 24**, **pnpm 11**, **Docker** (pour Postgres) et
+Requirements: **Node ≥ 24**, **pnpm 11**, **Docker** (for Postgres) and
 [**Task**](https://taskfile.dev/installation/).
 
 ```bash
 git clone https://github.com/floriaaan/arr.git
 cd arr
 
-task setup   # installe les dépendances, crée les .env depuis les .env.example, build une fois
+task setup   # installs dependencies, creates .env files from .env.example, builds once
 ```
 
-Renseigne ensuite `APP_KEY` dans `.env` et `backend/.env` (une chaîne aléatoire
-de 32 caractères, par ex. `openssl rand -base64 32`), puis :
+Set `APP_KEY` in `.env` and `backend/.env` (a random 32-character string,
+e.g. `openssl rand -base64 32`), then:
 
 ```bash
-task dev     # Postgres en conteneur + backend, frontend et réconciliateur en local
+task dev     # Postgres in a container + backend, frontend and reconciler locally
 ```
 
-Le frontend écoute sur <http://localhost:3000>, le backend sur
-<http://localhost:3333>. Au premier lancement, l'interface redirige vers
-`/setup` pour créer le compte administrateur et connecter les instances.
+The frontend listens on <http://localhost:3000>, the backend on
+<http://localhost:3333>. On first boot the UI redirects to `/setup` to create
+the admin account and connect your instances.
 
-### Sans backend
+### Without a backend
 
-Le frontend sait tourner entièrement hors-ligne contre un connecteur factice —
-pratique pour travailler l'UI sans base de données ni instance \*arr :
+The frontend can run entirely offline against an in-memory fake connector —
+handy for UI work without a database or any \*arr instance:
 
 ```bash
 task dev:fake
 ```
 
-### Stack complète en Docker
+### Full stack, locally, via Docker
 
 ```bash
-cp .env.example .env   # renseigne APP_KEY
-task up                # build + démarre db, backend, frontend, reconciler, health
+cp .env.example .env   # set APP_KEY
+task up                # builds + starts db, backend, frontend, reconciler, health
 task logs
 task down
 ```
 
-Seul le frontend est exposé sur l'hôte ; il relaie `/api/*` vers le backend par
-le réseau interne Docker.
+Only the frontend is exposed on the host; it proxies `/api/*` to the backend
+over the internal Docker network.
+
+## Deploying — drop-in docker-compose
+
+Prebuilt images are published to GHCR on every push to `main` and on tags.
+Copy this into your stack — right next to your existing Radarr/Sonarr/Lidarr
+services — set a couple of env vars, and go:
+
+```yaml
+# docker-compose.yml
+networks:
+  arr-internal:
+
+volumes:
+  arr-pgdata:
+
+services:
+  arr-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: arr
+      POSTGRES_PASSWORD: ${ARR_DB_PASSWORD:?set a real password}
+      POSTGRES_DB: arr
+    volumes:
+      - arr-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U arr -d arr']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - arr-internal
+
+  arr-backend: &arr-backend
+    image: ghcr.io/floriaaan/arr-backend:latest
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3333
+      LOG_LEVEL: info
+      APP_KEY: ${ARR_APP_KEY:?generate one with `openssl rand -base64 32`}
+      APP_URL: https://arr.example.com
+      DB_HOST: arr-db
+      DB_PORT: 5432
+      DB_USER: arr
+      DB_PASSWORD: ${ARR_DB_PASSWORD:?set a real password}
+      DB_DATABASE: arr
+      # Optional SSO (leave unset to configure it from the onboarding UI instead)
+      OIDC_ISSUER_URL: ${ARR_OIDC_ISSUER_URL:-}
+      OIDC_CLIENT_ID: ${ARR_OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${ARR_OIDC_CLIENT_SECRET:-}
+      DISABLE_PASSWORD_LOGIN: 'false'
+    depends_on:
+      arr-db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3333/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Not published to the host — only arr-frontend needs to be. It proxies
+    # /api/* to this service over the internal network.
+    networks:
+      - arr-internal
+
+  # Same image, three long-running commands instead of the HTTP server:
+  # nothing else advances request/instance state outside these processes.
+  arr-reconciler:
+    <<: *arr-backend
+    command: ['node', 'bin/console.js', 'requests:reconcile']
+    healthcheck: { disable: true }
+
+  arr-watchlist-sync:
+    <<: *arr-backend
+    command: ['node', 'bin/console.js', 'watchlist:sync']
+    healthcheck: { disable: true }
+
+  arr-health:
+    <<: *arr-backend
+    command: ['node', 'bin/console.js', 'instances:health']
+    healthcheck: { disable: true }
+
+  arr-frontend:
+    image: ghcr.io/floriaaan/arr-frontend:latest
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      BACKEND_URL: http://arr-backend:3333
+    ports:
+      - '3000:3000' # or drop this and put it behind your reverse proxy instead
+    depends_on:
+      arr-backend:
+        condition: service_healthy
+    networks:
+      - arr-internal
+```
+
+```bash
+ARR_APP_KEY=$(openssl rand -base64 32) ARR_DB_PASSWORD=change-me docker compose up -d
+```
+
+Put `arr-frontend` behind whatever reverse proxy already fronts the rest of
+your stack (Traefik, Caddy, nginx…) and point it at `APP_URL`.
 
 ## Configuration
 
-Deux fichiers d'environnement, avec des rôles distincts :
+Two environment files, two different jobs:
 
-- **`.env` (racine)** — consommé par Docker Compose : provisioning Postgres,
-  ports publiés, secrets partagés entre conteneurs.
-- **`backend/.env`** — consommé par le backend en développement local.
+- **`.env` (root)** — consumed by Docker Compose: Postgres provisioning,
+  published ports, secrets shared across containers.
+- **`backend/.env`** — consumed by the backend in local development.
 
-Les variables principales :
+Key variables:
 
-| Variable                                                          | Défaut                                       | Rôle                                                                                                                                            |
-| ----------------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `APP_KEY`                                                         | —                                            | **Requis.** Clé de chiffrement AdonisJS (sessions, cookies, clés d'API stockées).                                                               |
-| `APP_URL`                                                         | `http://localhost:3333`                      | URL publique du backend.                                                                                                                        |
-| `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_DATABASE` | `localhost` / `5432` / `arr` / `arr` / `arr` | Connexion PostgreSQL.                                                                                                                           |
-| `CORS_ORIGIN`                                                     | `http://localhost:3000`                      | Origine du frontend — également les `trustedOrigins` better-auth, nécessaire au SSO.                                                            |
-| `LOG_LEVEL`                                                       | `info`                                       | Niveau de log Pino.                                                                                                                             |
-| `OIDC_ISSUER_URL` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET`       | vide                                         | SSO OIDC. Optionnel : configurable depuis l'UI d'onboarding. Quand elles sont définies, ces variables **priment** sur la configuration en base. |
-| `DISABLE_PASSWORD_LOGIN`                                          | `false`                                      | Force le SSO comme unique moyen de connexion.                                                                                                   |
-| `VITE_CONNECTOR`                                                  | `http`                                       | `http` = vrai backend, `fake` = connecteur factice hors-ligne.                                                                                  |
-| `FRONTEND_PORT` / `BACKEND_PORT`                                  | `3000` / `3333`                              | Ports publiés par Compose.                                                                                                                      |
+| Variable                                                          | Default                                      | Role                                                                                                                        |
+| ------------------------------------------------------------------ | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `APP_KEY`                                                         | —                                             | **Required.** AdonisJS encryption key (sessions, cookies, stored API keys).                                                 |
+| `APP_URL`                                                         | `http://localhost:3333`                       | Public URL of the backend.                                                                                                  |
+| `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_DATABASE` | `localhost` / `5432` / `arr` / `arr` / `arr`  | PostgreSQL connection.                                                                                                      |
+| `CORS_ORIGIN`                                                     | `http://localhost:3000`                       | Frontend origin — also better-auth's `trustedOrigins`, required for SSO.                                                    |
+| `LOG_LEVEL`                                                       | `info`                                        | Pino log level.                                                                                                             |
+| `OIDC_ISSUER_URL` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET`       | empty                                         | SSO OIDC. Optional: configurable from the onboarding UI instead. When set, these env vars **take precedence** over the DB config. |
+| `DISABLE_PASSWORD_LOGIN`                                          | `false`                                       | Forces SSO as the only sign-in method.                                                                                      |
+| `VITE_CONNECTOR`                                                  | `http`                                        | `http` = real backend, `fake` = offline fake connector.                                                                     |
+| `FRONTEND_PORT` / `BACKEND_PORT`                                  | `3000` / `3333`                               | Ports published by Compose.                                                                                                 |
 
-## Commandes
+## Commands
 
-Tout passe par [Task](https://taskfile.dev) — `task --list` donne la liste complète.
+Everything goes through [Task](https://taskfile.dev) — `task --list` for the
+full list.
 
-| Commande                                                                  | Effet                                                             |
-| ------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `task setup`                                                              | Install + `.env` + build initial                                  |
-| `task dev`                                                                | Stack de dev complète (db conteneurisée, processus locaux)        |
-| `task dev:fake`                                                           | Frontend seul contre le connecteur factice                        |
-| `task dev:db`                                                             | Postgres seul                                                     |
-| `task check`                                                              | **La commande CI** : lint + typecheck + tests + lint de frontière |
-| `task lint` / `task format` / `task typecheck`                            | Sur les deux packages                                             |
-| `task test` / `task test:back` / `task test:front`                        | Suites de tests                                                   |
-| `task boundaries`                                                         | Vérifie la règle de dépendance entre couches                      |
-| `task build`                                                              | Build des deux packages                                           |
-| `task db:migrate` / `task db:rollback` / `task db:seed` / `task db:reset` | Migrations et seeds                                               |
-| `task up` / `task down` / `task logs`                                     | Stack Docker de type production                                   |
+| Command                                                                  | Effect                                                        |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `task setup`                                                              | Install + `.env` + initial build                              |
+| `task dev`                                                                | Full dev stack (containerized db, local processes)            |
+| `task dev:fake`                                                           | Frontend only, against the fake connector                     |
+| `task dev:db`                                                             | Postgres only                                                  |
+| `task check`                                                              | **The CI command**: lint + typecheck + tests + boundary lint   |
+| `task lint` / `task format` / `task typecheck`                            | Across both packages                                           |
+| `task test` / `task test:back` / `task test:front`                        | Test suites                                                    |
+| `task boundaries`                                                         | Enforces the layer dependency rule                              |
+| `task build`                                                              | Builds both packages                                            |
+| `task db:migrate` / `task db:rollback` / `task db:seed` / `task db:reset` | Migrations and seeds                                            |
+| `task up` / `task down` / `task logs`                                     | Production-like Docker stack                                    |
 
 ## Architecture
 
-Les deux packages suivent la **même architecture en couches**
-([ADR-0002](./docs/adr/0002-structure-en-couches.md)), avec une règle de
-dépendance à sens unique, vérifiée automatiquement par `dependency-cruiser`
-([ADR-0004](./docs/adr/0004-lint-de-frontiere.md)) :
+Both packages follow the **same layered architecture**, with a one-way
+dependency rule enforced automatically by `dependency-cruiser`:
 
 ```
 presentation ─┐
@@ -132,53 +252,53 @@ presentation ─┐
 infrastructure┘
 ```
 
-- **`domain/`** — entités, agrégats, value objects, événements et _interfaces de
-  ports_. Zéro dépendance : ni framework, ni client HTTP, ni Zod.
-- **`application/`** — cas d'usage, orchestration. Dépend uniquement du domaine.
-- **`infrastructure/`** — implémentations des ports : dépôts Lucid, ACL `servarr`,
-  adapter better-auth, cache d'images.
-- **`presentation/`** — contrôleurs et routes HTTP côté backend, composants React
-  et routes côté frontend.
+- **`domain/`** — entities, aggregates, value objects, events and port
+  _interfaces_. Zero dependencies: no framework, no HTTP client, no Zod.
+- **`application/`** — use cases, orchestration. Depends only on the domain.
+- **`infrastructure/`** — port implementations: Lucid repositories, the
+  `servarr` ACL, the better-auth adapter, image caching.
+- **`presentation/`** — HTTP controllers and routes on the backend, React
+  components and routes on the frontend.
 
-Le câblage des ports vers leurs implémentations se fait dans `providers/`, en
-dehors de `src/` — `presentation` n'importe jamais `infrastructure` directement.
+Ports are wired to their implementations in `providers/`, outside `src/` —
+`presentation` never imports `infrastructure` directly.
 
 ```
 arr/
 ├── backend/                 # AdonisJS 7
-│   ├── app/ start/ config/  # glue framework (snake_case)
-│   ├── commands/            # commandes Ace : requests:reconcile, instances:health
-│   ├── database/            # migrations, schéma
-│   ├── providers/           # câblage des ports
+│   ├── app/ start/ config/  # framework glue (snake_case)
+│   ├── commands/            # Ace commands: requests:reconcile, instances:health
+│   ├── database/            # migrations, schema
+│   ├── providers/           # port wiring
 │   ├── src/                 # domain / application / infrastructure / presentation
-│   └── tests/               # miroir de src/ + tests fonctionnels
+│   └── tests/               # mirrors src/, plus functional tests
 ├── frontend/                # TanStack Start + React 19
-│   ├── providers/           # sélection du connecteur (http | fake)
-│   ├── src/                 # mêmes quatre couches
-│   └── tests/               # domain, presentation, contrat de connecteur
-└── docs/                    # ADR + spécifications par phase
+│   ├── providers/           # connector selection (http | fake)
+│   ├── src/                 # the same four layers
+│   └── tests/                # domain, presentation, connector contract
+└── docs/                    # phase-by-phase functional specs
 ```
 
-### Processus longs
+### Long-running processes
 
-Au-delà du serveur HTTP, deux commandes Ace tournent comme services dédiés
-(services `reconciler` et `health` dans `compose.yml`) :
+Beyond the HTTP server, two Ace commands run as dedicated services
+(`reconciler` and `health` in `compose.yml`):
 
-- **`requests:reconcile`** — interroge les instances \*arr et fait avancer l'état
-  des requêtes. Sans lui, la progression ne dépasse jamais « soumise ».
-- **`instances:health`** — re-vérifie périodiquement la joignabilité des
-  instances, pour distinguer « désactivée » de « injoignable ».
+- **`requests:reconcile`** — polls the \*arr instances and advances request
+  state. Without it, progress never moves past "submitted".
+- **`instances:health`** — periodically re-checks instance reachability, to
+  tell "disabled" apart from "unreachable".
 
-En développement local, `task dev` lance le réconciliateur ; le contrôle de santé
-se lance à la demande avec `node ace instances:health` depuis `backend/`.
+In local development, `task dev` starts the reconciler; run health checks
+on demand with `node ace instances:health` from `backend/`.
 
-### Connecteur frontend
+### The frontend connector
 
-Le frontend ne parle jamais directement au backend depuis ses composants : il
-passe par l'interface `ArrConnector`, dont il existe deux implémentations —
-`HttpArrConnector` (vrai backend) et `FakeArrConnector` (données en mémoire).
-La sélection se fait par `VITE_CONNECTOR`, et une suite de tests de contrat
-garantit que les deux se comportent identiquement.
+Components never talk to the backend directly — everything goes through the
+`ArrConnector` interface, with two implementations: `HttpArrConnector` (the
+real backend) and `FakeArrConnector` (in-memory data). Selection happens via
+`VITE_CONNECTOR`, and a contract test suite guarantees both behave
+identically.
 
 ## Tests
 
@@ -186,50 +306,39 @@ garantit que les deux se comportent identiquement.
 task test           # backend (Japa) + frontend (Vitest)
 task test:back
 task test:front
-task test:contract  # suite de contrat ArrConnector (Http vs Fake)
+task test:contract  # ArrConnector contract suite (Http vs Fake)
 ```
 
-Les tests backend ont besoin d'une base PostgreSQL joignable
-(`task dev:db` suffit) ; sa configuration vit dans `backend/.env.test`.
+Backend tests need a reachable PostgreSQL database (`task dev:db` is
+enough); its config lives in `backend/.env.test`.
 
-## Intégration continue
+## Continuous integration
 
-| Workflow                                       | Déclencheur                              | Rôle                                                                |
-| ---------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------- |
-| [`ci.yml`](./.github/workflows/ci.yml)         | push `main`, pull requests               | `task check` (lint, typecheck, tests, frontières) puis `task build` |
-| [`docker.yml`](./.github/workflows/docker.yml) | push `main`, tags `v*.*.*`               | Build et publication des images backend/frontend sur GHCR           |
-| [`codeql.yml`](./.github/workflows/codeql.yml) | push `main`, pull requests, hebdomadaire | Analyse statique de sécurité                                        |
+| Workflow                                       | Trigger                            | Job                                                          |
+| ------------------------------------------------ | ------------------------------------ | ---------------------------------------------------------------- |
+| [`ci.yml`](./.github/workflows/ci.yml)         | push to `main`, pull requests       | `task check` (lint, typecheck, tests, boundaries), then `task build` |
+| [`docker.yml`](./.github/workflows/docker.yml) | push to `main`, tags `v*.*.*`        | Builds and publishes backend/frontend images to GHCR              |
+| [`codeql.yml`](./.github/workflows/codeql.yml) | push to `main`, pull requests, weekly | Static security analysis                                         |
 
-Les images publiées sont consommables directement :
+Published images are ready to pull:
 
 ```bash
 docker pull ghcr.io/floriaaan/arr-backend:latest
 docker pull ghcr.io/floriaaan/arr-frontend:latest
 ```
 
-## Documentation
+## Contributing
 
-- [`docs/adr/`](./docs/adr) — décisions d'architecture, avec leur contexte et
-  leurs conséquences.
-- [`docs/phase-0/`](./docs/phase-0) — cadrage : arborescence, modèle de domaine,
-  schéma de base, endpoints HTTP.
-- [`docs/phase-1/`](./docs/phase-1) et suivantes — spécifications par phase
-  (connecteur, bibliothèque et calendrier, profils d'instance, clients de
-  téléchargement et indexeurs, confort d'usage, fiabilité des requêtes).
-
-## Contribuer
-
-Avant d'ouvrir une pull request :
+Before opening a pull request:
 
 ```bash
 task format
 task check
 ```
 
-Les décisions structurantes se documentent par un ADR dans `docs/adr/`. Le
-[`CLAUDE.md`](./CLAUDE.md) résume les conventions du dépôt à l'usage des agents
-de code — il est aussi une bonne mise en route pour un contributeur humain.
+[`CLAUDE.md`](./CLAUDE.md) documents the repository's conventions for coding
+agents — it doubles as a solid onboarding read for human contributors too.
 
-## Licence
+## License
 
 [MIT](./LICENSE)
