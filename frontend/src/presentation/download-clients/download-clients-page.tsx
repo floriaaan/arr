@@ -85,7 +85,9 @@ export function DownloadClientsPage() {
       const query = byKind[kind]
       return query.data?.ok ? { kind, records: query.data.value } : null
     })
-    .filter((entry): entry is { kind: ServarrKind; records: DownloadClientRecord[] } => entry !== null)
+    .filter(
+      (entry): entry is { kind: ServarrKind; records: DownloadClientRecord[] } => entry !== null,
+    )
 
   const merged = mergeByInstance(entries)
   const unconfiguredKinds = SERVARR_KINDS.filter((kind) => !configuredKinds.includes(kind))
@@ -145,7 +147,9 @@ export function DownloadClientsPage() {
             onToggleDemerge={() => toggleDemerge(group.mergeKey)}
             renderInstanceStatus={renderStatus}
             onEditGroup={() => setDialogMode({ type: 'edit-group', merged: group })}
-            onEditInstance={(kind, record) => setDialogMode({ type: 'edit-instance', kind, record })}
+            onEditInstance={(kind, record) =>
+              setDialogMode({ type: 'edit-instance', kind, record })
+            }
             onDeleteGroup={() => handleDeleteGroup(group)}
             onDeleteInstance={handleDeleteInstance}
           />

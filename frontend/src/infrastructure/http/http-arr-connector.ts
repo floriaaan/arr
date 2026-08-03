@@ -330,9 +330,7 @@ export class HttpArrConnector implements ArrConnector {
   }
 
   async getQualityProfileSchema(kind: ServarrKind) {
-    const response = await this.http.get(
-      `/api/settings/instances/${kind}/quality-profiles/schema`,
-    )
+    const response = await this.http.get(`/api/settings/instances/${kind}/quality-profiles/schema`)
     if (!response.ok) return { ok: false as const, error: await toApiError(response) }
     const body = (await response.json()) as { qualityProfile: unknown }
     return { ok: true as const, value: qualityProfileRecordSchema.parse(body.qualityProfile) }
@@ -349,9 +347,7 @@ export class HttpArrConnector implements ArrConnector {
   }
 
   async getDownloadClientSchema(kind: ServarrKind) {
-    const response = await this.http.get(
-      `/api/settings/instances/${kind}/download-clients/schema`,
-    )
+    const response = await this.http.get(`/api/settings/instances/${kind}/download-clients/schema`)
     if (!response.ok) return { ok: false as const, error: await toApiError(response) }
     const body = (await response.json()) as { downloadClientSchemas: unknown[] }
     return {
@@ -425,10 +421,7 @@ export class HttpArrConnector implements ArrConnector {
   }
 
   async updateIndexer(kind: ServarrKind, id: number, payload: IndexerRecord) {
-    const response = await this.http.put(
-      `/api/settings/instances/${kind}/indexers/${id}`,
-      payload,
-    )
+    const response = await this.http.put(`/api/settings/instances/${kind}/indexers/${id}`, payload)
     if (!response.ok) return { ok: false as const, error: await toApiError(response) }
     const body = (await response.json()) as { indexer: unknown }
     return { ok: true as const, value: indexerRecordSchema.parse(body.indexer) }
@@ -441,10 +434,7 @@ export class HttpArrConnector implements ArrConnector {
   }
 
   async testIndexer(kind: ServarrKind, payload: IndexerRecord) {
-    const response = await this.http.post(
-      `/api/settings/instances/${kind}/indexers/test`,
-      payload,
-    )
+    const response = await this.http.post(`/api/settings/instances/${kind}/indexers/test`, payload)
     if (!response.ok) return { ok: false as const, error: await toApiError(response) }
     return { ok: true as const, value: undefined }
   }
@@ -493,9 +483,7 @@ export class HttpArrConnector implements ArrConnector {
     if (!response.ok) {
       return { ok: false, error: { message: (await toApiError(response)).message } }
     }
-    const body = (await response.json()) as
-      | { ok: true }
-      | { ok: false; error: { message: string } }
+    const body = (await response.json()) as { ok: true } | { ok: false; error: { message: string } }
     return body
   }
 

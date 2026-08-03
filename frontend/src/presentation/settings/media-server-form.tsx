@@ -77,8 +77,8 @@ export function MediaServerForm({
           onChange={(event) => setBaseUrl(event.target.value)}
         />
         <p className="text-xs text-muted-foreground">
-          The URL you open in your browser. Used to link to {meta.label} from an item's detail —
-          no API key needed, nothing is ever sent to {meta.label}.
+          The URL you open in your browser. Used to link to {meta.label} from an item's detail — no
+          API key needed, nothing is ever sent to {meta.label}.
         </p>
       </div>
 

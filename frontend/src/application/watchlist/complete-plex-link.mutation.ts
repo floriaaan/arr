@@ -5,10 +5,7 @@ import type { PlexPin, PlexLinkResult } from '#domain/watchlist/user-media-accou
 import type { ApiError } from '#domain/shared/api-error'
 import type { Result } from '#domain/shared/result'
 
-export const completePlexLinkMutation = defineMutation<
-  Result<PlexLinkResult, ApiError>,
-  PlexPin
->({
+export const completePlexLinkMutation = defineMutation<Result<PlexLinkResult, ApiError>, PlexPin>({
   mutationFn: (connector, pin) => connector.completePlexLink(pin),
 })
 

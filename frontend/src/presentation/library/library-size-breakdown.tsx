@@ -46,7 +46,10 @@ export function LibrarySizeBreakdown({ items }: { items: LibraryItem[] }) {
           const KindIcon = MEDIA_KIND_ICONS[entry.kind]
           const meta = KIND_META[entry.kind]
           return (
-            <div key={entry.kind} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div
+              key={entry.kind}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground"
+            >
               <span className={`size-2 shrink-0 rounded-full ${meta.swatchClass}`} />
               <KindIcon className="size-3.5" />
               <span>{meta.label}</span>

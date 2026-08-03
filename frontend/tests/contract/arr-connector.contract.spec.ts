@@ -114,14 +114,26 @@ describe.each<{ name: string; create: () => ArrConnector }>([
                 onRequestPendingApproval: boolean
               }
               if (draft.authMode === 'token' && draft.token === undefined && !settings.hasToken) {
-                return json({ error: { type: 'validation_failed', message: 'A token is required.' } }, 400)
+                return json(
+                  { error: { type: 'validation_failed', message: 'A token is required.' } },
+                  400,
+                )
               }
-              if (draft.authMode === 'basic' && draft.password === undefined && !settings.hasPassword) {
-                return json({ error: { type: 'validation_failed', message: 'A password is required.' } }, 400)
+              if (
+                draft.authMode === 'basic' &&
+                draft.password === undefined &&
+                !settings.hasPassword
+              ) {
+                return json(
+                  { error: { type: 'validation_failed', message: 'A password is required.' } },
+                  400,
+                )
               }
               settings = {
                 hasWebhookUrl:
-                  draft.webhookUrl === undefined ? settings.hasWebhookUrl : draft.webhookUrl !== null,
+                  draft.webhookUrl === undefined
+                    ? settings.hasWebhookUrl
+                    : draft.webhookUrl !== null,
                 authMode: draft.authMode,
                 hasToken: draft.authMode === 'token' ? true : false,
                 username: draft.authMode === 'basic' ? (draft.username ?? settings.username) : null,

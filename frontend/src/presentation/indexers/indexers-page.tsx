@@ -150,7 +150,9 @@ export function IndexersPage() {
             onToggleDemerge={() => toggleDemerge(group.mergeKey)}
             renderInstanceStatus={renderStatus}
             onEditGroup={() => setDialogMode({ type: 'edit-group', merged: group })}
-            onEditInstance={(kind, record) => setDialogMode({ type: 'edit-instance', kind, record })}
+            onEditInstance={(kind, record) =>
+              setDialogMode({ type: 'edit-instance', kind, record })
+            }
             onDeleteGroup={() => handleDeleteGroup(group)}
             onDeleteInstance={handleDeleteInstance}
           />

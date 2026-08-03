@@ -24,7 +24,8 @@ export function groupEntriesByDay(entries: CalendarEntry[]): CalendarDayGroup[] 
     .map(([dateKey, dayEntries]) => ({
       dateKey,
       entries: [...dayEntries].sort(
-        (a, b) => (a.subtitle ?? '').localeCompare(b.subtitle ?? '') || a.title.localeCompare(b.title),
+        (a, b) =>
+          (a.subtitle ?? '').localeCompare(b.subtitle ?? '') || a.title.localeCompare(b.title),
       ),
     }))
 }

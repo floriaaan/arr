@@ -126,8 +126,8 @@ export function DiscoveryDialog({
               onChange={(event) => setExtraHost(event.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Localhost and the usual Docker service names are always checked. Add a hostname or
-              IP here to check another machine — a URL works too, only the host is kept.
+              Localhost and the usual Docker service names are always checked. Add a hostname or IP
+              here to check another machine — a URL works too, only the host is kept.
             </p>
           </div>
 
@@ -155,9 +155,7 @@ export function DiscoveryDialog({
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <p className="text-sm font-medium">
-                  {matching.length > 0
-                    ? `${kindLabel(kind)} found`
-                    : `No ${kindLabel(kind)} found`}
+                  {matching.length > 0 ? `${kindLabel(kind)} found` : `No ${kindLabel(kind)} found`}
                 </p>
                 {matching.map((instance) => (
                   <ResultRow key={instance.baseUrl} instance={instance} onUse={handleUse} />

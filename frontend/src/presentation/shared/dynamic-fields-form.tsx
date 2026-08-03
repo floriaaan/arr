@@ -137,7 +137,10 @@ export function DynamicFieldsForm({
                 if (field.type !== 'number') return updateField(field.name, event.target.value)
                 const raw = event.target.value
                 const parsed = raw === '' ? undefined : Number(raw)
-                updateField(field.name, parsed === undefined || Number.isNaN(parsed) ? undefined : parsed)
+                updateField(
+                  field.name,
+                  parsed === undefined || Number.isNaN(parsed) ? undefined : parsed,
+                )
               }}
             />
             {field.helpText ? (

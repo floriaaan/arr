@@ -82,9 +82,7 @@ function SetupRoute() {
             {step === 'welcome' ? <WelcomeStep onNext={next} /> : null}
             {step === 'admin' ? <AdminStep onNext={next} onBack={back} /> : null}
             {step === 'services' ? <ServicesStep onNext={next} onBack={back} /> : null}
-            {step === 'media-servers' ? (
-              <MediaServersStep onNext={next} onBack={back} />
-            ) : null}
+            {step === 'media-servers' ? <MediaServersStep onNext={next} onBack={back} /> : null}
             {step === 'sso' ? <SsoStep onNext={next} onBack={back} /> : null}
             {step === 'summary' ? (
               <SummaryStep onComplete={() => void navigate({ to: '/login' })} onBack={back} />

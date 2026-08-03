@@ -113,7 +113,10 @@ export function CalendarTimeline({
                           Unmonitored
                         </Badge>
                       )}
-                      <Badge variant={entry.hasFile ? 'default' : 'secondary'} className="text-[10px]">
+                      <Badge
+                        variant={entry.hasFile ? 'default' : 'secondary'}
+                        className="text-[10px]"
+                      >
                         {entry.hasFile ? 'Downloaded' : 'Missing'}
                       </Badge>
                     </div>

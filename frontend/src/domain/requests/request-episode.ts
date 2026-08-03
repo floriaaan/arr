@@ -1,9 +1,4 @@
-export type RequestEpisodeState =
-  | 'available'
-  | 'downloading'
-  | 'importing'
-  | 'missing'
-  | 'failed'
+export type RequestEpisodeState = 'available' | 'downloading' | 'importing' | 'missing' | 'failed'
 
 export interface RequestEpisode {
   seasonNumber: number

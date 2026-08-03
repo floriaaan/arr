@@ -74,11 +74,7 @@ export function DownloadClientFormDialog({
   const [targetKinds, setTargetKinds] = useState<Set<ServarrKind>>(
     () =>
       new Set(
-        mode.type === 'edit-group'
-          ? groupKindsPresent
-          : mode.type === 'add'
-            ? configuredKinds
-            : [],
+        mode.type === 'edit-group' ? groupKindsPresent : mode.type === 'add' ? configuredKinds : [],
       ),
   )
   const [pending, setPending] = useState(false)
@@ -102,7 +98,9 @@ export function DownloadClientFormDialog({
 
   function selectImplementation(implementation: string) {
     if (!schema.data?.ok) return
-    const template = schema.data.value.find((candidate) => candidate.implementation === implementation)
+    const template = schema.data.value.find(
+      (candidate) => candidate.implementation === implementation,
+    )
     if (template) setRecord(template)
   }
 
@@ -128,8 +126,7 @@ export function DownloadClientFormDialog({
         return
       }
 
-      const reference =
-        mode.type === 'edit-group' ? mode.merged.perInstance[0]!.record : record
+      const reference = mode.type === 'edit-group' ? mode.merged.perInstance[0]!.record : record
       const existingByKind =
         mode.type === 'edit-group'
           ? new Map(mode.merged.perInstance.map(({ kind, record: r }) => [kind, r]))
@@ -170,8 +167,7 @@ export function DownloadClientFormDialog({
 
   async function handleTest() {
     if (!record) return
-    const kinds =
-      mode.type === 'edit-instance' ? [mode.kind] : [...targetKinds]
+    const kinds = mode.type === 'edit-instance' ? [mode.kind] : [...targetKinds]
     if (kinds.length === 0) return toast.error('Select at least one instance to test against.')
 
     for (const kind of kinds) {
@@ -235,9 +231,9 @@ export function DownloadClientFormDialog({
               />
 
               <p className="text-xs text-muted-foreground">
-                Tip: use <code className="rounded bg-muted px-1 py-0.5">{'{{arr}}'}</code> in a
-                text field (e.g. category) to insert the target instance automatically —
-                resolves to <code className="rounded bg-muted px-1 py-0.5">radarr</code>,{' '}
+                Tip: use <code className="rounded bg-muted px-1 py-0.5">{'{{arr}}'}</code> in a text
+                field (e.g. category) to insert the target instance automatically — resolves to{' '}
+                <code className="rounded bg-muted px-1 py-0.5">radarr</code>,{' '}
                 <code className="rounded bg-muted px-1 py-0.5">sonarr</code> or{' '}
                 <code className="rounded bg-muted px-1 py-0.5">lidarr</code> per instance.
               </p>
@@ -259,14 +255,16 @@ export function DownloadClientFormDialog({
                         />
                         {kindMeta[kind].label}
                         {!groupKindsPresent.includes(kind) && mode.type === 'edit-group' ? (
-                          <span className="text-xs text-muted-foreground">(not configured yet)</span>
+                          <span className="text-xs text-muted-foreground">
+                            (not configured yet)
+                          </span>
                         ) : null}
                       </label>
                     ))}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Only fields you change are applied to instances that already have this client
-                    — other per-instance settings (e.g. category) are left untouched.
+                    Only fields you change are applied to instances that already have this client —
+                    other per-instance settings (e.g. category) are left untouched.
                   </p>
                 </div>
               ) : null}
@@ -275,7 +273,11 @@ export function DownloadClientFormDialog({
         </div>
 
         <DialogFooter className="shrink-0">
-          <Button variant="outline" onClick={handleTest} disabled={!record || testMutation.isPending}>
+          <Button
+            variant="outline"
+            onClick={handleTest}
+            disabled={!record || testMutation.isPending}
+          >
             {testMutation.isPending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (

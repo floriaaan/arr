@@ -74,11 +74,7 @@ export function IndexerFormDialog({
   const [targetKinds, setTargetKinds] = useState<Set<ServarrKind>>(
     () =>
       new Set(
-        mode.type === 'edit-group'
-          ? groupKindsPresent
-          : mode.type === 'add'
-            ? configuredKinds
-            : [],
+        mode.type === 'edit-group' ? groupKindsPresent : mode.type === 'add' ? configuredKinds : [],
       ),
   )
   const [pending, setPending] = useState(false)
@@ -102,7 +98,9 @@ export function IndexerFormDialog({
 
   function selectImplementation(implementation: string) {
     if (!schema.data?.ok) return
-    const template = schema.data.value.find((candidate) => candidate.implementation === implementation)
+    const template = schema.data.value.find(
+      (candidate) => candidate.implementation === implementation,
+    )
     if (template) setRecord(template)
   }
 
@@ -233,9 +231,9 @@ export function IndexerFormDialog({
               />
 
               <p className="text-xs text-muted-foreground">
-                Tip: use <code className="rounded bg-muted px-1 py-0.5">{'{{arr}}'}</code> in a
-                text field (e.g. categories) to insert the target instance automatically —
-                resolves to <code className="rounded bg-muted px-1 py-0.5">radarr</code>,{' '}
+                Tip: use <code className="rounded bg-muted px-1 py-0.5">{'{{arr}}'}</code> in a text
+                field (e.g. categories) to insert the target instance automatically — resolves to{' '}
+                <code className="rounded bg-muted px-1 py-0.5">radarr</code>,{' '}
                 <code className="rounded bg-muted px-1 py-0.5">sonarr</code> or{' '}
                 <code className="rounded bg-muted px-1 py-0.5">lidarr</code> per instance.
               </p>
@@ -257,14 +255,16 @@ export function IndexerFormDialog({
                         />
                         {kindMeta[kind].label}
                         {!groupKindsPresent.includes(kind) && mode.type === 'edit-group' ? (
-                          <span className="text-xs text-muted-foreground">(not configured yet)</span>
+                          <span className="text-xs text-muted-foreground">
+                            (not configured yet)
+                          </span>
                         ) : null}
                       </label>
                     ))}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Only fields you change are applied to instances that already have this
-                    indexer — other per-instance settings (e.g. categories) are left untouched.
+                    Only fields you change are applied to instances that already have this indexer —
+                    other per-instance settings (e.g. categories) are left untouched.
                   </p>
                 </div>
               ) : null}
@@ -273,7 +273,11 @@ export function IndexerFormDialog({
         </div>
 
         <DialogFooter className="shrink-0">
-          <Button variant="outline" onClick={handleTest} disabled={!record || testMutation.isPending}>
+          <Button
+            variant="outline"
+            onClick={handleTest}
+            disabled={!record || testMutation.isPending}
+          >
             {testMutation.isPending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (

@@ -81,10 +81,7 @@ export interface ArrConnector {
 
   // identity — admin user management
   listUsers: () => Promise<UserAccount[]>
-  setUserRole: (
-    userId: string,
-    role: UserRole,
-  ) => Promise<Result<{ user: UserAccount }, ApiError>>
+  setUserRole: (userId: string, role: UserRole) => Promise<Result<{ user: UserAccount }, ApiError>>
   // identity — per-user request approval override (cf. docs/phase-7-watchlist-sync, chantier 4)
   listUserRequestPreferences: () => Promise<Record<string, boolean | null>>
   setUserAutoApprove: (userId: string, autoApprove: boolean | null) => Promise<void>
@@ -285,7 +282,10 @@ export interface ArrConnector {
 
   // library
   listLibrary: (kind?: MediaKind) => Promise<LibraryItem[]>
-  removeLibraryItem: (externalId: ExternalId, deleteFiles: boolean) => Promise<Result<void, ApiError>>
+  removeLibraryItem: (
+    externalId: ExternalId,
+    deleteFiles: boolean,
+  ) => Promise<Result<void, ApiError>>
 
   // calendar
   getCalendar: (startDate: string, endDate: string) => Promise<CalendarEntry[]>
