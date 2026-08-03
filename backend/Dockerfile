@@ -5,7 +5,7 @@
 # pruning to production-only deps via `pnpm deploy` — good enough for the
 # Phase 1 skeleton, revisit in the Phase 6 performance pass.
 
-FROM node:24-alpine AS base
+FROM node:26-alpine AS base
 RUN corepack enable && corepack prepare pnpm@11.17.0 --activate
 WORKDIR /app
 
