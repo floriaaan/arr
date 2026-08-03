@@ -8,7 +8,9 @@
 # (cf. server.mjs comment) — that would give a ready-made Node entrypoint.
 
 FROM node:26-alpine AS base
-RUN corepack enable && corepack prepare pnpm@11.17.0 --activate
+# node:26-alpine no longer bundles corepack — install it explicitly first,
+# or `corepack enable` fails with "command not found".
+RUN npm install -g corepack@latest && corepack enable && corepack prepare pnpm@11.17.0 --activate
 WORKDIR /app
 
 FROM base AS deps
