@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AccountIndexRouteImport } from './routes/account/index'
 import { Route as CalendarIndexRouteImport } from './routes/calendar/index'
 import { Route as DownloadClientsIndexRouteImport } from './routes/download-clients/index'
 import { Route as IndexersIndexRouteImport } from './routes/indexers/index'
@@ -28,6 +29,11 @@ const IndexRoute = IndexRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountIndexRoute = AccountIndexRouteImport.update({
+  id: '/account/',
+  path: '/account/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CalendarIndexRoute = CalendarIndexRouteImport.update({
@@ -74,6 +80,7 @@ const SetupIndexRoute = SetupIndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/account/': typeof AccountIndexRoute
   '/calendar/': typeof CalendarIndexRoute
   '/download-clients/': typeof DownloadClientsIndexRoute
   '/indexers/': typeof IndexersIndexRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/account': typeof AccountIndexRoute
   '/calendar': typeof CalendarIndexRoute
   '/download-clients': typeof DownloadClientsIndexRoute
   '/indexers': typeof IndexersIndexRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/account/': typeof AccountIndexRoute
   '/calendar/': typeof CalendarIndexRoute
   '/download-clients/': typeof DownloadClientsIndexRoute
   '/indexers/': typeof IndexersIndexRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/account/'
     | '/calendar/'
     | '/download-clients/'
     | '/indexers/'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/account'
     | '/calendar'
     | '/download-clients'
     | '/indexers'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/login'
+    | '/account/'
     | '/calendar/'
     | '/download-clients/'
     | '/indexers/'
@@ -150,6 +162,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  AccountIndexRoute: typeof AccountIndexRoute
   CalendarIndexRoute: typeof CalendarIndexRoute
   DownloadClientsIndexRoute: typeof DownloadClientsIndexRoute
   IndexersIndexRoute: typeof IndexersIndexRoute
@@ -174,6 +187,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/': {
+      id: '/account/'
+      path: '/account'
+      fullPath: '/account/'
+      preLoaderRoute: typeof AccountIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/calendar/': {
@@ -238,6 +258,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  AccountIndexRoute: AccountIndexRoute,
   CalendarIndexRoute: CalendarIndexRoute,
   DownloadClientsIndexRoute: DownloadClientsIndexRoute,
   IndexersIndexRoute: IndexersIndexRoute,

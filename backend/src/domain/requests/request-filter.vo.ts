@@ -5,4 +5,5 @@ export interface RequestFilter {
   status?: RequestStatus
   kind?: MediaKind
   requestedBy?: string
+  requiresApproval?: boolean
 }

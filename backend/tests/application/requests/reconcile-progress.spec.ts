@@ -22,6 +22,8 @@ function aSubmittedRequest() {
       externalId: anExternalId(),
       title: 'Fight Club',
       instanceId: 'instance-1',
+      origin: 'manual',
+      requiresApproval: false,
     },
     new Date(),
   )

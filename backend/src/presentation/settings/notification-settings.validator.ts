@@ -15,5 +15,6 @@ export const saveNotificationSettingsValidator = vine.compile(
     onRequestAvailable: vine.boolean(),
     onRequestFailed: vine.boolean(),
     onInstanceUnreachable: vine.boolean(),
+    onRequestPendingApproval: vine.boolean(),
   }),
 )

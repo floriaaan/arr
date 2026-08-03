@@ -21,6 +21,12 @@ export async function toMediaRequestDto(request: MediaRequest, userDirectory: Us
         }
       : null,
     failureReason: request.failureReason,
+    origin: request.origin,
+    requiresApproval: request.requiresApproval,
+    approvedAt: request.approvedAt ? request.approvedAt.toISOString() : null,
+    approvedByUserId: request.approvedByUserId,
+    rejectedAt: request.rejectedAt ? request.rejectedAt.toISOString() : null,
+    rejectionReason: request.rejectionReason,
     createdAt: request.createdAt.toISOString(),
     updatedAt: request.updatedAt.toISOString(),
   }

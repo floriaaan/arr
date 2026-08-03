@@ -20,6 +20,7 @@ export interface SaveNotificationSettingsInput {
   onRequestAvailable: boolean
   onRequestFailed: boolean
   onInstanceUnreachable: boolean
+  onRequestPendingApproval: boolean
 }
 
 export class SaveNotificationSettings implements UseCase<
@@ -52,6 +53,7 @@ export class SaveNotificationSettings implements UseCase<
       onRequestAvailable: input.onRequestAvailable,
       onRequestFailed: input.onRequestFailed,
       onInstanceUnreachable: input.onInstanceUnreachable,
+      onRequestPendingApproval: input.onRequestPendingApproval,
     })
     await this.repository.save(settings)
     return Result.ok(settings)

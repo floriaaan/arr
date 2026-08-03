@@ -97,6 +97,13 @@ export const notificationSettingsDtoSchema = z.object({
   onRequestAvailable: z.boolean(),
   onRequestFailed: z.boolean(),
   onInstanceUnreachable: z.boolean(),
+  onRequestPendingApproval: z.boolean(),
+})
+
+export const requestApprovalSettingsDtoSchema = z.object({
+  moviePolicy: z.enum(['auto', 'manual']),
+  seriesPolicy: z.enum(['auto', 'manual']),
+  albumPolicy: z.enum(['auto', 'manual']),
 })
 
 export const mediaServerDtoSchema = z.object({

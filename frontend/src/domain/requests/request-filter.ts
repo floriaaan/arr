@@ -13,4 +13,5 @@ export interface RequestFilter {
   status?: RequestStatus
   kind?: MediaKind
   requestedByMe?: boolean
+  requiresApproval?: boolean
 }

@@ -6,6 +6,9 @@ const SettingsController = () => import('./settings.controller.js')
 const MediaServersController = () => import('./media-servers.controller.js')
 const DiscoveryController = () => import('./discovery.controller.js')
 const NotificationsController = () => import('./notifications.controller.js')
+const RequestApprovalSettingsController = () => import('./request-approval-settings.controller.js')
+const UserRequestPreferencesController = () => import('./user-request-preferences.controller.js')
+const WatchlistSettingsController = () => import('./watchlist-settings.controller.js')
 
 /**
  * Public on purpose, and outside the `onboardingGuard` group below: the
@@ -95,6 +98,13 @@ router
     router.get('/notifications', [NotificationsController, 'show'])
     router.put('/notifications', [NotificationsController, 'update'])
     router.post('/notifications/test', [NotificationsController, 'test'])
+    router.get('/request-approval', [RequestApprovalSettingsController, 'show'])
+    router.put('/request-approval', [RequestApprovalSettingsController, 'update'])
+    router.get('/user-request-preferences', [UserRequestPreferencesController, 'index'])
+    router.put('/user-request-preferences/:userId', [UserRequestPreferencesController, 'update'])
+    router.get('/watchlist', [WatchlistSettingsController, 'show'])
+    router.put('/watchlist', [WatchlistSettingsController, 'update'])
+    router.get('/watchlist/accounts', [WatchlistSettingsController, 'listAccounts'])
     router.get('/sso', [SettingsController, 'getSso'])
     router.put('/sso', [SettingsController, 'updateSso'])
     router.post('/sso/test', [SettingsController, 'testSso'])

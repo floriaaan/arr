@@ -14,6 +14,7 @@ import {
   mediaServerDtoSchema,
   discoveredInstanceSchema,
   notificationSettingsDtoSchema,
+  requestApprovalSettingsDtoSchema,
   qualityProfileRecordSchema,
   downloadClientRecordSchema,
   indexerRecordSchema,
@@ -22,6 +23,13 @@ import {
   savedSsoConfigSchema,
 } from './schemas/settings.schema'
 import { mediaItemDtoSchema, mediaDetailDtoSchema } from './schemas/catalog.schema'
+import {
+  userMediaAccountDtoSchema,
+  userMediaAccountAdminDtoSchema,
+  plexLinkStartSchema,
+  plexLinkResultSchema,
+  watchlistSettingsDtoSchema,
+} from './schemas/watchlist.schema'
 import { mediaRequestDtoSchema, requestEpisodeSchema } from './schemas/requests.schema'
 import { libraryItemDtoSchema, calendarEntryDtoSchema } from './schemas/library.schema'
 import type {
@@ -44,6 +52,9 @@ import type {
   NotificationSettingsDraft,
   NotificationTestResult,
 } from '#domain/settings/notification-settings'
+import type { RequestApprovalSettingsDto } from '#domain/settings/request-approval-settings'
+import type { WatchlistSettingsDto } from '#domain/settings/watchlist-settings'
+import type { MediaAccountKind, PlexPin } from '#domain/watchlist/user-media-account'
 import type { DownloadClientRecord } from '#domain/settings/download-client-record'
 import type { IndexerRecord } from '#domain/settings/indexer-record'
 import type { MediaKind } from '#domain/catalog/media-kind'
@@ -129,6 +140,20 @@ export class HttpArrConnector implements ArrConnector {
     const response = await this.http.post('/api/auth/admin/set-role', { userId, role })
     if (!response.ok) return { ok: false, error: await toApiError(response) }
     return { ok: true, value: setUserRoleResponseSchema.parse(await response.json()) }
+  }
+
+  async listUserRequestPreferences(): Promise<Record<string, boolean | null>> {
+    const response = await this.http.get('/api/settings/user-request-preferences')
+    if (!response.ok) throw new Error((await toApiError(response)).message)
+    const body = (await response.json()) as { preferences: Record<string, boolean | null> }
+    return body.preferences
+  }
+
+  async setUserAutoApprove(userId: string, autoApprove: boolean | null): Promise<void> {
+    const response = await this.http.put(`/api/settings/user-request-preferences/${userId}`, {
+      autoApprove,
+    })
+    if (!response.ok) throw new Error((await toApiError(response)).message)
   }
 
   async getOnboardingState(): Promise<{ status: OnboardingStatus }> {
@@ -474,6 +499,89 @@ export class HttpArrConnector implements ArrConnector {
     return body
   }
 
+  async getRequestApprovalSettings() {
+    const response = await this.http.get('/api/settings/request-approval')
+    if (!response.ok) throw new Error((await toApiError(response)).message)
+    const body = (await response.json()) as { requestApproval: unknown }
+    return requestApprovalSettingsDtoSchema.parse(body.requestApproval)
+  }
+
+  async saveRequestApprovalSettings(draft: RequestApprovalSettingsDto) {
+    const response = await this.http.put('/api/settings/request-approval', draft)
+    if (!response.ok) throw new Error((await toApiError(response)).message)
+    const body = (await response.json()) as { requestApproval: unknown }
+    return requestApprovalSettingsDtoSchema.parse(body.requestApproval)
+  }
+
+  async listMyMediaAccounts() {
+    const response = await this.http.get('/api/watchlist/accounts')
+    if (!response.ok) throw new Error((await toApiError(response)).message)
+    const body = (await response.json()) as { accounts: unknown[] }
+    return body.accounts.map((account) => userMediaAccountDtoSchema.parse(account))
+  }
+
+  async startPlexLink() {
+    const response = await this.http.post('/api/watchlist/accounts/plex/start')
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    return { ok: true as const, value: plexLinkStartSchema.parse(await response.json()) }
+  }
+
+  async completePlexLink(pin: PlexPin) {
+    const response = await this.http.post('/api/watchlist/accounts/plex/complete', { pin })
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    return { ok: true as const, value: plexLinkResultSchema.parse(await response.json()) }
+  }
+
+  async linkMediaServerAccount(
+    kind: Extract<MediaAccountKind, 'jellyfin' | 'emby'>,
+    baseUrl: string,
+    username: string,
+    password: string,
+  ) {
+    const response = await this.http.put(`/api/watchlist/accounts/${kind}`, {
+      baseUrl,
+      username,
+      password,
+    })
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { account: unknown }
+    return { ok: true as const, value: userMediaAccountDtoSchema.parse(body.account) }
+  }
+
+  async setWatchlistAccountEnabled(id: string, enabled: boolean) {
+    const response = await this.http.put(`/api/watchlist/accounts/${id}/enabled`, { enabled })
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { account: unknown }
+    return { ok: true as const, value: userMediaAccountDtoSchema.parse(body.account) }
+  }
+
+  async unlinkMediaAccount(id: string) {
+    const response = await this.http.delete(`/api/watchlist/accounts/${id}`)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    return { ok: true as const, value: undefined }
+  }
+
+  async getWatchlistSettings() {
+    const response = await this.http.get('/api/settings/watchlist')
+    if (!response.ok) throw new Error((await toApiError(response)).message)
+    const body = (await response.json()) as { watchlist: unknown }
+    return watchlistSettingsDtoSchema.parse(body.watchlist)
+  }
+
+  async saveWatchlistSettings(draft: WatchlistSettingsDto) {
+    const response = await this.http.put('/api/settings/watchlist', draft)
+    if (!response.ok) return { ok: false as const, error: await toApiError(response) }
+    const body = (await response.json()) as { watchlist: unknown }
+    return { ok: true as const, value: watchlistSettingsDtoSchema.parse(body.watchlist) }
+  }
+
+  async listAllMediaAccounts() {
+    const response = await this.http.get('/api/settings/watchlist/accounts')
+    if (!response.ok) throw new Error((await toApiError(response)).message)
+    const body = (await response.json()) as { accounts: unknown[] }
+    return body.accounts.map((account) => userMediaAccountAdminDtoSchema.parse(account))
+  }
+
   async getSso() {
     const response = await this.http.get('/api/settings/sso')
     const body = (await response.json()) as { oidc: unknown }
@@ -532,11 +640,16 @@ export class HttpArrConnector implements ArrConnector {
   }
 
   async cancelRequest(id: string) {
-    const response = await this.http.post(`/api/requests/${id}/cancel`)
+    return this.parseRequestActionResponse(await this.http.post(`/api/requests/${id}/cancel`))
+  }
+
+  /**
+   * 409 on cancel/approve/reject puts `currentStatus` as a sibling of
+   * `type`/`message`, not under `details` like every other error body — read
+   * it directly instead of losing it to `toApiError`'s stricter schema.
+   */
+  private async parseRequestActionResponse(response: Response) {
     if (!response.ok) {
-      // 409 on this endpoint puts `currentStatus` as a sibling of
-      // `type`/`message`, not under `details` like every other error body —
-      // read it directly instead of losing it to `toApiError`'s stricter schema.
       const body: unknown = await response.json().catch(() => null)
       const conflict = body as {
         error?: { type?: string; message?: string; currentStatus?: string }
@@ -545,7 +658,7 @@ export class HttpArrConnector implements ArrConnector {
         conflict.error?.type === 'not_cancellable'
           ? {
               type: conflict.error.type,
-              message: conflict.error.message ?? 'This request cannot be cancelled.',
+              message: conflict.error.message ?? 'This request cannot be updated.',
               details: { currentStatus: conflict.error.currentStatus },
               status: response.status,
             }
@@ -558,6 +671,16 @@ export class HttpArrConnector implements ArrConnector {
     }
     const body = (await response.json()) as { request: unknown }
     return { ok: true as const, value: mediaRequestDtoSchema.parse(body.request) }
+  }
+
+  async approveRequest(id: string) {
+    return this.parseRequestActionResponse(await this.http.post(`/api/requests/${id}/approve`))
+  }
+
+  async rejectRequest(id: string, reason: string) {
+    return this.parseRequestActionResponse(
+      await this.http.post(`/api/requests/${id}/reject`, { reason }),
+    )
   }
 
   async listRequestEpisodes(id: string) {

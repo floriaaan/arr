@@ -123,6 +123,8 @@ export class InstanceProfileSchema extends BaseModel {
 
 export class MediaRequestSchema extends BaseModel {
   static $columns = [
+    'approvedAt',
+    'approvedByUserId',
     'createdAt',
     'externalIdScheme',
     'externalIdValue',
@@ -130,17 +132,25 @@ export class MediaRequestSchema extends BaseModel {
     'failureReason',
     'id',
     'kind',
+    'origin',
     'progressEta',
     'progressPercentage',
     'progressSizeLeftBytes',
     'progressStepLabel',
+    'rejectedAt',
+    'rejectionReason',
     'requestedByUserId',
+    'requiresApproval',
     'servarrInstanceId',
     'status',
     'title',
     'updatedAt',
   ] as const
   $columns = MediaRequestSchema.$columns
+  @column.dateTime()
+  declare approvedAt: DateTime | null
+  @column()
+  declare approvedByUserId: string | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
@@ -155,6 +165,8 @@ export class MediaRequestSchema extends BaseModel {
   declare id: string
   @column()
   declare kind: string
+  @column()
+  declare origin: string
   @column.dateTime()
   declare progressEta: DateTime | null
   @column()
@@ -163,8 +175,14 @@ export class MediaRequestSchema extends BaseModel {
   declare progressSizeLeftBytes: bigint | number | null
   @column()
   declare progressStepLabel: string | null
+  @column.dateTime()
+  declare rejectedAt: DateTime | null
+  @column()
+  declare rejectionReason: string | null
   @column()
   declare requestedByUserId: string
+  @column()
+  declare requiresApproval: boolean
   @column()
   declare servarrInstanceId: string
   @column()
@@ -192,6 +210,51 @@ export class MediaServerSchema extends BaseModel {
   declare updatedAt: DateTime
 }
 
+export class NotificationSettingSchema extends BaseModel {
+  static $columns = [
+    'authMode',
+    'createdAt',
+    'id',
+    'onInstanceUnreachable',
+    'onRequestAvailable',
+    'onRequestCreated',
+    'onRequestFailed',
+    'onRequestPendingApproval',
+    'passwordEncrypted',
+    'tokenEncrypted',
+    'updatedAt',
+    'username',
+    'webhookUrlEncrypted',
+  ] as const
+  $columns = NotificationSettingSchema.$columns
+  @column()
+  declare authMode: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare onInstanceUnreachable: boolean
+  @column()
+  declare onRequestAvailable: boolean
+  @column()
+  declare onRequestCreated: boolean
+  @column()
+  declare onRequestFailed: boolean
+  @column()
+  declare onRequestPendingApproval: boolean
+  @column()
+  declare passwordEncrypted: string | null
+  @column()
+  declare tokenEncrypted: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare username: string | null
+  @column()
+  declare webhookUrlEncrypted: string | null
+}
+
 export class OnboardingStateSchema extends BaseModel {
   static $columns = [
     'adminCreatedAt',
@@ -215,6 +278,30 @@ export class OnboardingStateSchema extends BaseModel {
   declare servicesConfiguredAt: DateTime | null
   @column()
   declare status: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class RequestApprovalSettingSchema extends BaseModel {
+  static $columns = [
+    'albumPolicy',
+    'createdAt',
+    'id',
+    'moviePolicy',
+    'seriesPolicy',
+    'updatedAt',
+  ] as const
+  $columns = RequestApprovalSettingSchema.$columns
+  @column()
+  declare albumPolicy: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare moviePolicy: string
+  @column()
+  declare seriesPolicy: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 }
@@ -351,6 +438,61 @@ export class UserSchema extends BaseModel {
   declare updatedAt: DateTime
 }
 
+export class UserMediaAccountSchema extends BaseModel {
+  static $columns = [
+    'accessTokenEncrypted',
+    'baseUrl',
+    'createdAt',
+    'externalUserId',
+    'id',
+    'kind',
+    'lastSyncError',
+    'lastSyncedAt',
+    'updatedAt',
+    'userId',
+    'username',
+    'watchlistEnabled',
+  ] as const
+  $columns = UserMediaAccountSchema.$columns
+  @column()
+  declare accessTokenEncrypted: string
+  @column()
+  declare baseUrl: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare externalUserId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare lastSyncError: string | null
+  @column.dateTime()
+  declare lastSyncedAt: DateTime | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare userId: string
+  @column()
+  declare username: string
+  @column()
+  declare watchlistEnabled: boolean
+}
+
+export class UserRequestPreferenceSchema extends BaseModel {
+  static $columns = ['autoApprove', 'createdAt', 'updatedAt', 'userId'] as const
+  $columns = UserRequestPreferenceSchema.$columns
+  @column()
+  declare autoApprove: boolean | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column({ isPrimary: true })
+  declare userId: string
+}
+
 export class VerificationSchema extends BaseModel {
   static $columns = ['createdAt', 'expiresAt', 'id', 'identifier', 'updatedAt', 'value'] as const
   $columns = VerificationSchema.$columns
@@ -366,4 +508,52 @@ export class VerificationSchema extends BaseModel {
   declare updatedAt: DateTime
   @column()
   declare value: string
+}
+
+export class WatchlistSeenItemSchema extends BaseModel {
+  static $columns = [
+    'externalIdScheme',
+    'externalIdValue',
+    'firstSeenAt',
+    'id',
+    'mediaRequestId',
+    'userMediaAccountId',
+  ] as const
+  $columns = WatchlistSeenItemSchema.$columns
+  @column()
+  declare externalIdScheme: string
+  @column()
+  declare externalIdValue: string
+  @column.dateTime()
+  declare firstSeenAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare mediaRequestId: string | null
+  @column()
+  declare userMediaAccountId: string
+}
+
+export class WatchlistSettingSchema extends BaseModel {
+  static $columns = [
+    'createdAt',
+    'enabled',
+    'id',
+    'intervalMinutes',
+    'maxNewRequestsPerRun',
+    'updatedAt',
+  ] as const
+  $columns = WatchlistSettingSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare enabled: boolean
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare intervalMinutes: number
+  @column()
+  declare maxNewRequestsPerRun: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
 }

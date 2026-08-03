@@ -34,6 +34,9 @@ export default class NotificationSettingLucidModel extends BaseModel {
   @column()
   declare onInstanceUnreachable: boolean
 
+  @column()
+  declare onRequestPendingApproval: boolean
+
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 

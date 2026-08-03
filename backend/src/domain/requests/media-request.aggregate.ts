@@ -6,6 +6,7 @@ import type { ExternalId } from '#domain/catalog/external-id.vo'
 import type { RequestStatus } from './request-status.vo.js'
 import type { RequestProgress } from './request-progress.vo.js'
 import type { ExternalRef } from './external-ref.vo.js'
+import type { RequestOrigin } from './request-origin.vo.js'
 import {
   mediaRequested,
   requestSubmitted,
@@ -13,6 +14,7 @@ import {
   requestCompleted,
   requestFailed,
   requestCancelled,
+  requestPendingApproval,
 } from './requests.events.js'
 
 const ACTIVE_STATUSES: RequestStatus[] = ['pending', 'submitted', 'downloading', 'importing']
@@ -28,6 +30,13 @@ export interface MediaRequestProps {
   status: RequestStatus
   progress: RequestProgress | null
   failureReason: string | null
+  /** Informational only — does not gate approval, cf. `requiresApproval`. */
+  origin: RequestOrigin
+  requiresApproval: boolean
+  approvedAt: Date | null
+  approvedByUserId: string | null
+  rejectedAt: Date | null
+  rejectionReason: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -38,6 +47,8 @@ export interface RequestMediaInput {
   externalId: ExternalId
   title: string
   instanceId: string
+  origin: RequestOrigin
+  requiresApproval: boolean
 }
 
 export class MediaRequest extends AggregateRoot<string> {
@@ -59,6 +70,12 @@ export class MediaRequest extends AggregateRoot<string> {
       status: 'pending',
       progress: null,
       failureReason: null,
+      origin: input.origin,
+      requiresApproval: input.requiresApproval,
+      approvedAt: null,
+      approvedByUserId: null,
+      rejectedAt: null,
+      rejectionReason: null,
       createdAt: now,
       updatedAt: now,
     })
@@ -68,6 +85,9 @@ export class MediaRequest extends AggregateRoot<string> {
         now,
       ),
     )
+    if (input.requiresApproval) {
+      request.record(requestPendingApproval({ requestId: id }, now))
+    }
     return request
   }
 
@@ -120,8 +140,64 @@ export class MediaRequest extends AggregateRoot<string> {
     return this.props.updatedAt
   }
 
+  get origin(): RequestOrigin {
+    return this.props.origin
+  }
+
+  get requiresApproval(): boolean {
+    return this.props.requiresApproval
+  }
+
+  get approvedAt(): Date | null {
+    return this.props.approvedAt
+  }
+
+  get approvedByUserId(): string | null {
+    return this.props.approvedByUserId
+  }
+
+  get rejectedAt(): Date | null {
+    return this.props.rejectedAt
+  }
+
+  get rejectionReason(): string | null {
+    return this.props.rejectionReason
+  }
+
+  /**
+   * Lifts the approval gate without submitting to the *arr — the caller
+   * (`ApproveRequest`) does that next, the same way `CreateRequest` does for
+   * an auto-approved request. Kept separate from `submit()` so the aggregate
+   * never reaches into provisioning itself.
+   */
+  approve(approvedByUserId: string, now: Date): Result<void, InvalidTransition> {
+    if (this.props.status !== 'pending' || !this.props.requiresApproval) {
+      return Result.err({ from: this.props.status, to: 'submitted' })
+    }
+    this.props.requiresApproval = false
+    this.props.approvedAt = now
+    this.props.approvedByUserId = approvedByUserId
+    this.props.updatedAt = now
+    return Result.ok(undefined)
+  }
+
+  /** A rejected request is cancelled — same terminal state as a user-initiated cancel, distinguished by `rejectedAt`/`rejectionReason`. */
+  reject(reason: string, now: Date): Result<void, InvalidTransition> {
+    if (this.props.status !== 'pending' || !this.props.requiresApproval) {
+      return Result.err({ from: this.props.status, to: 'cancelled' })
+    }
+    this.props.status = 'cancelled'
+    this.props.requiresApproval = false
+    this.props.rejectedAt = now
+    this.props.rejectionReason = reason
+    this.props.updatedAt = now
+    this.record(requestCancelled({ requestId: this.id }, now))
+    return Result.ok(undefined)
+  }
+
+  /** Refused while an approval is still pending — nothing should reach the *arr before an admin signs off. */
   submit(ref: ExternalRef, now: Date): Result<void, InvalidTransition> {
-    if (this.props.status !== 'pending') {
+    if (this.props.status !== 'pending' || this.props.requiresApproval) {
       return Result.err({ from: this.props.status, to: 'submitted' })
     }
     this.props.externalRef = ref

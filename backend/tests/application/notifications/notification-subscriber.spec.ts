@@ -11,7 +11,12 @@ import { User } from '#domain/identity/user.entity'
 import { Email } from '#domain/identity/email.vo'
 import { Url } from '#domain/settings/url.vo'
 import { Result } from '#domain/shared/result'
-import { mediaRequested, requestCompleted, requestFailed } from '#domain/requests/requests.events'
+import {
+  mediaRequested,
+  requestCompleted,
+  requestFailed,
+  requestPendingApproval,
+} from '#domain/requests/requests.events'
 import { instanceHealthCheckFailed } from '#domain/settings/settings.events'
 import { InMemoryMediaRequestRepository } from '../requests/fakes.js'
 import type { Notification } from '#domain/notifications/notification.vo'
@@ -92,6 +97,7 @@ function settingsWith(overrides: Partial<Parameters<NotificationSettings['config
     onRequestAvailable: true,
     onRequestFailed: true,
     onInstanceUnreachable: true,
+    onRequestPendingApproval: true,
     ...overrides,
   })
   return settings
@@ -114,6 +120,8 @@ async function setup(settings = settingsWith()) {
         externalId: externalId.value,
         title: 'Fight Club',
         instanceId: 'instance-1',
+        origin: 'manual',
+        requiresApproval: false,
       },
       new Date(),
     ),
@@ -181,6 +189,24 @@ test.group('notification subscribers', () => {
     assert.include(notifier.sent[0]?.body ?? '', 'No space left')
     assert.include(notifier.sent[0]?.body ?? '', 'alice@example.test')
     assert.notInclude(notifier.sent[0]?.body ?? '', '**')
+  })
+
+  test('notifies when a request needs approval', async ({ assert }) => {
+    const { bus, notifier } = await setup()
+
+    await bus.publish([requestPendingApproval({ requestId: 'request-1' }, new Date())])
+
+    assert.lengthOf(notifier.sent, 1)
+    assert.include(notifier.sent[0]?.body ?? '', 'Fight Club')
+    assert.include(notifier.sent[0]?.body ?? '', 'alice@example.test')
+  })
+
+  test('stays silent on pending approval when the matching switch is off', async ({ assert }) => {
+    const { bus, notifier } = await setup(settingsWith({ onRequestPendingApproval: false }))
+
+    await bus.publish([requestPendingApproval({ requestId: 'request-1' }, new Date())])
+
+    assert.isEmpty(notifier.sent)
   })
 
   test('notifies when an instance stops answering', async ({ assert }) => {

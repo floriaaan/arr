@@ -28,6 +28,16 @@ import type {
   NotificationSettingsDto,
   NotificationTestResult,
 } from '#domain/settings/notification-settings'
+import type { RequestApprovalSettingsDto } from '#domain/settings/request-approval-settings'
+import type { WatchlistSettingsDto } from '#domain/settings/watchlist-settings'
+import type {
+  MediaAccountKind,
+  UserMediaAccountDto,
+  UserMediaAccountAdminDto,
+  PlexPin,
+  PlexLinkStart,
+  PlexLinkResult,
+} from '#domain/watchlist/user-media-account'
 import type { QualityProfileRecord } from '#domain/settings/quality-profile-record'
 import type { DownloadClientRecord } from '#domain/settings/download-client-record'
 import type { IndexerRecord } from '#domain/settings/indexer-record'
@@ -408,6 +418,19 @@ export class FakeArrConnector implements ArrConnector {
     onRequestAvailable: true,
     onRequestFailed: true,
     onInstanceUnreachable: true,
+    onRequestPendingApproval: true,
+  }
+  private requestApprovalSettings: RequestApprovalSettingsDto = {
+    moviePolicy: 'auto',
+    seriesPolicy: 'auto',
+    albumPolicy: 'auto',
+  }
+  private readonly userAutoApprove = new Map<string, boolean | null>()
+  private readonly mediaAccounts = new Map<string, UserMediaAccountDto & { userId: string }>()
+  private watchlistSettings: WatchlistSettingsDto = {
+    enabled: true,
+    intervalMinutes: 60,
+    maxNewRequestsPerRun: 20,
   }
   private ssoConfig: (OidcConfigInput & { claimsMapping?: Record<string, string> }) | null = null
   private readonly requests = new Map<string, MediaRequest>()
@@ -523,6 +546,14 @@ export class FakeArrConnector implements ArrConnector {
     this.users.set(userId, updated)
     if (this.user?.id === userId) this.user = { ...this.user, role }
     return { ok: true as const, value: { user: updated } }
+  }
+
+  async listUserRequestPreferences(): Promise<Record<string, boolean | null>> {
+    return Object.fromEntries(this.userAutoApprove.entries())
+  }
+
+  async setUserAutoApprove(userId: string, autoApprove: boolean | null): Promise<void> {
+    this.userAutoApprove.set(userId, autoApprove)
   }
 
   async getOnboardingState(): Promise<{ status: OnboardingStatus }> {
@@ -813,6 +844,7 @@ export class FakeArrConnector implements ArrConnector {
       onRequestAvailable: draft.onRequestAvailable,
       onRequestFailed: draft.onRequestFailed,
       onInstanceUnreachable: draft.onInstanceUnreachable,
+      onRequestPendingApproval: draft.onRequestPendingApproval,
     }
     const { webhookUrl: _hidden, token: _hiddenToken, password: _hiddenPassword, ...dto } =
       this.notificationSettings
@@ -824,6 +856,126 @@ export class FakeArrConnector implements ArrConnector {
       return { ok: false, error: { message: 'No webhook URL configured.' } }
     }
     return { ok: true }
+  }
+
+  async getRequestApprovalSettings(): Promise<RequestApprovalSettingsDto> {
+    return this.requestApprovalSettings
+  }
+
+  async saveRequestApprovalSettings(
+    draft: RequestApprovalSettingsDto,
+  ): Promise<RequestApprovalSettingsDto> {
+    this.requestApprovalSettings = draft
+    return this.requestApprovalSettings
+  }
+
+  async listMyMediaAccounts(): Promise<UserMediaAccountDto[]> {
+    const userId = this.user?.id ?? 'fake-user'
+    return [...this.mediaAccounts.values()].filter((account) => account.userId === userId)
+  }
+
+  /** No real PIN flow in fake mode — the pin is cosmetic, `completePlexLink` links immediately. */
+  async startPlexLink(): Promise<Result<PlexLinkStart, ApiError>> {
+    const pin: PlexPin = { id: 1, code: 'FAKE', clientIdentifier: 'fake-client' }
+    return {
+      ok: true,
+      value: { pin, authUrl: `https://app.plex.tv/auth#?code=${pin.code}` },
+    }
+  }
+
+  async completePlexLink(_pin: PlexPin): Promise<Result<PlexLinkResult, ApiError>> {
+    const userId = this.user?.id ?? 'fake-user'
+    const existing = [...this.mediaAccounts.values()].find(
+      (a) => a.userId === userId && a.kind === 'plex',
+    )
+    const account: UserMediaAccountDto & { userId: string } = {
+      id: existing?.id ?? crypto.randomUUID(),
+      userId,
+      kind: 'plex',
+      username: this.user?.email.split('@')[0] ?? 'plex-user',
+      baseUrl: null,
+      watchlistEnabled: true,
+      lastSyncedAt: null,
+      lastSyncError: null,
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
+    }
+    this.mediaAccounts.set(account.id, account)
+    return { ok: true, value: { status: 'linked', account } }
+  }
+
+  async linkMediaServerAccount(
+    kind: Extract<MediaAccountKind, 'jellyfin' | 'emby'>,
+    baseUrl: string,
+    username: string,
+    _password: string,
+  ): Promise<Result<UserMediaAccountDto, ApiError>> {
+    if (!/^https?:\/\//.test(baseUrl)) {
+      return {
+        ok: false,
+        error: { type: 'validation_failed', message: `"${baseUrl}" is not a valid URL`, status: 400 },
+      }
+    }
+    const userId = this.user?.id ?? 'fake-user'
+    const existing = [...this.mediaAccounts.values()].find(
+      (a) => a.userId === userId && a.kind === kind,
+    )
+    const account: UserMediaAccountDto & { userId: string } = {
+      id: existing?.id ?? crypto.randomUUID(),
+      userId,
+      kind,
+      username,
+      baseUrl,
+      watchlistEnabled: true,
+      lastSyncedAt: null,
+      lastSyncError: null,
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
+    }
+    this.mediaAccounts.set(account.id, account)
+    return { ok: true, value: account }
+  }
+
+  async setWatchlistAccountEnabled(
+    id: string,
+    enabled: boolean,
+  ): Promise<Result<UserMediaAccountDto, ApiError>> {
+    const account = this.mediaAccounts.get(id)
+    if (!account) return { ok: false, error: notFound('Account not found.') }
+    const updated = { ...account, watchlistEnabled: enabled }
+    this.mediaAccounts.set(id, updated)
+    return { ok: true, value: updated }
+  }
+
+  async unlinkMediaAccount(id: string): Promise<Result<void, ApiError>> {
+    this.mediaAccounts.delete(id)
+    return { ok: true, value: undefined }
+  }
+
+  async getWatchlistSettings(): Promise<WatchlistSettingsDto> {
+    return this.watchlistSettings
+  }
+
+  async saveWatchlistSettings(
+    draft: WatchlistSettingsDto,
+  ): Promise<Result<WatchlistSettingsDto, ApiError>> {
+    if (draft.intervalMinutes < 15) {
+      return {
+        ok: false,
+        error: {
+          type: 'validation_failed',
+          message: 'Interval must be at least 15 minutes.',
+          status: 400,
+        },
+      }
+    }
+    this.watchlistSettings = draft
+    return { ok: true, value: this.watchlistSettings }
+  }
+
+  async listAllMediaAccounts(): Promise<UserMediaAccountAdminDto[]> {
+    return [...this.mediaAccounts.values()].map((account) => {
+      const user = this.users.get(account.userId)
+      return { ...account, user: { id: account.userId, email: user?.email ?? null } }
+    })
   }
 
   async getSso() {
@@ -874,6 +1026,7 @@ export class FakeArrConnector implements ArrConnector {
       .filter((request) => !filter.status || request.status === filter.status)
       .filter((request) => !filter.kind || request.kind === filter.kind)
       .filter((request) => !filter.requestedByMe || request.requestedBy.id === this.user?.id)
+      .filter((request) => filter.requiresApproval === undefined || request.requiresApproval === filter.requiresApproval)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   }
 
@@ -929,20 +1082,41 @@ export class FakeArrConnector implements ArrConnector {
     }
 
     const now = new Date().toISOString()
+    const requiresApproval = this.resolveRequiresApproval(kind)
     const request: MediaRequest = {
       id: crypto.randomUUID(),
       requestedBy: { id: this.user?.id ?? 'fake-user', email: this.user?.email ?? null },
       kind,
       externalId,
       title: fixture.title,
-      status: 'submitted',
+      status: requiresApproval ? 'pending' : 'submitted',
       progress: null,
       failureReason: null,
+      origin: 'manual',
+      requiresApproval,
+      approvedAt: null,
+      approvedByUserId: null,
+      rejectedAt: null,
+      rejectionReason: null,
       createdAt: now,
       updatedAt: now,
     }
     this.requests.set(request.id, request)
     return { ok: true as const, value: request }
+  }
+
+  /** Mirrors `resolveRequiresApproval` on the backend: admin bypass, then per-user override, then the kind's global policy. */
+  private resolveRequiresApproval(kind: MediaKind): boolean {
+    if (this.user?.role === 'admin') return false
+    const override = this.user ? this.userAutoApprove.get(this.user.id) : undefined
+    if (override !== undefined && override !== null) return !override
+    const policy =
+      kind === 'movie'
+        ? this.requestApprovalSettings.moviePolicy
+        : kind === 'series'
+          ? this.requestApprovalSettings.seriesPolicy
+          : this.requestApprovalSettings.albumPolicy
+    return policy === 'manual'
   }
 
   async getRequest(id: string): Promise<MediaRequest | null> {
@@ -979,6 +1153,60 @@ export class FakeArrConnector implements ArrConnector {
     }
     this.requests.set(id, cancelled)
     return { ok: true as const, value: cancelled }
+  }
+
+  async approveRequest(id: string) {
+    const stored = this.requests.get(id)
+    if (!stored) return { ok: false as const, error: notFound('Request not found.') }
+    if (stored.status !== 'pending' || !stored.requiresApproval) {
+      return {
+        ok: false as const,
+        error: {
+          type: 'not_cancellable',
+          message: 'This request cannot be approved from its current state.',
+          details: { currentStatus: stored.status },
+          status: 409,
+        },
+      }
+    }
+
+    const approved: MediaRequest = {
+      ...stored,
+      status: 'submitted',
+      requiresApproval: false,
+      approvedAt: new Date().toISOString(),
+      approvedByUserId: this.user?.id ?? 'fake-user',
+      updatedAt: new Date().toISOString(),
+    }
+    this.requests.set(id, approved)
+    return { ok: true as const, value: approved }
+  }
+
+  async rejectRequest(id: string, reason: string) {
+    const stored = this.requests.get(id)
+    if (!stored) return { ok: false as const, error: notFound('Request not found.') }
+    if (stored.status !== 'pending' || !stored.requiresApproval) {
+      return {
+        ok: false as const,
+        error: {
+          type: 'not_cancellable',
+          message: 'This request cannot be rejected from its current state.',
+          details: { currentStatus: stored.status },
+          status: 409,
+        },
+      }
+    }
+
+    const rejected: MediaRequest = {
+      ...stored,
+      status: 'cancelled',
+      requiresApproval: false,
+      rejectedAt: new Date().toISOString(),
+      rejectionReason: reason,
+      updatedAt: new Date().toISOString(),
+    }
+    this.requests.set(id, rejected)
+    return { ok: true as const, value: rejected }
   }
 
   async removeLibraryItem(externalId: ExternalId, _deleteFiles: boolean) {
