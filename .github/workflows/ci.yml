@@ -10,6 +10,11 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Les deux jobs ne font que lire le dépôt : on retire au GITHUB_TOKEN tout le
+# reste plutôt que de lui laisser les permissions par défaut du dépôt.
+permissions:
+  contents: read
+
 jobs:
   check:
     name: Lint, typecheck, tests, boundaries
@@ -57,7 +62,9 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      - uses: arduino/setup-task@v2
+      # Action tierce épinglée sur un SHA : un tag est déplaçable, donc pas un
+      # point fixe vérifiable. Dependabot suit le commentaire de version.
+      - uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2.0.0
         with:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -86,7 +93,7 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      - uses: arduino/setup-task@v2
+      - uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2.0.0
         with:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
