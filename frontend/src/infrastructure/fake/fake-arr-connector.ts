@@ -482,7 +482,8 @@ export class FakeArrConnector implements ArrConnector {
       this.onboardingStatus = persisted.onboardingStatus
       for (const [kind, instance] of persisted.instances) this.instances.set(kind, instance)
       this.ssoConfig = persisted.ssoConfig
-      for (const [kind, profiles] of persisted.savedProfiles ?? []) this.savedProfiles.set(kind, profiles)
+      for (const [kind, profiles] of persisted.savedProfiles ?? [])
+        this.savedProfiles.set(kind, profiles)
       for (const [kind, profiles] of persisted.qualityProfiles ?? []) {
         this.qualityProfiles.set(kind, profiles)
       }
@@ -772,8 +773,12 @@ export class FakeArrConnector implements ArrConnector {
   }
 
   async getNotificationSettings(): Promise<NotificationSettingsDto> {
-    const { webhookUrl: _webhookUrl, token: _token, password: _password, ...dto } =
-      this.notificationSettings
+    const {
+      webhookUrl: _webhookUrl,
+      token: _token,
+      password: _password,
+      ...dto
+    } = this.notificationSettings
     return dto
   }
 
@@ -781,22 +786,37 @@ export class FakeArrConnector implements ArrConnector {
     const existing = this.notificationSettings
 
     if (draft.authMode === 'none') {
-      return { ok: true as const, value: { mode: 'none' as const, token: null, username: null, password: null } }
+      return {
+        ok: true as const,
+        value: { mode: 'none' as const, token: null, username: null, password: null },
+      }
     }
 
     if (draft.authMode === 'token') {
-      const token = draft.token !== undefined ? draft.token : existing.authMode === 'token' ? existing.token : null
+      const token =
+        draft.token !== undefined
+          ? draft.token
+          : existing.authMode === 'token'
+            ? existing.token
+            : null
       if (!token) {
         return {
           ok: false as const,
           error: { type: 'validation_failed', message: 'A token is required.', status: 400 },
         }
       }
-      return { ok: true as const, value: { mode: 'token' as const, token, username: null, password: null } }
+      return {
+        ok: true as const,
+        value: { mode: 'token' as const, token, username: null, password: null },
+      }
     }
 
     const username =
-      draft.username !== undefined ? draft.username : existing.authMode === 'basic' ? existing.username : null
+      draft.username !== undefined
+        ? draft.username
+        : existing.authMode === 'basic'
+          ? existing.username
+          : null
     if (!username || username.trim() === '') {
       return {
         ok: false as const,
@@ -804,7 +824,11 @@ export class FakeArrConnector implements ArrConnector {
       }
     }
     const password =
-      draft.password !== undefined ? draft.password : existing.authMode === 'basic' ? existing.password : null
+      draft.password !== undefined
+        ? draft.password
+        : existing.authMode === 'basic'
+          ? existing.password
+          : null
     if (!password) {
       return {
         ok: false as const,
@@ -846,8 +870,12 @@ export class FakeArrConnector implements ArrConnector {
       onInstanceUnreachable: draft.onInstanceUnreachable,
       onRequestPendingApproval: draft.onRequestPendingApproval,
     }
-    const { webhookUrl: _hidden, token: _hiddenToken, password: _hiddenPassword, ...dto } =
-      this.notificationSettings
+    const {
+      webhookUrl: _hidden,
+      token: _hiddenToken,
+      password: _hiddenPassword,
+      ...dto
+    } = this.notificationSettings
     return { ok: true as const, value: dto }
   }
 
@@ -912,7 +940,11 @@ export class FakeArrConnector implements ArrConnector {
     if (!/^https?:\/\//.test(baseUrl)) {
       return {
         ok: false,
-        error: { type: 'validation_failed', message: `"${baseUrl}" is not a valid URL`, status: 400 },
+        error: {
+          type: 'validation_failed',
+          message: `"${baseUrl}" is not a valid URL`,
+          status: 400,
+        },
       }
     }
     const userId = this.user?.id ?? 'fake-user'
@@ -1014,7 +1046,10 @@ export class FakeArrConnector implements ArrConnector {
     if (!fixture)
       return { ok: false as const, error: notFound(`No fixture for ${scheme}:${value}.`) }
     if (this.removedLibraryItems.has(`${scheme}:${value}`)) {
-      return { ok: true as const, value: { ...fixture, alreadyManaged: false, managedBy: undefined } }
+      return {
+        ok: true as const,
+        value: { ...fixture, alreadyManaged: false, managedBy: undefined },
+      }
     }
     return { ok: true as const, value: fixture }
   }
@@ -1026,7 +1061,11 @@ export class FakeArrConnector implements ArrConnector {
       .filter((request) => !filter.status || request.status === filter.status)
       .filter((request) => !filter.kind || request.kind === filter.kind)
       .filter((request) => !filter.requestedByMe || request.requestedBy.id === this.user?.id)
-      .filter((request) => filter.requiresApproval === undefined || request.requiresApproval === filter.requiresApproval)
+      .filter(
+        (request) =>
+          filter.requiresApproval === undefined ||
+          request.requiresApproval === filter.requiresApproval,
+      )
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   }
 
@@ -1359,7 +1398,8 @@ export class FakeArrConnector implements ArrConnector {
   }
 
   async fetchStoredInstanceProfiles(kind: ServarrKind) {
-    if (!this.instances.get(kind)) return { ok: false as const, error: notFound('Instance not configured.') }
+    if (!this.instances.get(kind))
+      return { ok: false as const, error: notFound('Instance not configured.') }
     return this.fetchInstanceProfiles(kind)
   }
 

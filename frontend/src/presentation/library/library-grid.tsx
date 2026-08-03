@@ -148,7 +148,10 @@ export function LibraryGrid() {
             className="pl-9"
           />
         </div>
-        <Select value={availability} onValueChange={(value) => setAvailability(value as Availability)}>
+        <Select
+          value={availability}
+          onValueChange={(value) => setAvailability(value as Availability)}
+        >
           <SelectTrigger size="sm">
             <SelectValue placeholder="Availability" />
           </SelectTrigger>

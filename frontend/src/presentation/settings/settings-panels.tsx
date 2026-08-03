@@ -70,7 +70,9 @@ function instanceHealthLabel(existing: ServarrInstanceDto): string | null {
   if (!existing.enabled || existing.lastCheckedAt === null) return null
   const checkedAt = new Date(existing.lastCheckedAt).toLocaleString()
   if (existing.healthy === false) {
-    return existing.lastError ? `${existing.lastError.message} · checked ${checkedAt}` : `Unreachable · checked ${checkedAt}`
+    return existing.lastError
+      ? `${existing.lastError.message} · checked ${checkedAt}`
+      : `Unreachable · checked ${checkedAt}`
   }
   return existing.detectedVersion
     ? `${existing.detectedVersion} · checked ${checkedAt}`
@@ -117,7 +119,10 @@ function ServiceCard({
           ) : null}
         </div>
         <ChevronDown
-          className={cn('size-4 shrink-0 text-muted-foreground transition-transform', expanded && 'rotate-180')}
+          className={cn(
+            'size-4 shrink-0 text-muted-foreground transition-transform',
+            expanded && 'rotate-180',
+          )}
         />
       </button>
 
@@ -461,8 +466,8 @@ function NotificationsPanel() {
       <div>
         <h2 className="text-lg font-semibold tracking-tight">Notifications</h2>
         <p className="text-sm text-muted-foreground">
-          Push a notification to an ntfy topic when a request is created, becomes available,
-          fails, or an instance goes unreachable.
+          Push a notification to an ntfy topic when a request is created, becomes available, fails,
+          or an instance goes unreachable.
         </p>
       </div>
       <Card>
@@ -548,10 +553,7 @@ function NotificationsPanel() {
               <Label>Request failed</Label>
             </div>
             <div className="flex items-center gap-2">
-              <Switch
-                checked={onInstanceUnreachable}
-                onCheckedChange={setOnInstanceUnreachable}
-              />
+              <Switch checked={onInstanceUnreachable} onCheckedChange={setOnInstanceUnreachable} />
               <Label>Instance unreachable</Label>
             </div>
             <div className="flex items-center gap-2">
@@ -646,16 +648,16 @@ function ApprovalPanel() {
         <h2 className="text-lg font-semibold tracking-tight">Approval</h2>
         <p className="text-sm text-muted-foreground">
           Decide whether a new request goes straight to your services, or waits for an admin to
-          approve it — per media kind. Applies to every request, whether typed in the search bar
-          or picked up from a watchlist. Admins always bypass this.
+          approve it — per media kind. Applies to every request, whether typed in the search bar or
+          picked up from a watchlist. Admins always bypass this.
         </p>
       </div>
       <Card>
         <CardHeader>
           <CardTitle>Policy per kind</CardTitle>
           <CardDescription>
-            "Requires approval" leaves a request pending until an admin approves or rejects it
-            from the requests list.
+            "Requires approval" leaves a request pending until an admin approves or rejects it from
+            the requests list.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 border-t pt-6">
@@ -711,7 +713,9 @@ function WatchlistPanel() {
       <Card>
         <CardHeader>
           <CardTitle>Job settings</CardTitle>
-          <CardDescription>How often the sync runs and how much it can create at once.</CardDescription>
+          <CardDescription>
+            How often the sync runs and how much it can create at once.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 border-t pt-6">
           <div className="flex items-center gap-2">
@@ -802,7 +806,9 @@ function AuthPanel() {
               <CardTitle>Sign-in methods</CardTitle>
               <CardDescription>
                 Source: {authSettings.data.source}
-                {authSettings.data.source === 'environment' ? ' (set via environment variables)' : ''}
+                {authSettings.data.source === 'environment'
+                  ? ' (set via environment variables)'
+                  : ''}
               </CardDescription>
             </div>
           </CardHeader>

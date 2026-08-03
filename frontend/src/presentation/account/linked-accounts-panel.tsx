@@ -14,9 +14,16 @@ import { Badge } from '#presentation/ui/badge'
 import { Switch } from '#presentation/ui/switch'
 import { Input } from '#presentation/ui/input'
 import { Label } from '#presentation/ui/label'
-import type { MediaAccountKind, PlexPin, UserMediaAccountDto } from '#domain/watchlist/user-media-account'
+import type {
+  MediaAccountKind,
+  PlexPin,
+  UserMediaAccountDto,
+} from '#domain/watchlist/user-media-account'
 
-const KIND_META: Record<MediaAccountKind, { label: string; icon: typeof Clapperboard; description: string }> = {
+const KIND_META: Record<
+  MediaAccountKind,
+  { label: string; icon: typeof Clapperboard; description: string }
+> = {
   plex: {
     label: 'Plex',
     icon: Clapperboard,
@@ -110,13 +117,18 @@ function PlexCard({ account }: { account?: UserMediaAccountDto }) {
             }
             onUnlink={() =>
               unlink.mutate(account.id, {
-                onSuccess: (r) => (r.ok ? toast.success('Plex unlinked.') : toast.error(r.error.message)),
+                onSuccess: (r) =>
+                  r.ok ? toast.success('Plex unlinked.') : toast.error(r.error.message),
               })
             }
           />
         ) : (
           <Button onClick={handleLink} disabled={startLink.isPending || linking}>
-            {linking ? <Loader2 className="size-4 animate-spin" /> : <ExternalLink className="size-4" />}
+            {linking ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <ExternalLink className="size-4" />
+            )}
             {linking ? 'Waiting for authorization…' : 'Link Plex account'}
           </Button>
         )}

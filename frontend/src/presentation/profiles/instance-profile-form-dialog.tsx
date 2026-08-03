@@ -29,7 +29,10 @@ import {
 import { SERVARR_LABEL } from '#presentation/shared/servarr-meta'
 import type { ServarrKind } from '#domain/settings/servarr-instance'
 import type { InstanceProfileDto } from '#domain/settings/instance-profile'
-import type { QualityProfileItem, QualityProfileRecord } from '#domain/settings/quality-profile-record'
+import type {
+  QualityProfileItem,
+  QualityProfileRecord,
+} from '#domain/settings/quality-profile-record'
 
 const SERIES_TYPE_OPTIONS = [
   { value: 'standard', label: 'Standard' },
@@ -80,9 +83,7 @@ export function InstanceProfileFormDialog({
   const [languageProfileId, setLanguageProfileId] = useState<number | undefined>(
     profile?.languageProfileId ?? undefined,
   )
-  const [seriesType, setSeriesType] = useState<string | undefined>(
-    profile?.seriesType ?? undefined,
-  )
+  const [seriesType, setSeriesType] = useState<string | undefined>(profile?.seriesType ?? undefined)
   const [minimumAvailability, setMinimumAvailability] = useState<string | undefined>(
     profile?.minimumAvailability ?? undefined,
   )
@@ -200,8 +201,8 @@ export function InstanceProfileFormDialog({
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Edit profile' : 'New profile'}</DialogTitle>
           <DialogDescription>
-            Creates or edits a real Quality Profile on the {SERVARR_LABEL[kind]} instance, plus
-            the root folder and language settings used when requesting with it.
+            Creates or edits a real Quality Profile on the {SERVARR_LABEL[kind]} instance, plus the
+            root folder and language settings used when requesting with it.
           </DialogDescription>
         </DialogHeader>
 

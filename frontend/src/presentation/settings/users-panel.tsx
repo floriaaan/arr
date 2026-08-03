@@ -126,8 +126,8 @@ export function UsersPanel() {
       <div>
         <h2 className="text-lg font-semibold tracking-tight">Users</h2>
         <p className="text-sm text-muted-foreground">
-          Everyone who has signed in, whether through a password or SSO. Promote a user to admin
-          to let them manage services and settings, or override their request approval policy
+          Everyone who has signed in, whether through a password or SSO. Promote a user to admin to
+          let them manage services and settings, or override their request approval policy
           individually.
         </p>
       </div>

@@ -27,5 +27,4 @@ export interface PlexLinkStart {
 }
 
 export type PlexLinkResult =
-  | { status: 'pending' }
-  | { status: 'linked'; account: UserMediaAccountDto }
+  { status: 'pending' } | { status: 'linked'; account: UserMediaAccountDto }

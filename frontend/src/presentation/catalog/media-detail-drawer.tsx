@@ -25,12 +25,7 @@ import { useSession } from '#application/identity/session.query'
 import { useInstances } from '#application/settings/instances.query'
 import { useInstanceCatalog } from '#application/settings/instance-catalog.query'
 import { useMediaServers } from '#application/settings/media-servers.query'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '#presentation/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '#presentation/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -326,8 +321,8 @@ export function MediaDetailDrawer({
                         <AlertDialogHeader>
                           <AlertDialogTitle>Remove "{value.title}"?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This removes it from its *arr instance and deletes its files from
-                            disk. This can't be undone.
+                            This removes it from its *arr instance and deletes its files from disk.
+                            This can't be undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

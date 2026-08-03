@@ -4,10 +4,7 @@ import type { ApiError } from '#domain/shared/api-error'
 import type { Result } from '#domain/shared/result'
 import type { RequestEpisode } from '#domain/requests/request-episode'
 
-export const requestEpisodesQuery = defineQuery<
-  Result<RequestEpisode[], ApiError>,
-  [string]
->({
+export const requestEpisodesQuery = defineQuery<Result<RequestEpisode[], ApiError>, [string]>({
   key: (id) => ['requests', id, 'episodes'],
   queryFn: (connector, id) => connector.listRequestEpisodes(id),
 })

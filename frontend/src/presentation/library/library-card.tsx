@@ -50,9 +50,7 @@ export function LibraryCard({ item, onSelect }: { item: LibraryItem; onSelect?: 
         <Badge
           className={cn(
             'absolute top-2 right-2 border-0 shadow-sm',
-            item.hasFile
-              ? 'bg-black/60 text-white backdrop-blur-sm'
-              : 'bg-destructive text-white',
+            item.hasFile ? 'bg-black/60 text-white backdrop-blur-sm' : 'bg-destructive text-white',
           )}
         >
           {item.hasFile ? 'Downloaded' : 'Missing'}

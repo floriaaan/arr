@@ -37,10 +37,7 @@ const SERVARR_META: Record<
 
 const SERVARR_KINDS: readonly ServarrKind[] = ['radarr', 'sonarr', 'lidarr']
 
-function invalidateProfiles(
-  queryClient: ReturnType<typeof useQueryClient>,
-  kind: ServarrKind,
-) {
+function invalidateProfiles(queryClient: ReturnType<typeof useQueryClient>, kind: ServarrKind) {
   void queryClient.invalidateQueries({ queryKey: ['instance-profiles', kind] })
   void queryClient.invalidateQueries({ queryKey: ['instances'] })
 }

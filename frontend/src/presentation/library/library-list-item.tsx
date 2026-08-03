@@ -29,7 +29,10 @@ export function LibraryListItem({ item, onSelect }: { item: LibraryItem; onSelec
         <p className="truncate text-xs text-muted-foreground">{item.year ?? 'Unknown year'}</p>
       </div>
 
-      <span title={item.monitored ? 'Monitored' : 'Unmonitored'} className="shrink-0 text-muted-foreground">
+      <span
+        title={item.monitored ? 'Monitored' : 'Unmonitored'}
+        className="shrink-0 text-muted-foreground"
+      >
         {item.monitored ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
       </span>
 

@@ -67,7 +67,12 @@ export function RequestEpisodes({ requestId, open }: { requestId: string; open: 
           <span className="w-14 shrink-0 font-mono text-muted-foreground tabular-nums">
             {episodeCode(episode.seasonNumber, episode.episodeNumber)}
           </span>
-          <span className={cn('min-w-0 flex-1 truncate', episode.state === 'missing' && 'text-muted-foreground')}>
+          <span
+            className={cn(
+              'min-w-0 flex-1 truncate',
+              episode.state === 'missing' && 'text-muted-foreground',
+            )}
+          >
             {episode.title}
           </span>
           {episode.percentage !== null ? (
