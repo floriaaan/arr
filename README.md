@@ -141,6 +141,16 @@ services:
       OIDC_CLIENT_ID: ${ARR_OIDC_CLIENT_ID:-}
       OIDC_CLIENT_SECRET: ${ARR_OIDC_CLIENT_SECRET:-}
       DISABLE_PASSWORD_LOGIN: 'false'
+      # Optional: pre-create these *arr instances at boot (leave unset to add
+      # them from the onboarding UI instead). Never overwrites an instance
+      # already saved from the UI. The admin account still has to be created
+      # through the UI regardless — cf. docs/adr/0010.
+      SONARR_URL: ${ARR_SONARR_URL:-}
+      SONARR_API_KEY: ${ARR_SONARR_API_KEY:-}
+      RADARR_URL: ${ARR_RADARR_URL:-}
+      RADARR_API_KEY: ${ARR_RADARR_API_KEY:-}
+      LIDARR_URL: ${ARR_LIDARR_URL:-}
+      LIDARR_API_KEY: ${ARR_LIDARR_API_KEY:-}
     depends_on:
       arr-db:
         condition: service_healthy
@@ -219,6 +229,7 @@ Key variables:
 | `LOG_LEVEL`                                                       | `info`                                        | Pino log level.                                                                                                             |
 | `OIDC_ISSUER_URL` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET`       | empty                                         | SSO OIDC. Optional: configurable from the onboarding UI instead. When set, these env vars **take precedence** over the DB config. |
 | `DISABLE_PASSWORD_LOGIN`                                          | `false`                                       | Forces SSO as the only sign-in method.                                                                                      |
+| `SONARR_URL` / `SONARR_API_KEY`, `RADARR_URL` / `RADARR_API_KEY`, `LIDARR_URL` / `LIDARR_API_KEY` | empty | Optional: pre-create that instance at boot instead of adding it from the onboarding UI. Skipped if an instance of that kind already exists — never overwrites one saved from the UI. Doesn't skip the admin-account onboarding step. |
 | `VITE_CONNECTOR`                                                  | `http`                                        | `http` = real backend, `fake` = offline fake connector.                                                                     |
 | `FRONTEND_PORT` / `BACKEND_PORT`                                  | `3000` / `3333`                               | Ports published by Compose.                                                                                                 |
 

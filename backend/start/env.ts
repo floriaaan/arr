@@ -38,4 +38,15 @@ export default await Env.create(new URL('../', import.meta.url), {
   // Frontend origin(s) the browser actually calls the API from — used by
   // better-auth's trustedOrigins check (cf. instance.ts), comma-separated.
   CORS_ORIGIN: Env.schema.string.optional(),
+
+  // *arr instance bootstrap — pre-creates the instance at boot if none of
+  // that kind exists yet, never overwrites one saved from the UI, cf.
+  // docs/adr/0010. Onboarding's admin-account step still has to happen
+  // through the UI regardless.
+  SONARR_URL: Env.schema.string.optional({ format: 'url', tld: false }),
+  SONARR_API_KEY: Env.schema.string.optional(),
+  RADARR_URL: Env.schema.string.optional({ format: 'url', tld: false }),
+  RADARR_API_KEY: Env.schema.string.optional(),
+  LIDARR_URL: Env.schema.string.optional({ format: 'url', tld: false }),
+  LIDARR_API_KEY: Env.schema.string.optional(),
 })

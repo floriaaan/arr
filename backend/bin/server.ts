@@ -34,6 +34,30 @@ new Ignitor(APP_ROOT, { importer: IMPORTER })
     app.booting(async () => {
       await import('#start/env')
     })
+    app.ready(async () => {
+      const { readEnvInstanceConfigs } =
+        await import('#infrastructure/servarr/env-instance-configs')
+      const configs = readEnvInstanceConfigs()
+      if (configs.length === 0) return
+
+      const { BootstrapInstancesFromEnv } =
+        await import('#application/settings/bootstrap-instances-from-env.use-case')
+      const logger = await app.container.make('logger')
+      const useCase = new BootstrapInstancesFromEnv(
+        await app.container.make('settings.instanceRepository'),
+        await app.container.make('settings.connectionTester'),
+        await app.container.make('settings.profileCatalog'),
+        await app.container.make('shared.idGenerator'),
+        await app.container.make('settings.instanceProfileRepository'),
+        await app.container.make('settings.onboardingStateRepository'),
+        await app.container.make('shared.clock'),
+      )
+      const result = await useCase.execute(configs)
+      for (const kind of result.bootstrapped) logger.info(`bootstrapped ${kind} instance from env`)
+      for (const { kind, reason } of result.failed) {
+        logger.warn(`failed to bootstrap ${kind} instance from env: ${reason}`)
+      }
+    })
     app.listen('SIGTERM', () => app.terminate())
     app.listenIf(app.managedByPm2, 'SIGINT', () => app.terminate())
   })
