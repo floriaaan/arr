@@ -2,6 +2,12 @@ packages:
   - backend
   - frontend
 
+# brace-expansion 1.x arrive uniquement en transitif sous eslint (via minimatch),
+# qui ne bougera pas de la ligne 1.x : on force le correctif du DoS par expansion
+# non bornée (GHSA-v6h2-p8h4-qcjw) plutôt que d'attendre une remontée d'eslint.
+overrides:
+  brace-expansion@1: ^1.1.17
+
 allowBuilds:
   '@prisma/client': false
   '@swc/core': true

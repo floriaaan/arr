@@ -1,0 +1,70 @@
+version: 2
+
+updates:
+  # pnpm workspace: the root holds the lockfile, each package its own manifest.
+  - package-ecosystem: npm
+    directories:
+      - '/'
+      - '/backend'
+      - '/frontend'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '05:00'
+      timezone: Europe/Paris
+    open-pull-requests-limit: 10
+    groups:
+      # One PR per family rather than one per package — these move in lockstep
+      # and are unusable half-upgraded.
+      adonisjs:
+        patterns:
+          - '@adonisjs/*'
+          - '@japa/*'
+      tanstack:
+        patterns:
+          - '@tanstack/*'
+      react:
+        patterns:
+          - 'react'
+          - 'react-dom'
+          - '@types/react'
+          - '@types/react-dom'
+      dev-tooling:
+        patterns:
+          - 'eslint*'
+          - '@typescript-eslint/*'
+          - 'prettier*'
+          - 'typescript'
+          - 'vite'
+          - 'vitest'
+          - 'dependency-cruiser'
+          - '@types/*'
+        exclude-patterns:
+          - '@types/react'
+          - '@types/react-dom'
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '05:00'
+      timezone: Europe/Paris
+    groups:
+      actions:
+        patterns:
+          - '*'
+
+  - package-ecosystem: docker
+    directories:
+      - '/backend'
+      - '/frontend'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '05:00'
+      timezone: Europe/Paris

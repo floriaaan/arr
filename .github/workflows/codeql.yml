@@ -1,0 +1,57 @@
+# Ce dépôt est privé : le code scanning y demande GitHub Code Security
+# (Settings → Advanced Security). Tant qu'il n'est pas activé, ce workflow
+# échoue à l'upload des résultats avec « Advanced Security must be enabled
+# for this repository to use code scanning ». Sur un dépôt public, rien à
+# activer.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Monday 04:17 UTC — an off-peak, non-round minute, as GitHub recommends
+    # for scheduled workflows. Catches newly published queries against code
+    # that has not changed.
+    - cron: '17 4 * * 1'
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # `javascript-typescript` covers both packages and the GitHub Actions
+          # workflows are analysed separately by the `actions` pack.
+          - language: javascript-typescript
+          - language: actions
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # Interpreted languages need no compilation step.
+          build-mode: none
+          queries: security-and-quality
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:${{ matrix.language }}
