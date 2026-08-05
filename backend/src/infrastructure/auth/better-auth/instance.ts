@@ -79,6 +79,27 @@ function buildAuthInstance(
         createdAt: 'created_at',
         updatedAt: 'updated_at',
       },
+      /**
+       * better-auth already resolves an incoming OIDC identity to an existing
+       * user by email (`findOAuthUser`) — the merge itself is automatic. What
+       * it gates by default is whether to link *implicitly* without an extra
+       * verification step, and both of its default guards defeat us here:
+       *   - `pocketid` isn't in `trustedProviders`, so the provider itself
+       *     isn't trusted;
+       *   - `requireLocalEmailVerified` defaults to `true`, but this app has
+       *     no email-verification flow at all, so a password account (e.g.
+       *     the admin created at onboarding) is permanently unverified.
+       * Together those unconditionally block linking regardless of what
+       * PocketID reports, so the onboarding admin could never sign back in
+       * over SSO with the same email. The instance admin already establishes
+       * trust by configuring OIDC in settings — that's the linking boundary,
+       * not local email verification we don't otherwise implement.
+       */
+      accountLinking: {
+        enabled: true,
+        trustedProviders: ['pocketid'],
+        requireLocalEmailVerified: false,
+      },
     },
     verification: {
       fields: {

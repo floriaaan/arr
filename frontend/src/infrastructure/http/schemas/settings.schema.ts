@@ -150,7 +150,12 @@ export const oidcDiscoverySchema = z.object({
 export const effectiveAuthSettingsSchema = z.object({
   passwordLoginEnabled: z.boolean(),
   oidcConfigured: z.boolean(),
-  source: z.enum(['database', 'environment']),
+  // 'disabled' = no OIDC anywhere (env or database) — the default state on
+  // any fresh instance. Missing from this enum meant `.parse()` threw on
+  // every such instance, silently breaking the query (masked by call sites
+  // treating `data === undefined` as "no SSO", which happens to be the
+  // right fallback — but retried and errored forever for no reason).
+  source: z.enum(['database', 'environment', 'disabled']),
 })
 
 export const savedSsoConfigSchema = z

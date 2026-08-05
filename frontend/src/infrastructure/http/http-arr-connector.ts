@@ -226,7 +226,7 @@ export class HttpArrConnector implements ArrConnector {
   }
 
   async saveOnboardingSso(config: OidcConfigInput | null) {
-    const response = await this.http.put('/api/onboarding/sso', config)
+    const response = await this.http.put('/api/onboarding/sso', { config })
     if (!response.ok) return { ok: false as const, error: await toApiError(response) }
     return { ok: true as const, value: (await response.json()) as { oidcEnabled: boolean } }
   }
@@ -577,7 +577,7 @@ export class HttpArrConnector implements ArrConnector {
   }
 
   async updateSso(config: OidcConfigInput | null) {
-    const response = await this.http.put('/api/settings/sso', config)
+    const response = await this.http.put('/api/settings/sso', { config })
     if (!response.ok) return { ok: false as const, error: await toApiError(response) }
     return { ok: true as const, value: (await response.json()) as { oidcEnabled: boolean } }
   }
