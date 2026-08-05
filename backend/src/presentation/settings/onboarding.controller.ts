@@ -128,10 +128,8 @@ export default class OnboardingController {
   }
 
   async saveSso(ctx: HttpContext) {
-    const raw = ctx.request.raw()
-    const parsed: unknown = raw ? JSON.parse(raw) : null
-
-    const oidc = parsed === null ? null : await saveOidcValidator.validate(parsed)
+    const payload = await ctx.request.validateUsing(saveOidcValidator)
+    const oidc = payload.config
 
     const repository = await app.container.make('settings.authSettingsRepository')
     const result = await new SaveAuthSettings(repository).execute({ oidc })

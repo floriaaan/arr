@@ -225,6 +225,11 @@ describe.each<{ name: string; create: () => ArrConnector }>([
               },
             ],
           }),
+        // 'disabled' = no OIDC configured anywhere, the default on a fresh
+        // instance — regression coverage for the source enum that used to
+        // reject exactly this value (cf. effectiveAuthSettingsSchema).
+        'GET /api/settings/auth': () =>
+          json({ passwordLoginEnabled: true, oidcConfigured: false, source: 'disabled' }),
       }),
   },
 ])('$name', ({ create }) => {
@@ -441,5 +446,13 @@ describe.each<{ name: string; create: () => ArrConnector }>([
       expect(entry).not.toHaveProperty('posterRef')
       if (entry.posterUrl !== null) expect(typeof entry.posterUrl).toBe('string')
     }
+  })
+
+  // Régression : `effectiveAuthSettingsSchema`'s `source` enum used to omit
+  // 'disabled' (no OIDC configured anywhere), so this call threw on any
+  // fresh instance — the default state — for `HttpArrConnector`.
+  test('reading effective auth settings does not throw when SSO is unconfigured', async () => {
+    const settings = await connector.getEffectiveAuthSettings()
+    expect(settings.oidcConfigured).toBe(false)
   })
 })

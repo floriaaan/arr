@@ -63,4 +63,14 @@ test.group('Onboarding flow', (group) => {
     assert.equal(session.body().user.email, ADMIN_EMAIL)
     assert.equal(session.body().user.role, 'admin')
   })
+
+  // Régression : `{ config: null }` (bouton « Skip » de l'étape SSO) renvoyait
+  // 422. La cause n'était pas la validation métier mais le bodyparser
+  // AdonisJS, qui rejette un body JSON `null` nu avant même que le
+  // contrôleur s'exécute — d'où le body enveloppé dans un objet.
+  test('skipping SSO during onboarding accepts a null config', async ({ client, assert }) => {
+    const skipped = await client.put('/api/onboarding/sso').json({ config: null })
+    skipped.assertStatus(200)
+    assert.isFalse(skipped.body().oidcEnabled)
+  })
 })

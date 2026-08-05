@@ -11,6 +11,7 @@ import type { LanguageProfileId } from './language-profile-id.vo.js'
 import type { SeriesType } from './series-type.vo.js'
 import type { MinimumAvailability } from './minimum-availability.vo.js'
 import type { HealthCheckResult } from './health-check-result.vo.js'
+import type { DisabledReason } from './disabled-reason.vo.js'
 import { instanceConnected, instanceHealthCheckFailed } from './settings.events.js'
 import { validateProfileSelection } from './profile-selection-rules.js'
 
@@ -26,6 +27,8 @@ export interface ServarrInstanceProps {
   minimumAvailability: MinimumAvailability | null
   enabled: boolean
   lastHealthCheck: HealthCheckResult | null
+  /** `null` while enabled, or for a never-yet-disabled draft. */
+  disabledReason: DisabledReason | null
 }
 
 export class ServarrInstance extends AggregateRoot<string> {
@@ -49,6 +52,7 @@ export class ServarrInstance extends AggregateRoot<string> {
       minimumAvailability: null,
       enabled: false,
       lastHealthCheck: null,
+      disabledReason: null,
     })
   }
 
@@ -101,12 +105,19 @@ export class ServarrInstance extends AggregateRoot<string> {
     return this.props.lastHealthCheck
   }
 
+  get disabledReason(): DisabledReason | null {
+    return this.props.disabledReason
+  }
+
   /** Changing the connection details invalidates any previous health check and disables the instance. */
   updateConnection(baseUrl: Url, apiKey: ApiKey): void {
     this.props.baseUrl = baseUrl
     this.props.apiKey = apiKey
     this.props.lastHealthCheck = null
     this.props.enabled = false
+    // Neither reason: the connection itself changed, so the last check (and
+    // whatever disabled it) no longer describes the current state either way.
+    this.props.disabledReason = null
   }
 
   configure(
@@ -135,7 +146,15 @@ export class ServarrInstance extends AggregateRoot<string> {
     return Result.ok(undefined)
   }
 
-  /** A failed check disables the instance — "enabled" always implies "last known check was healthy". */
+  /**
+   * A failed check disables the instance. A successful one only re-enables
+   * it if the health-check worker is the one that disabled it in the first
+   * place — an admin's deliberate `disable()` (`disabledReason: 'admin'`)
+   * never gets silently undone by a later successful check; that stays an
+   * explicit `enable()` call (cf. docs/phase-6-fiabilite-requests/02,
+   * chantier 3 décision 3, revised: the worker may only reactivate what it
+   * itself disabled).
+   */
   recordHealthCheck(result: HealthCheckResult): void {
     this.props.lastHealthCheck = result
 
@@ -150,6 +169,16 @@ export class ServarrInstance extends AggregateRoot<string> {
           result.checkedAt,
         ),
       )
+
+      if (
+        !this.props.enabled &&
+        this.props.disabledReason === 'health_check' &&
+        this.props.rootFolderPath &&
+        this.props.qualityProfileId
+      ) {
+        this.props.enabled = true
+        this.props.disabledReason = null
+      }
       return
     }
 
@@ -164,6 +193,7 @@ export class ServarrInstance extends AggregateRoot<string> {
       ),
     )
     this.props.enabled = false
+    this.props.disabledReason = 'health_check'
   }
 
   enable(): Result<void, ValidationError> {
@@ -181,10 +211,12 @@ export class ServarrInstance extends AggregateRoot<string> {
     }
 
     this.props.enabled = true
+    this.props.disabledReason = null
     return Result.ok(undefined)
   }
 
   disable(): void {
     this.props.enabled = false
+    this.props.disabledReason = 'admin'
   }
 }

@@ -141,10 +141,21 @@ depuis une semaine ». Et le check n'a lieu **qu'à la sauvegarde**.
    c'est le pattern déjà en place et validé par ADR-0003 — pas de dépendance
    scheduler. Intervalle : 5 minutes.
 
-3. **Le worker ne réactive jamais une instance.** `recordHealthCheck` désactive
-   sur échec ; le retour à `enabled` reste une action admin explicite. Un
-   worker qui rallume tout seul une instance que quelqu'un a désactivée
-   volontairement serait un piège.
+3. **Le worker ne réactive que ce qu'il a lui-même désactivé** (révisé — la
+   version initiale ne réactivait jamais rien du tout, ce qui laissait une
+   instance revenue en ligne bloquée en `Disabled` jusqu'à une action admin
+   manuelle, à chaque coupure transitoire). `ServarrInstance` porte désormais
+   `disabledReason: 'admin' | 'health_check' | null` : `disable()` (action
+   admin explicite) pose `'admin'`, un échec de `recordHealthCheck` pose
+   `'health_check'`. Un succès ne réactive que si la raison est
+   `'health_check'` — jamais si c'est `'admin'`, ce qui reste le piège à
+   éviter : un worker qui rallume tout seul une instance que quelqu'un a
+   désactivée volontairement.
+
+   Distinguer les deux réutilise l'ambiguïté déjà notée en décision 1
+   (`Enabled`/`Disabled` seul ne dit pas pourquoi) : avant ce champ,
+   `enabled=false` ne portait aucune trace de la cause, donc aucune règle de
+   réactivation automatique ne pouvait être sûre à 100 %.
 
 4. **Notification sur transition, pas sur état.** Le worker ne notifie que
    quand la santé **change** (saine → en échec), sinon un check toutes les

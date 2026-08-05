@@ -36,6 +36,7 @@ import { MediaServerForm } from './media-server-form'
 import { UsersPanel } from './users-panel'
 import { MEDIA_SERVER_META } from '#presentation/shared/media-server-meta'
 import { SERVARR_META } from '#presentation/shared/servarr-meta'
+import { useMediaQuery } from '#presentation/shared/use-media-query'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '#presentation/ui/tabs'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '#presentation/ui/card'
 import { Button } from '#presentation/ui/button'
@@ -843,9 +844,30 @@ function AuthPanel() {
 }
 
 export function SettingsPanels() {
+  // Radix's `orientation` prop drives its own keyboard nav + `data-orientation`
+  // styling — it can't be made responsive with CSS alone, hence the JS media
+  // query. Below `md`, the fixed `w-48` sidebar left barely any room for
+  // content; a horizontally-scrollable top strip fits every viewport instead
+  // of squeezing it (cf. `md:` split convention in `app-shell.tsx`).
+  const isDesktop = useMediaQuery('(min-width: 768px)')
+
   return (
-    <Tabs defaultValue="services" orientation="vertical" className="items-start gap-8">
-      <TabsList variant="line" className="w-48 shrink-0">
+    <Tabs
+      defaultValue="services"
+      orientation={isDesktop ? 'vertical' : 'horizontal'}
+      className={isDesktop ? 'items-start gap-8' : 'gap-4'}
+    >
+      <TabsList
+        variant="line"
+        className={
+          isDesktop
+            ? 'w-48 shrink-0'
+            : // Triggers default to `flex-1` (fine when the sidebar has fixed
+              // width) — undone here so they keep their natural width and the
+              // strip scrolls horizontally instead of squeezing 8 labels flat.
+              'w-full flex-nowrap justify-start overflow-x-auto [&>[data-slot=tabs-trigger]]:flex-none'
+        }
+      >
         <TabsTrigger value="services">
           <Clapperboard className="size-4" />
           Services

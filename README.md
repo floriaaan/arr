@@ -290,6 +290,12 @@ your stack (Traefik, Caddy, nginx…) and point it at `APP_URL`, or drop its
 `ports:` mapping and let that existing reverse proxy publish port 80/443
 directly.
 
+`arr-backend`'s image runs pending migrations on boot, before starting the
+server — no separate migration step to remember on a fresh deploy or an
+upgrade. The `arr-reconciler` / `arr-watchlist-sync` / `arr-health` services
+share the same image but override `command`, so they skip straight to their
+own process instead of racing each other to migrate on every restart.
+
 ## Configuration
 
 Two environment files, two different jobs:

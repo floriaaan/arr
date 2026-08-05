@@ -121,11 +121,18 @@ export function RequestCard({ request }: { request: MediaRequest }) {
           <KindIcon className="size-4" />
         </div>
         <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex items-center gap-2">
-            <p className="truncate font-medium">{request.title}</p>
-            <Badge variant={STATUS_VARIANT[request.status]}>{request.status}</Badge>
-            {request.requiresApproval ? <Badge variant="outline">Awaiting approval</Badge> : null}
-            {request.origin === 'watchlist' ? <Badge variant="secondary">Watchlist</Badge> : null}
+          {/* flex-wrap: on narrow screens the title alone already fills the
+              line (its intrinsic width forces a wrap before it starts
+              shrinking), so it gets the full width to truncate against
+              instead of splitting that width with the badges — which drop
+              to their own line below. */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="min-w-0 truncate font-medium">{request.title}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={STATUS_VARIANT[request.status]}>{request.status}</Badge>
+              {request.requiresApproval ? <Badge variant="outline">Awaiting approval</Badge> : null}
+              {request.origin === 'watchlist' ? <Badge variant="secondary">Watchlist</Badge> : null}
+            </div>
           </div>
           {request.progress ? (
             <div className="flex items-center gap-2">

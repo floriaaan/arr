@@ -58,9 +58,12 @@ function ProfileRow({
   const deleteProfile = useDeleteInstanceProfile()
 
   return (
-    <div className="flex items-center gap-3 rounded-md border px-4 py-3">
+    // Flat row, no per-item border/box — same geometry as the "Linked
+    // accounts" list in the Watchlist settings panel, one flat Card with
+    // `divide-y` rows instead of a stack of nested bordered boxes per row.
+    <div className="flex flex-wrap items-center gap-3 px-6 py-4">
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="font-medium">{profile.name}</span>
           {profile.isDefault ? <Badge>Default</Badge> : null}
           {qualityProfileName ? (
@@ -165,12 +168,12 @@ function InstanceProfilesSection({
   )
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-center gap-3 space-y-0">
+    <Card className="py-0">
+      <CardHeader className="flex-row flex-wrap items-center gap-3 border-b py-4">
         <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
           <Icon className="size-4.5" />
         </div>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <CardTitle>{meta.label}</CardTitle>
           <CardDescription className="truncate">{instance.baseUrl}</CardDescription>
         </div>
@@ -179,7 +182,7 @@ function InstanceProfilesSection({
           Add profile
         </Button>
       </CardHeader>
-      <CardContent className="space-y-2 border-t pt-6">
+      <CardContent className="divide-y px-0">
         {profiles.data?.length ? (
           profiles.data.map((profile) => (
             <ProfileRow
@@ -191,7 +194,7 @@ function InstanceProfilesSection({
             />
           ))
         ) : (
-          <p className="text-sm text-muted-foreground">No profile yet.</p>
+          <p className="px-6 py-4 text-sm text-muted-foreground">No profile yet.</p>
         )}
       </CardContent>
 

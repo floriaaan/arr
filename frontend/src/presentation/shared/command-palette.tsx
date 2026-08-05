@@ -28,7 +28,15 @@ export function CommandPalette({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-3xl">
+        {/* Anchored near the top instead of the base `DialogContent`'s
+            vertical centering, and `dvh` instead of `vh` (cf. `app-shell.tsx`
+            on why): centered + `vh` computes against the pre-keyboard
+            viewport height on mobile, so once the keyboard opens the dialog
+            stays centered against a taller-than-visible area and ends up
+            hidden behind/above it. Anchoring high keeps it above the
+            keyboard on every device. `overflow-x-hidden` guards against any
+            child bleeding past the narrower mobile width instead of wrapping. */}
+        <DialogContent className="top-[5%] max-h-[80dvh] translate-y-0 overflow-x-hidden overflow-y-auto p-4 sm:top-[50%] sm:max-w-3xl sm:translate-y-[-50%] sm:p-6">
           <DialogHeader>
             <DialogTitle>Search the catalog</DialogTitle>
           </DialogHeader>

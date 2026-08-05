@@ -18,5 +18,8 @@ test.group('architecture boundaries', () => {
       const { stdout } = error as { stdout?: string }
       assert.fail(stdout || String(error))
     }
-  })
+    // Spawns depcruise over the whole src/ tree — the default 2s test
+    // timeout is tight enough to flake under load even though the process
+    // itself completes fine (observed ~2.7s wall / 3.25s cpu locally).
+  }).timeout(15_000)
 })
