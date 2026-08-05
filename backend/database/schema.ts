@@ -312,6 +312,7 @@ export class ServarrInstanceSchema extends BaseModel {
     'baseUrl',
     'createdAt',
     'detectedVersion',
+    'disabledReason',
     'enabled',
     'id',
     'kind',
@@ -336,6 +337,8 @@ export class ServarrInstanceSchema extends BaseModel {
   declare createdAt: DateTime
   @column()
   declare detectedVersion: string | null
+  @column()
+  declare disabledReason: string | null
   @column()
   declare enabled: boolean
   @column({ isPrimary: true })

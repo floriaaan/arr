@@ -37,6 +37,9 @@ export default class ServarrInstanceLucidModel extends BaseModel {
   @column()
   declare enabled: boolean
 
+  @column()
+  declare disabledReason: string | null
+
   @column.dateTime()
   declare lastHealthCheckAt: DateTime | null
 

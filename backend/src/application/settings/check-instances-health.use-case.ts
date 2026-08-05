@@ -10,11 +10,11 @@ export interface HealthCheckSummary {
 }
 
 /**
- * Re-checks every configured instance. Deliberately never *enables* anything:
- * `recordHealthCheck` disables on failure, but coming back up stays an
- * explicit admin action — a worker that silently re-enabled an instance
- * someone turned off on purpose would be a trap (cf.
- * docs/phase-6-fiabilite-requests/02, chantier 3 décision 3).
+ * Re-checks every configured instance. `recordHealthCheck` decides whether a
+ * transition re-enables anything: it only reactivates an instance it disabled
+ * itself after an outage, never one an admin turned off on purpose — cf.
+ * `ServarrInstance.recordHealthCheck` and docs/phase-6-fiabilite-requests/02,
+ * chantier 3 décision 3 (revised).
  */
 export class CheckInstancesHealth implements UseCase<void, HealthCheckSummary> {
   constructor(

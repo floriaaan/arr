@@ -2,6 +2,7 @@ import { DateTime } from 'luxon'
 import type ServarrInstanceLucidModel from './servarr_instance.lucid.js'
 import { ServarrInstance } from '#domain/settings/servarr-instance.aggregate'
 import type { ServarrKind } from '#domain/settings/servarr-kind.vo'
+import type { DisabledReason } from '#domain/settings/disabled-reason.vo'
 import type { ConnectionErrorType } from '#domain/settings/connection-error.vo'
 import type { Result } from '#domain/shared/result'
 import type { ValidationError } from '#domain/shared/validation-error'
@@ -58,6 +59,7 @@ export function toDomain(row: ServarrInstanceLucidModel): ServarrInstance {
       : null,
     enabled: row.enabled,
     lastHealthCheck,
+    disabledReason: (row.disabledReason as DisabledReason | null) ?? null,
   })
 }
 
@@ -73,6 +75,7 @@ export function applyToModel(instance: ServarrInstance, model: ServarrInstanceLu
   model.seriesType = instance.seriesType?.value ?? null
   model.minimumAvailability = instance.minimumAvailability?.value ?? null
   model.enabled = instance.enabled
+  model.disabledReason = instance.disabledReason
   model.lastHealthCheckAt = instance.lastHealthCheck
     ? DateTime.fromJSDate(instance.lastHealthCheck.checkedAt)
     : null

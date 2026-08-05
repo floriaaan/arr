@@ -178,5 +178,62 @@ test.group('ServarrInstance', () => {
 
     assert.isFalse(instance.enabled)
     assert.isNull(instance.lastHealthCheck)
+    assert.isNull(instance.disabledReason)
+  })
+
+  // Régression : le worker `instances:health` flaggait bien une instance
+  // injoignable, mais rien ne la réactivait à son retour — `recordHealthCheck`
+  // ne touchait `enabled` qu'en cas d'échec (cf. décision 3, révisée : le
+  // worker peut réactiver ce qu'il a lui-même désactivé).
+  test('recordHealthCheck() reactivates an instance it disabled itself once healthy again', ({
+    assert,
+  }) => {
+    const instance = ServarrInstance.draft('1', 'radarr', aUrl(), anApiKey())
+    instance.configure(aRootFolderPath(), aQualityProfileId(), null, null, null, null)
+    instance.recordHealthCheck(HealthCheckResult.healthy(new Date(), '5.14.0'))
+    instance.enable()
+
+    instance.recordHealthCheck(
+      HealthCheckResult.unhealthy(new Date(), { type: 'timeout', message: 'timed out' }),
+    )
+    assert.isFalse(instance.enabled)
+    assert.equal(instance.disabledReason, 'health_check')
+
+    instance.recordHealthCheck(HealthCheckResult.healthy(new Date(), '5.14.0'))
+
+    assert.isTrue(instance.enabled)
+    assert.isNull(instance.disabledReason)
+  })
+
+  // The other half of the same fix: a health-check success must never undo a
+  // deliberate admin `disable()` — that's the exact "trap" décision 3 rules out.
+  test('recordHealthCheck() never reactivates an instance an admin disabled on purpose', ({
+    assert,
+  }) => {
+    const instance = ServarrInstance.draft('1', 'radarr', aUrl(), anApiKey())
+    instance.configure(aRootFolderPath(), aQualityProfileId(), null, null, null, null)
+    instance.recordHealthCheck(HealthCheckResult.healthy(new Date(), '5.14.0'))
+    instance.enable()
+
+    instance.disable()
+    assert.equal(instance.disabledReason, 'admin')
+
+    instance.recordHealthCheck(HealthCheckResult.healthy(new Date(), '5.14.0'))
+
+    assert.isFalse(instance.enabled)
+    assert.equal(instance.disabledReason, 'admin')
+  })
+
+  test('recordHealthCheck() does not reactivate an unconfigured instance', ({ assert }) => {
+    const instance = ServarrInstance.draft('1', 'radarr', aUrl(), anApiKey())
+    // Never configured, so never enabled — but still fed a failing then
+    // healthy check, e.g. by the background worker checking every saved
+    // instance regardless of configuration state.
+    instance.recordHealthCheck(
+      HealthCheckResult.unhealthy(new Date(), { type: 'timeout', message: 'timed out' }),
+    )
+    instance.recordHealthCheck(HealthCheckResult.healthy(new Date(), '5.14.0'))
+
+    assert.isFalse(instance.enabled)
   })
 })
