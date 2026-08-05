@@ -29,11 +29,13 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/backend/node_modules ./backend/node_modules
 COPY --from=build /app/backend/build ./backend/build
 COPY --from=build /app/backend/package.json ./backend/package.json
-RUN chown -R arr:arr /app
+COPY backend/docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh && chown -R arr:arr /app
 USER arr
 WORKDIR /app/backend/build
 EXPOSE 3333
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:3333/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["node", "bin/server.js"]
