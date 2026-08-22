@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { createConnector, getCookieHeader } from '../../../providers/create-connector'
 import { requireOnboarded, requireSession } from '#presentation/shared/route-guards'
 import { AppShell } from '#presentation/shared/app-shell'
+import { InstallAppButton } from '#presentation/account/install-app-button'
 import { LinkedAccountsPanel } from '#presentation/account/linked-accounts-panel'
 
 export const Route = createFileRoute('/account/')({
@@ -16,7 +17,10 @@ export const Route = createFileRoute('/account/')({
 function AccountRoute() {
   return (
     <AppShell>
-      <LinkedAccountsPanel />
+      <div className="space-y-6">
+        <InstallAppButton />
+        <LinkedAccountsPanel />
+      </div>
     </AppShell>
   )
 }
