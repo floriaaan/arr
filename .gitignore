@@ -15,3 +15,4 @@ coverage/
 .output/
 .tanstack/
 *.sqlite3
+.superpowers/
