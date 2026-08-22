@@ -3,6 +3,24 @@
 Date: 2026-08-22
 Scope: `frontend/` only. No backend changes.
 
+> **Amendment, same day, mid-implementation:** the offline-app-shell half of
+> this spec is dropped. Task 2's implementer found `vite-plugin-pwa` cannot
+> generate a service worker under TanStack Start's build at all — it shares
+> one mutable config object across Vite's Environment-API client/ssr builds,
+> so its "am I building the client?" guard is permanently false and
+> `_generateSW`/`sw.js` never runs. Confirmed empirically (`dist/client/`
+> gets `manifest.webmanifest` + icons, never `sw.js` or any `workbox-*`
+> chunk) and matches two independent open upstream issues
+> (`TanStack/router#4988`, labeled `needs-upstream-fix`; `serwist/serwist#300`),
+> unresolved as of this date. User decision: ship installable-only now
+> (manifest, icons, install button, offline-status banner — none of which
+> need a service worker) and defer offline caching to a future spec once
+> upstream fixes this or a hand-written SW-build plugin is judged worth the
+> investment. Every section below that assumed a working service worker
+> (offline app-shell caching, the offline fallback page, update-available/
+> offline-ready toasts) no longer applies — see the implementation plan's
+> own amendment for the task-level breakdown.
+
 ## Goal
 
 Make `arr` installable ("Add to Home Screen" on phones and desktop

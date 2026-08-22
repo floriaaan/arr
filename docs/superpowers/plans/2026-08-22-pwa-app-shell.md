@@ -2,19 +2,28 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make `arr`'s frontend installable (manifest + icons, standalone display) and resilient to a dropped connection for its own static shell, without ever caching `/api/*` responses.
+**Goal:** Make `arr`'s frontend installable (manifest + icons, standalone display, install button, offline-status banner).
 
-**Architecture:** `vite-plugin-pwa` (Workbox `generateSW` strategy) generates the manifest and service worker from a config module (`vite-pwa.config.ts`) that's importable and unit-testable outside of Vite. `@vite-pwa/assets-generator` rasterizes the existing `public/logo.svg` into the full icon set once, as a committed static asset, not a build step. Two small interfaces (`ConnectivityMonitor`, `InstallPromptController`) wrap the browser APIs that have no framework equivalent yet, each with a fake test double, following the same interface+fake shape as `ArrConnector`/`FakeArrConnector` — but living in `presentation/shared/`, not `domain/`, since these are browser-platform concerns, not business ports (same layering `next-themes`'s `useTheme` already gets in this codebase).
+> **Amended mid-implementation (2026-08-22):** the "resilient to a dropped
+> connection" / offline-app-shell half of the original goal is dropped.
+> `vite-plugin-pwa` cannot generate a service worker at all under TanStack
+> Start's build — confirmed root cause and two matching open upstream
+> issues in Task 2's report; see the design spec's own amendment note. User
+> decision: ship installable-only now. **Task 3 (offline fallback page) and
+> Task 9 (update/offline-ready toasts) are dropped** — their bodies below
+> are replaced with a short notice; do not implement them. Every other task
+> is unaffected — `OfflineBanner`/`ConnectivityMonitor` (Tasks 4-6) track
+> `navigator.onLine` directly and never depended on a service worker.
 
-**Tech Stack:** `vite-plugin-pwa` (registry-confirmed `1.3.0`), `@vite-pwa/assets-generator` (registry-confirmed `1.0.2`), React 19, Vitest + `@testing-library/react` (already a devDependency, unused until this plan — no existing component-render test to follow, this introduces the first one).
+**Architecture:** `vite-plugin-pwa` generates the manifest only (no service worker — see amendment above) from a config module (`vite-pwa.config.ts`) that's importable and unit-testable outside of Vite. `@vite-pwa/assets-generator` rasterizes the existing `public/logo.svg` into the full icon set once, as a committed static asset, not a build step. Two small interfaces (`ConnectivityMonitor`, `InstallPromptController`) wrap the browser APIs that have no framework equivalent yet, each with a fake test double, following the same interface+fake shape as `ArrConnector`/`FakeArrConnector` — but living in `presentation/shared/`, not `domain/`, since these are browser-platform concerns, not business ports (same layering `next-themes`'s `useTheme` already gets in this codebase).
+
+**Tech Stack:** `vite-plugin-pwa` (registry-confirmed `1.3.0`, manifest generation only), `@vite-pwa/assets-generator` (registry-confirmed `1.0.2`), React 19, Vitest + `@testing-library/react` (already a devDependency, unused until this plan — no existing component-render test to follow, this introduces the first one).
 
 ## Global Constraints
 
 - **Frontend-only.** No backend changes anywhere in this plan.
-- **`/api/*` is always network-only.** No caching strategy may ever match it — this is the one non-negotiable rule from the spec.
+- **No service worker.** `vite-plugin-pwa` is confirmed incapable of generating one under this build (Task 2 finding) — don't configure `workbox`, `registerType`, or anything implying SW behavior; it would be dead/misleading config for a file that's never produced.
 - **No domain-layer changes.** `ConnectivityMonitor`/`InstallPromptController` are browser-platform concerns, not business ports; they live in `presentation/shared/`.
-- **`registerType: 'prompt'`.** The service worker never silently activates a new version behind the user's back.
-- **Reuse existing `sonner` toast infra** for the update-available and offline-ready messages — no new toast/notification UI.
 - **Icon generation is a one-off dev script**, not part of `task build`. Its output is committed like any other static asset in `public/`.
 - **Match existing conventions:** kebab-case filenames under `src/`, `#presentation/*` import alias (no extension, per `frontend`'s convention — contrast the backend's `.js`-suffixed ESM imports), Prettier (no semicolons, single quotes, trailing commas, 100 cols) via `task format`, strict TypeScript with no `any`.
 - **`task check` (lint + typecheck + test + boundaries) must pass before any task is considered done.**
@@ -26,10 +35,19 @@
 **Files:**
 - Modify: `frontend/package.json` (add `vite-plugin-pwa`, `@vite-pwa/assets-generator` devDependencies; add `generate-pwa-assets` script)
 - Create: `frontend/pwa-assets.config.ts`
-- Create (generated, committed): `frontend/public/favicon.ico`, `frontend/public/favicon.svg`, `frontend/public/apple-touch-icon-180x180.png`, `frontend/public/pwa-64x64.png`, `frontend/public/pwa-192x192.png`, `frontend/public/pwa-512x512.png`, `frontend/public/maskable-icon-512x512.png`
+- Create (generated, committed): `frontend/public/favicon.ico`, `frontend/public/apple-touch-icon-180x180.png`, `frontend/public/pwa-64x64.png`, `frontend/public/pwa-192x192.png`, `frontend/public/pwa-512x512.png`, `frontend/public/maskable-icon-512x512.png`
 
 **Interfaces:**
 - Produces: the exact icon filenames above, referenced by name in Task 2's manifest config and Task 6's head links. Later tasks must use these filenames verbatim — don't rename them.
+
+> **Amended after Task 1's real run** (`@vite-pwa/assets-generator@1.0.2`,
+> `minimal2023Preset`): the installed version generates **6 files, not 7** —
+> no separate `favicon.svg`. Its own printed output recommends the SVG
+> favicon link point at the project's existing `public/logo.svg` directly:
+> `<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" href="/logo.svg" type="image/svg+xml">`.
+> Task 6 uses this exact real-tool-recommended snippet (not the `favicon.svg`
+> + `sizes="48x48"` version originally drafted from fetched docs, which
+> didn't match this version's actual behavior).
 
 - [ ] **Step 1: Add the dependencies**
 
@@ -66,17 +84,17 @@ pnpm run generate-pwa-assets
 - [ ] **Step 5: Verify the exact output files exist**
 
 ```bash
-ls public/favicon.ico public/favicon.svg public/apple-touch-icon-180x180.png \
+ls public/favicon.ico public/apple-touch-icon-180x180.png \
    public/pwa-64x64.png public/pwa-192x192.png public/pwa-512x512.png \
    public/maskable-icon-512x512.png
 ```
 
-Expected: all seven files listed, no "No such file" errors. If the preset produced different filenames than listed above, stop and reconcile Task 2/6 to the actual names before proceeding — don't rename the generated files to match a guess.
+Expected: all six files listed, no "No such file" errors. (An earlier run of this task found the installed `@vite-pwa/assets-generator@1.0.2` + `minimal2023Preset` produces exactly these six — no separate `favicon.svg`; its own recommended favicon markup uses the existing `logo.svg` directly, wired in Task 6.) If a future run of this step produces a different file list than these six, stop and reconcile Task 2/6 to the actual names before proceeding — don't rename the generated files to match a guess.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add frontend/package.json pnpm-lock.yaml frontend/pwa-assets.config.ts frontend/public/favicon.ico frontend/public/favicon.svg frontend/public/apple-touch-icon-180x180.png frontend/public/pwa-64x64.png frontend/public/pwa-192x192.png frontend/public/pwa-512x512.png frontend/public/maskable-icon-512x512.png
+git add frontend/package.json pnpm-lock.yaml frontend/pwa-assets.config.ts frontend/public/favicon.ico frontend/public/apple-touch-icon-180x180.png frontend/public/pwa-64x64.png frontend/public/pwa-192x192.png frontend/public/pwa-512x512.png frontend/public/maskable-icon-512x512.png
 git commit -m "feat(frontend): generate PWA icon set from logo.svg"
 ```
 
@@ -84,11 +102,20 @@ Note: the lockfile lives at the repo root (pnpm workspace), not inside `frontend
 
 ---
 
-### Task 2: `vite-pwa.config.ts` and wiring into `vite.config.ts`
+### Task 2: `vite-pwa.config.ts` (manifest only) and wiring into `vite.config.ts`
+
+> **Rewritten after the Task 2 blocker** (see plan header amendment):
+> `vite-plugin-pwa` cannot generate a service worker under this build at
+> all — confirmed by the first implementer attempt, root-caused to a shared
+> mutable config object across Vite's Environment-API client/ssr builds.
+> `manifest.webmanifest` generation is unaffected (it goes through a
+> different, working hook) and is the entire scope of this task now. No
+> `workbox`, `registerType`, or `injectRegister` config — none of it does
+> anything without a service worker to register, and leaving it in would
+> misleadingly imply behavior that can't happen.
 
 **Files:**
 - Create: `frontend/vite-pwa.config.ts`
-- Create: `frontend/src/vite-pwa-env.d.ts`
 - Modify: `frontend/vite.config.ts`
 - Test: `frontend/tests/presentation/vite-pwa-config.spec.ts`
 
@@ -103,30 +130,29 @@ import { describe, test, expect } from 'vitest'
 import { pwaOptions } from '../../vite-pwa.config'
 
 describe('pwaOptions', () => {
-  test('never caches /api/* — network-only, no exceptions', () => {
-    const apiRule = pwaOptions.workbox?.runtimeCaching?.find(
-      (rule) => rule.urlPattern.toString() === /^\/api\//.toString(),
-    )
-    expect(apiRule?.handler).toBe('NetworkOnly')
-  })
-
   test('manifest has the required installability fields', () => {
-    expect(pwaOptions.manifest?.name).toBe('arr')
-    expect(pwaOptions.manifest?.display).toBe('standalone')
-    expect(pwaOptions.manifest?.start_url).toBe('/')
+    const manifest = pwaOptions.manifest
+    if (!manifest) throw new Error('expected pwaOptions.manifest to be set')
 
-    const icons = pwaOptions.manifest?.icons ?? []
+    expect(manifest.name).toBe('arr')
+    expect(manifest.display).toBe('standalone')
+    expect(manifest.start_url).toBe('/')
+
+    const icons = manifest.icons ?? []
     expect(icons.some((icon) => icon.purpose === 'maskable')).toBe(true)
     expect(icons.some((icon) => icon.sizes === '512x512' && icon.purpose !== 'maskable')).toBe(
       true,
     )
   })
 
-  test('registerType is prompt, not silent auto-activation', () => {
-    expect(pwaOptions.registerType).toBe('prompt')
+  test('no service-worker config — vite-plugin-pwa cannot generate one under this build', () => {
+    expect(pwaOptions.workbox).toBeUndefined()
+    expect(pwaOptions.registerType).toBeUndefined()
   })
 })
 ```
+
+(`pwaOptions.manifest`'s type is `false | Partial<ManifestOptions>` — manifest generation can be disabled — so `manifest?.name` alone doesn't narrow out `false` under strict TypeScript. The explicit `if (!manifest) throw` guard above is required, not optional style.)
 
 - [ ] **Step 2: Run it to verify it fails**
 
@@ -145,10 +171,13 @@ import type { VitePWAOptions } from 'vite-plugin-pwa'
  * Exported as plain data — not called inline in vite.config.ts — so it's
  * unit-testable without booting Vite (cf.
  * tests/presentation/vite-pwa-config.spec.ts).
+ *
+ * Manifest generation only. No `workbox`/`registerType`/`injectRegister` —
+ * vite-plugin-pwa cannot produce a service worker under this build (see the
+ * plan's Task 2 amendment); configuring SW-only options here would be dead,
+ * misleading config for a file that's never written.
  */
 export const pwaOptions: Partial<VitePWAOptions> = {
-  registerType: 'prompt',
-  injectRegister: null,
   outDir: 'dist/client',
   manifest: {
     id: '/',
@@ -177,21 +206,6 @@ export const pwaOptions: Partial<VitePWAOptions> = {
       },
     ],
   },
-  workbox: {
-    navigateFallback: '/offline.html',
-    navigateFallbackDenylist: [/^\/api\//],
-    // Belt-and-braces: generateSW only routes precached URLs plus whatever's
-    // declared here, so /api/* already gets no SW route at all. This makes
-    // the "never cache API responses" rule explicit instead of implicit —
-    // if someone later adds a catch-all runtimeCaching rule, this one still
-    // wins by being more specific.
-    runtimeCaching: [
-      {
-        urlPattern: /^\/api\//,
-        handler: 'NetworkOnly',
-      },
-    ],
-  },
 }
 ```
 
@@ -201,7 +215,7 @@ export const pwaOptions: Partial<VitePWAOptions> = {
 pnpm test -- vite-pwa-config
 ```
 
-Expected: PASS (3 tests).
+Expected: PASS (2 tests).
 
 - [ ] **Step 5: Wire the plugin into `vite.config.ts`**
 
@@ -234,40 +248,43 @@ const config = defineConfig({
 export default config
 ```
 
-- [ ] **Step 6: Add the virtual-module type declaration**
-
-```typescript
-// frontend/src/vite-pwa-env.d.ts
-/// <reference types="vite-plugin-pwa/react" />
-```
-
-- [ ] **Step 7: Typecheck**
+- [ ] **Step 6: Typecheck**
 
 ```bash
 cd frontend && pnpm run typecheck
 ```
 
-Expected: no errors (confirms `VitePWAOptions`'s manifest/workbox shape accepts everything written above, and that `virtual:pwa-register/react` — used starting Task 9 — resolves once this reference exists).
+Expected: no errors.
 
-- [ ] **Step 8: Build and verify the actual output**
+- [ ] **Step 7: Build and verify the actual output**
 
 ```bash
 pnpm run build
-ls dist/client/manifest.webmanifest dist/client/sw.js
+ls dist/client/manifest.webmanifest
+find dist -iname "*sw*" -o -iname "*workbox*"
 ```
 
-Expected: both files exist under `dist/client`. If they land somewhere else (e.g. TanStack Start nests the client output further, or under a different root), fix `outDir` in `vite-pwa.config.ts` to the real path and rebuild until this check passes — don't guess further, verify against the actual build output.
+Expected: `manifest.webmanifest` exists under `dist/client`; the `find` prints nothing (confirming no service-worker artifact is generated — expected and correct given this task's scope, not a bug to chase).
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add frontend/vite-pwa.config.ts frontend/src/vite-pwa-env.d.ts frontend/vite.config.ts frontend/tests/presentation/vite-pwa-config.spec.ts
-git commit -m "feat(frontend): configure vite-plugin-pwa (manifest + service worker)"
+git add frontend/vite-pwa.config.ts frontend/vite.config.ts frontend/tests/presentation/vite-pwa-config.spec.ts
+git commit -m "feat(frontend): configure vite-plugin-pwa (manifest only)"
 ```
 
 ---
 
-### Task 3: Offline fallback page
+### Task 3: Offline fallback page — DROPPED
+
+Dropped in the same amendment as Task 2's rewrite: there is no service
+worker to reference this page (`navigateFallback` was the only consumer of
+`offline.html`, and that Workbox config no longer exists). Do not implement
+this task. If offline caching is revisited in a future spec, this page's
+content can be resurrected from git history at need.
+
+<details>
+<summary>Original task body (kept for history, not to be implemented)</summary>
 
 **Files:**
 - Create: `frontend/public/offline.html`
@@ -275,7 +292,7 @@ git commit -m "feat(frontend): configure vite-plugin-pwa (manifest + service wor
 **Interfaces:**
 - Produces: a static file at `/offline.html`, referenced by `pwaOptions.workbox.navigateFallback` (already wired in Task 2).
 
-- [ ] **Step 1: Write `offline.html`**
+**Step 1 (not run):** would have written `offline.html` with this content:
 
 ```html
 <!doctype html>
@@ -336,21 +353,13 @@ git commit -m "feat(frontend): configure vite-plugin-pwa (manifest + service wor
 </html>
 ```
 
-- [ ] **Step 2: Verify it's picked up by the build**
+**Step 2 (not run):** would have verified `dist/client/offline.html` after
+build.
 
-```bash
-cd frontend && pnpm run build
-ls dist/client/offline.html
-```
+**Step 3 (not run):** would have committed as
+`feat(frontend): add static offline fallback page`.
 
-Expected: file present (Vite copies everything under `public/` as-is).
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add frontend/public/offline.html
-git commit -m "feat(frontend): add static offline fallback page"
-```
+</details>
 
 ---
 
@@ -691,12 +700,11 @@ In `frontend/src/routes/__root.tsx`, replace the existing `head: () => ({ meta: 
       {
         rel: 'icon',
         href: '/favicon.ico',
-        sizes: '48x48',
+        sizes: 'any',
       },
       {
         rel: 'icon',
-        href: '/favicon.svg',
-        sizes: 'any',
+        href: '/logo.svg',
         type: 'image/svg+xml',
       },
       {
@@ -707,7 +715,7 @@ In `frontend/src/routes/__root.tsx`, replace the existing `head: () => ({ meta: 
   }),
 ```
 
-This replaces the previous single `{ rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }` entry with the three generated-icon links from Task 1 — `logo.svg` itself keeps being used elsewhere (`AppShell`'s sidebar `<img>`), only the browser-tab/head favicon source changes.
+(Matches `@vite-pwa/assets-generator@1.0.2`'s own recommended markup exactly — Task 1's real run found this preset generates no separate `favicon.svg`; it expects the SVG favicon link to point at the project's existing `logo.svg` directly.) This still changes the previous entry's `sizes`/ordering — `logo.svg` keeps being used both here and elsewhere (`AppShell`'s sidebar `<img>`), now paired with the generated `favicon.ico` for raster fallback and `apple-touch-icon-180x180.png` for iOS.
 
 - [ ] **Step 2: Render `OfflineBanner` in `RootDocument`**
 
@@ -1148,92 +1156,14 @@ git commit -m "feat(frontend): add InstallAppButton, wire into Account"
 
 ---
 
-### Task 9: Update-available and offline-ready toasts
+### Task 9: Update-available and offline-ready toasts — DROPPED
 
-**Files:**
-- Create: `frontend/src/presentation/shared/use-service-worker-update.ts`
-- Modify: `frontend/src/routes/__root.tsx`
-
-**Interfaces:**
-- Consumes: `useRegisterSW` from `virtual:pwa-register/react` (available once Task 2's `vite-pwa-env.d.ts` and plugin config are in place).
-- Produces: `useServiceWorkerUpdate(): void` — a side-effect-only hook, called once from `RootDocument`.
-
-- [ ] **Step 1: Write `use-service-worker-update.ts`**
-
-No test here — this is a thin wrapper over a third-party hook whose own registration lifecycle only runs in a real browser with a real service worker; there is nothing meaningful to assert against without one (same limitation the spec's own Testing section already names for real SW behavior).
-
-```typescript
-import { useEffect } from 'react'
-import { toast } from 'sonner'
-import { useRegisterSW } from 'virtual:pwa-register/react'
-
-/**
- * `registerType: 'prompt'` (cf. vite-pwa.config.ts) means Workbox never
- * activates a new service worker behind the user's back — this hook is the
- * prompt. Reuses the existing sonner toast infra rather than building new
- * UI (cf. request-card.tsx, login-form.tsx).
- */
-export function useServiceWorkerUpdate(): void {
-  const {
-    offlineReady: [offlineReady, setOfflineReady],
-    needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
-  } = useRegisterSW()
-
-  useEffect(() => {
-    if (!needRefresh) return
-    toast('Update available', {
-      description: 'A new version of arr is ready.',
-      action: { label: 'Reload', onClick: () => updateServiceWorker(true) },
-      duration: Infinity,
-    })
-    setNeedRefresh(false)
-  }, [needRefresh, setNeedRefresh, updateServiceWorker])
-
-  useEffect(() => {
-    if (!offlineReady) return
-    toast.success('arr is ready to work offline.')
-    setOfflineReady(false)
-  }, [offlineReady, setOfflineReady])
-}
-```
-
-- [ ] **Step 2: Call it from `RootDocument`**
-
-In `frontend/src/routes/__root.tsx`, add the import and call the hook at the top of `RootDocument` (a hook call, not JSX):
-
-```tsx
-import { useServiceWorkerUpdate } from '#presentation/shared/use-service-worker-update'
-```
-
-```tsx
-function RootDocument({ children }: { children: React.ReactNode }) {
-  const connector = createConnector(getCookieHeader())
-  useServiceWorkerUpdate()
-
-  return (
-    <html lang="en" suppressHydrationWarning>
-      ...
-```
-
-- [ ] **Step 3: Typecheck**
-
-```bash
-cd frontend && pnpm run typecheck
-```
-
-Expected: clean — confirms `virtual:pwa-register/react` resolves via `vite-pwa-env.d.ts` (Task 2, Step 6).
-
-- [ ] **Step 4: Manual verification note**
-
-Actually exercising this (seeing the "Update available" toast after a real deploy, or the "ready to work offline" toast after a real first install) needs a real browser and a real service-worker lifecycle — not available in this sandbox (no `chromium-cli`, no Chrome/Chromium binary, no Playwright in the project, confirmed earlier this session). Flag as manual/Lighthouse verification in Task 10, not blocking here.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add frontend/src/presentation/shared/use-service-worker-update.ts frontend/src/routes/__root.tsx
-git commit -m "feat(frontend): add update-available and offline-ready toasts"
-```
+Dropped in the same amendment as Task 2's rewrite: `useRegisterSW` from
+`virtual:pwa-register/react` has nothing to register — there is no service
+worker (Task 2 finding). Do not implement this task. If offline caching is
+revisited in a future spec (a hand-written SW-build plugin, per the
+options presented to the user when this was decided), this task's original
+toast-wiring design can be resurrected from git history.
 
 ---
 
@@ -1263,7 +1193,7 @@ Expected: PASS — lint, typecheck, `test:back` + `test:front`, `boundaries`, al
 task build
 ```
 
-Expected: succeeds; re-confirm `dist/client/manifest.webmanifest`, `dist/client/sw.js`, and `dist/client/offline.html` all exist (same check as Task 2/3, now against the full production build).
+Expected: succeeds; re-confirm `dist/client/manifest.webmanifest` exists (same check as Task 2, now against the full production build). No `sw.js`/`workbox-*`/`offline.html` to check — Tasks 3 and 9 are dropped.
 
 - [ ] **Step 4: Commit any formatting fixes**
 
@@ -1282,6 +1212,22 @@ Not verifiable in this environment (no browser available): a real Lighthouse PWA
 
 ## Self-review notes
 
-- **Spec coverage:** manifest/icons (Tasks 1–2, 6), offline app-shell service worker with `/api/*` excluded (Task 2), offline fallback page (Task 3), offline banner (Tasks 4–6), install button + iOS hint (Tasks 7–8), update-available/offline-ready toasts (Task 9), `/api/*` non-negotiable rule enforced and tested (Task 2's `pwaOptions` test). No spec section without a task.
+- **Spec coverage:** manifest/icons (Tasks 1–2, 6), offline banner (Tasks 4–6), install button + iOS hint (Tasks 7–8). No spec section without a task, for what remains in scope.
 - **Type consistency checked:** `ConnectivityMonitor`/`InstallPromptController` signatures match exactly between their definition (Tasks 4/7), fakes (Tasks 4/7), hooks (Tasks 5/8), and components (Tasks 5/8) — `isOnline`/`subscribe`/`canInstall`/`prompt` used identically everywhere, no renamed variants.
-- **No placeholders:** every step has real, complete code; the two "verify against actual build output" steps (Task 2 Step 8, Task 3 Step 2) are genuine checks with a clear pass condition, not deferred work.
+- **No placeholders:** every step has real, complete code; Task 2's "verify against actual build output" step is a genuine check with a clear pass condition, not deferred work.
+
+## Amendment (2026-08-22, mid-implementation)
+
+The offline-app-shell half of the original plan (Tasks 3 and 9, and the
+service-worker/workbox portion of Task 2) is dropped: `vite-plugin-pwa`
+cannot generate a service worker under TanStack Start's build (confirmed
+root cause: a shared mutable config object across Vite's Environment-API
+client/ssr builds permanently defeats the plugin's own "am I building the
+client?" guard; matches two independent open upstream issues,
+`TanStack/router#4988` and `serwist/serwist#300`, both unresolved as of this
+date). User decision, presented with three options (custom SW-build plugin,
+patch `vite-plugin-pwa` directly, ship installable-only): **ship
+installable-only**. Manifest, icons, install button, and the offline-status
+banner (`OfflineBanner`/`ConnectivityMonitor`, which only ever needed
+`navigator.onLine` and never depended on a service worker) are unaffected
+and remain fully in scope. The spec document carries the same amendment.
