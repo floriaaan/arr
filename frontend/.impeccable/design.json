@@ -1,0 +1,239 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-22T10:40:44Z",
+  "title": "Design System: arr",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Primary Ink",
+        "canonical": "oklch(0.21 0.006 285.885)",
+        "tonalRamp": [
+          "oklch(0.141 0.005 285.823)",
+          "oklch(0.21 0.006 285.885)",
+          "oklch(0.35 0.008 285.9)",
+          "oklch(0.48 0.01 285.9)",
+          "oklch(0.6 0.012 285.9)",
+          "oklch(0.72 0.01 285.9)",
+          "oklch(0.85 0.006 285.9)",
+          "oklch(0.985 0 0)"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(0.141 0.005 285.823)",
+        "tonalRamp": [
+          "oklch(0.141 0.005 285.823)",
+          "oklch(0.274 0.006 286.033)",
+          "oklch(0.4 0.01 286)",
+          "oklch(0.552 0.016 285.938)",
+          "oklch(0.705 0.015 286.067)",
+          "oklch(0.83 0.008 286)",
+          "oklch(0.92 0.004 286.32)",
+          "oklch(1 0 0)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Quiet Gray",
+        "canonical": "oklch(0.967 0.001 286.375)"
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(0.92 0.004 286.32)"
+      },
+      "destructive": {
+        "role": "status",
+        "displayName": "Failure Red",
+        "canonical": "oklch(0.577 0.245 27.325)",
+        "tonalRamp": [
+          "oklch(0.2 0.09 27)",
+          "oklch(0.32 0.15 27)",
+          "oklch(0.44 0.2 27.2)",
+          "oklch(0.577 0.245 27.325)",
+          "oklch(0.66 0.22 27.3)",
+          "oklch(0.75 0.17 27.3)",
+          "oklch(0.85 0.1 27.3)",
+          "oklch(0.94 0.04 27.3)"
+        ]
+      },
+      "status-success": {
+        "role": "status",
+        "displayName": "Available Green",
+        "canonical": "#059669"
+      },
+      "status-warning": {
+        "role": "status",
+        "displayName": "Attention Amber",
+        "canonical": "#d97706"
+      },
+      "chart-movie": {
+        "role": "chart",
+        "displayName": "Movie",
+        "canonical": "oklch(0.646 0.222 41.116)"
+      },
+      "chart-series": {
+        "role": "chart",
+        "displayName": "Series",
+        "canonical": "oklch(0.6 0.118 184.704)"
+      },
+      "chart-album": {
+        "role": "chart",
+        "displayName": "Album",
+        "canonical": "oklch(0.398 0.07 227.392)"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display (wordmark only)",
+        "purpose": "The 'arr' logotype in sidebar/mobile header. Never used for page headings or body copy."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles, dialog titles, section headings."
+      },
+      "body": { "displayName": "Body", "purpose": "Default weight for nearly all interface copy." },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Badges, timestamps, muted metadata, kbd hints."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card",
+        "value": "shadow-sm (Tailwind default)",
+        "purpose": "The only shadow used on cards. Nothing in the system escalates past it."
+      },
+      {
+        "name": "input",
+        "value": "shadow-xs (Tailwind default)",
+        "purpose": "Inputs and outline buttons."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-transition",
+        "value": "180ms ease",
+        "purpose": "Shared background/color/border/transform transition on buttons and links."
+      },
+      {
+        "name": "tap-scale-hover",
+        "value": "160ms cubic-bezier(0.16, 1, 0.3, 1) → scale(1.02)",
+        "purpose": "Press-affordance feedback on hover for any .tap-scale element (buttons, cards)."
+      },
+      {
+        "name": "tap-scale-active",
+        "value": "160ms cubic-bezier(0.16, 1, 0.3, 1) → scale(0.97)",
+        "purpose": "Press-affordance feedback on active/press."
+      }
+    ],
+    "breakpoints": [{ "name": "md", "value": "768px" }],
+    "textures": [
+      {
+        "name": "grid-backdrop",
+        "value": "40px line grid, color-mix(in oklab, var(--foreground) 8%, transparent), radial-gradient mask fading from 50% 35% to transparent at 75%",
+        "purpose": "Scoped to LoginForm's and /setup's own wrapper only — the one texture the system allows, deliberately not applied to body or to any authenticated/dense view."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Default filled button, used for the main affirmative action in a view (Approve, Save, primary CTAs).",
+      "html": "<button class=\"ds-btn-primary\">Approve</button>",
+      "css": ".ds-btn-primary { background: oklch(0.21 0.006 285.885); color: oklch(0.985 0 0); padding: 8px 16px; border: none; border-radius: 0; font-size: 0.875rem; font-weight: 500; font-family: Manrope, ui-sans-serif, system-ui, sans-serif; transition: background-color 180ms ease, transform 160ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-primary:hover { background: color-mix(in oklab, oklch(0.21 0.006 285.885) 90%, white); transform: scale(1.02); } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px oklch(0.871 0.006 286.286 / 0.5); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action button — search trigger, cancel, retry.",
+      "html": "<button class=\"ds-btn-outline\">Retry</button>",
+      "css": ".ds-btn-outline { background: oklch(1 0 0); color: oklch(0.141 0.005 285.823); padding: 8px 16px; border: 1px solid oklch(0.92 0.004 286.32); border-radius: 0; font-size: 0.875rem; font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,0.04); transition: background-color 180ms ease, transform 160ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-outline:hover { background: oklch(0.967 0.001 286.375); transform: scale(1.02); } .ds-btn-outline:active { transform: scale(0.97); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Base container for requests, stat tiles, settings panels.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">Request title</div><div class=\"ds-card-body\">Body content</div></div>",
+      "css": ".ds-card { background: oklch(1 0 0); color: oklch(0.141 0.005 285.823); border-radius: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 1px 1px rgba(0,0,0,0.03); padding: 24px; display: flex; flex-direction: column; gap: 24px; } .ds-card-title { font-weight: 600; font-size: 1rem; line-height: 1; } .ds-card-body { font-size: 0.875rem; color: oklch(0.552 0.016 285.938); }"
+    },
+    {
+      "name": "Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Text field used throughout forms (search, settings, reject-reason).",
+      "html": "<input class=\"ds-input\" placeholder=\"Reason (shown to the requester)\" />",
+      "css": ".ds-input { height: 36px; width: 100%; border: 1px solid oklch(0.92 0.004 286.32); background: transparent; border-radius: 0; padding: 4px 12px; font-size: 0.875rem; box-shadow: 0 1px 2px rgba(0,0,0,0.04); transition: box-shadow 150ms ease; } .ds-input::placeholder { color: oklch(0.552 0.016 285.938); } .ds-input:focus-visible { outline: none; border-color: oklch(0.871 0.006 286.286); box-shadow: 0 0 0 3px oklch(0.871 0.006 286.286 / 0.5); }"
+    },
+    {
+      "name": "Instance Status Badge",
+      "kind": "custom",
+      "refersTo": "badge-status",
+      "description": "Signature component: the four-state honesty indicator for a *arr instance's reachability. Not configured / Disabled / Unreachable / Enabled.",
+      "html": "<span class=\"ds-badge ds-badge--destructive\">Unreachable</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 0; font-size: 0.75rem; font-weight: 500; font-family: Manrope, sans-serif; } .ds-badge--default { background: oklch(0.21 0.006 285.885); color: oklch(0.985 0 0); } .ds-badge--secondary { background: oklch(0.967 0.001 286.375); color: oklch(0.21 0.006 285.885); } .ds-badge--destructive { background: oklch(0.577 0.245 27.325); color: #fff; } .ds-badge--outline { background: transparent; color: oklch(0.141 0.005 285.823); border: 1px solid oklch(0.92 0.004 286.32); }"
+    },
+    {
+      "name": "Stat Tile",
+      "kind": "custom",
+      "refersTo": "stat-tile",
+      "description": "Requests-overview metric card: icon + label + colored count. Four instances (Total/Active/Available/Failed) share this exact shape, differing only by tone.",
+      "html": "<div class=\"ds-stat\"><span class=\"ds-stat-label\">Available</span><span class=\"ds-stat-value ds-stat-value--success\">12</span></div>",
+      "css": ".ds-stat { background: oklch(1 0 0); border-radius: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); padding: 16px; display: flex; flex-direction: column; gap: 4px; } .ds-stat-label { font-size: 0.75rem; color: oklch(0.552 0.016 285.938); } .ds-stat-value { font-size: 1.5rem; font-weight: 600; } .ds-stat-value--success { color: #059669; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Honest Panel",
+    "overview": "Every visual choice serves one product promise: state you can trust at a glance. The system is a near-flat, near-neutral shadcn/ui foundation (Tailwind 4, sharp square corners, shadow-xs/shadow-sm only) that stays out of the way for 95% of any screen — grayscale surfaces, thin 1px borders, Manrope for all reading text. The one place the UI is allowed to raise its voice is status: a request's badge, an instance's health, a stat card's tone. Color there is never decorative — default (dark neutral) means healthy/active, destructive red means failed or unreachable, secondary gray means in-progress, outline means not-yet-configured or awaiting. The Fraunces serif wordmark is the system's only ornament, reserved for the \"arr\" logotype and nothing else — a small warmth against an otherwise utilitarian, restrained-and-precise surface.\n\nThree-way theming (light / dark / system, via next-themes) is a first-class constraint, not an afterthought: every token is defined once in :root and re-mapped in .dark, never hardcoded per-component.",
+    "keyCharacteristics": [
+      "Grayscale-first surface; color is reserved for status, never for brand decoration.",
+      "Flat by default — shadow-xs/shadow-sm only, no layered elevation.",
+      "Sharp, modern geometry — square corners everywhere, no rounding.",
+      "One serif accent (Fraunces) on the wordmark; everything else is Manrope.",
+      "tap-scale press feedback (scale 1.02 hover / 0.97 active) is the system's one shared micro-interaction, applied uniformly via a CSS utility rather than per-component hover:scale-*.",
+      "Light/dark/system theming is structural, not optional."
+    ],
+    "rules": [
+      {
+        "name": "The Status-Only Color Rule",
+        "body": "Outside of the library composition chart, saturated color exists to report state (success/failure/warning/active), never to decorate a surface. If a color isn't reporting something, it should be neutral.",
+        "section": "colors"
+      },
+      {
+        "name": "The One-Serif Rule",
+        "body": "Fraunces appears exactly once per screen, on the \"arr\" wordmark. It never appears on page titles, buttons, or body copy — introducing it elsewhere would compete with the wordmark instead of marking it.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "No component escalates past shadow-sm. If a screen needs more visual separation, reach for a border or a muted-background block before reaching for a bigger shadow.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Square Corner Rule",
+        "body": "No component earns a radius. If a shape needs to read as \"special\" (a status tag, a floating panel), separate it with color, weight, or a border — never with a rounded corner.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do treat color as a status signal first — pick a badge/text variant by what it reports (healthy/in-progress/failed/unconfigured), not by visual preference.",
+      "Do reuse the Instance Status Badge's exact four-state mapping for any new reachability/health surface.",
+      "Do keep Fraunces confined to the \"arr\" wordmark; every other heading and body role is Manrope.",
+      "Do define new tokens in both :root and .dark at once — no component should hardcode a light-only or dark-only value.",
+      "Do apply tap-scale to new interactive elements instead of a bespoke hover:scale-*."
+    ],
+    "donts": [
+      "Don't reintroduce a --sea-ink/--lagoon/--palm/--hero-*/--glow-*/--grid-*-style decorative body background or an unlayered body {} rule that paints ahead of @layer base — it painted /login and /setup teal until this pass removed it. Any new top-level page must render inside (or reproduce) bg-background/text-foreground.",
+      "Don't introduce any border-radius above 0 — no rounded-sm/md/lg/xl/full on any component. --radius-sm/md/lg/xl are hardcoded to 0px in styles.css, not derived from a --radius base.",
+      "Don't introduce a shadow past shadow-sm.",
+      "Don't add a fourth or fifth library-composition chart color (chart-4/chart-5 exist in :root but back no real media kind today).",
+      "Don't hardcode a status color as a literal Tailwind class on a one-off element when an existing Badge/stat-tone convention already covers that meaning."
+    ]
+  }
+}
