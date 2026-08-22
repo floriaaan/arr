@@ -25,6 +25,7 @@ const MIME_TYPES = {
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
   '.map': 'application/json; charset=utf-8',
+  '.webmanifest': 'application/manifest+json',
 }
 
 function tryServeStatic(req, res) {

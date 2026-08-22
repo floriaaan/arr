@@ -85,13 +85,21 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <OfflineBanner />
-        <ThemeProvider>
-          <ArrConnectorProvider connector={connector}>
-            {children}
-            <Toaster />
-          </ArrConnectorProvider>
-        </ThemeProvider>
+        {/* This `flex h-dvh flex-col` column is the single place `h-dvh` is
+            claimed in the whole document — `OfflineBanner` (sticky,
+            non-scrolling) and `AppShell` (`flex-1 min-h-0`) are siblings
+            here and split that one viewport height between them, instead of
+            both claiming a full `100dvh` and pushing the document taller
+            than the viewport while the banner is visible. */}
+        <div className="flex h-dvh flex-col">
+          <OfflineBanner />
+          <ThemeProvider>
+            <ArrConnectorProvider connector={connector}>
+              {children}
+              <Toaster />
+            </ArrConnectorProvider>
+          </ThemeProvider>
+        </div>
         <TanStackDevtools
           config={{
             position: 'bottom-right',

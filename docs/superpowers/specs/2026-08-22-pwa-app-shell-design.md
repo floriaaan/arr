@@ -105,11 +105,16 @@ integration is manual (a documented, supported pattern for SSR
 meta-frameworks — same shape used for Remix/SvelteKit):
 
 - `injectRegister: null` in the Vite plugin config.
-- Manifest `<link rel="manifest">` + `<meta name="theme-color">` (light
-  value, plus a `media="(prefers-color-scheme: dark)"` variant for the
-  browser-chrome color specifically — the manifest itself has no reliable
-  dark-mode variant support yet) added to `__root.tsx`'s existing
-  `head: () => ({ links: [...], meta: [...] })`.
+- Manifest `<link rel="manifest">` added to `__root.tsx`'s existing
+  `head: () => ({ links: [...], meta: [...] })`. The two `theme-color`
+  metas (light value, plus a `media="(prefers-color-scheme: dark)"` variant
+  for the browser-chrome color specifically — the manifest itself has no
+  reliable dark-mode variant support yet) turned out **not** to work through
+  that array: TanStack Router's `HeadContent` dedupes meta by `name`,
+  collapsing both `theme-color` entries into one at render time. They ship
+  instead as two literal `<meta>` JSX elements rendered directly in
+  `RootDocument`'s `<head>`, alongside — not through — `head()`'s array,
+  specifically to bypass that dedup.
 - SW registration + update flow done from a small client-only hook
   (`use-service-worker-update.ts`) calling `useRegisterSW` directly, not
   through the manual-injection path.

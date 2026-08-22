@@ -147,9 +147,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   )
 
   return (
-    // `h-dvh`, not `h-screen`: on mobile browsers `vh` ignores the collapsing
-    // address bar, which clipped the bottom of the layout.
-    <div className="flex h-dvh overflow-hidden bg-background">
+    // `flex-1 min-h-0`, not `h-dvh`: the `h-dvh` flex column lives one level
+    // up now, in `__root.tsx`, as the shared ancestor of `OfflineBanner` and
+    // this shell — that way the banner (sticky, non-scrolling) and this
+    // shell split one `100dvh` between them instead of each claiming the
+    // full viewport height and pushing the document taller than the
+    // viewport when the banner renders. `min-h-0` is required alongside
+    // `flex-1`: without it, a flex child's default `min-height: auto` lets
+    // it grow past its share based on content, defeating `overflow-hidden`
+    // below.
+    <div className="flex min-h-0 flex-1 overflow-hidden bg-background">
       {/* The same sidebar twice: a fixed column from `md` up, a drawer below.
           Rendering one and repositioning it with CSS would mean the drawer
           keeps a focus trap it shouldn't have on desktop. */}

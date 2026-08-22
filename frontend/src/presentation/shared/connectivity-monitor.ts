@@ -6,7 +6,12 @@ export interface ConnectivityMonitor {
 /**
  * The real thing — wraps `navigator.onLine` and the `online`/`offline`
  * window events. Guarded for SSR: this app server-renders every route, and
- * neither `navigator` nor `window` exists there.
+ * `window` doesn't exist there. Guard on `window`, not `navigator` — Node
+ * has had a global `navigator` since v21, but its `.onLine` is `undefined`,
+ * so a `typeof navigator === 'undefined'` guard never fires server-side and
+ * the banner renders on every SSR pass (cf. `http-client.ts`'s
+ * `resolveBaseUrl` and `fake-arr-connector.ts`, which both key their SSR
+ * guards off `window` for the same reason).
  *
  * `navigator.onLine` only reflects whether the OS/browser thinks it has a
  * network interface, not whether the backend is actually reachable — a
@@ -15,7 +20,7 @@ export interface ConnectivityMonitor {
  */
 export const browserConnectivityMonitor: ConnectivityMonitor = {
   isOnline: () => {
-    return typeof navigator === 'undefined' ? true : navigator.onLine
+    return typeof window === 'undefined' ? true : navigator.onLine
   },
   subscribe: (callback) => {
     if (typeof window === 'undefined') return () => {}

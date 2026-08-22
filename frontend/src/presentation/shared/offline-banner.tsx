@@ -13,7 +13,11 @@ export function OfflineBanner({ monitor }: { monitor?: ConnectivityMonitor }) {
   if (online) return null
 
   return (
-    <div className="flex items-center justify-center gap-2 border-b bg-muted px-4 py-1.5 text-xs text-muted-foreground">
+    <div
+      role="status"
+      aria-live="polite"
+      className="sticky top-0 z-50 flex items-center justify-center gap-2 border-b bg-muted px-4 py-1.5 text-xs text-muted-foreground"
+    >
       <WifiOff className="size-3.5 shrink-0" />
       You're offline — some data may be out of date.
     </div>
