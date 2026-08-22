@@ -11,9 +11,16 @@
 > issues in Task 2's report; see the design spec's own amendment note. User
 > decision: ship installable-only now. **Task 3 (offline fallback page) and
 > Task 9 (update/offline-ready toasts) are dropped** — their bodies below
-> are replaced with a short notice; do not implement them. Every other task
-> is unaffected — `OfflineBanner`/`ConnectivityMonitor` (Tasks 4-6) track
+> are replaced with a short notice; do not implement them. `OfflineBanner`/
+> `ConnectivityMonitor` (Tasks 4-6) are unaffected — they track
 > `navigator.onLine` directly and never depended on a service worker.
+> **Believed unaffected, not yet device-verified:** `InstallPromptController`/
+> `InstallAppButton` (Tasks 7-8), pending a real check of whether this
+> Chrome version still gates `beforeinstallprompt` on a registered service
+> worker with a fetch handler (historically a Chromium installability
+> criterion). If it does, `canInstall()` is permanently `false` on
+> desktop/Android and only the iOS-hint branch is ever live — see Task 10's
+> manual-verification note.
 
 **Architecture:** `vite-plugin-pwa` generates the manifest only (no service worker — see amendment above) from a config module (`vite-pwa.config.ts`) that's importable and unit-testable outside of Vite. `@vite-pwa/assets-generator` rasterizes the existing `public/logo.svg` into the full icon set once, as a committed static asset, not a build step. Two small interfaces (`ConnectivityMonitor`, `InstallPromptController`) wrap the browser APIs that have no framework equivalent yet, each with a fake test double, following the same interface+fake shape as `ArrConnector`/`FakeArrConnector` — but living in `presentation/shared/`, not `domain/`, since these are browser-platform concerns, not business ports (same layering `next-themes`'s `useTheme` already gets in this codebase).
 
@@ -1206,7 +1213,7 @@ git commit -m "chore(frontend): format" --allow-empty
 
 - [ ] **Step 5: Note what's still manual**
 
-Not verifiable in this environment (no browser available): a real Lighthouse PWA audit, and an actual "Add to Home Screen" test on an iOS device and an Android/Chrome device. Surface this to the user as the last remaining step before calling the feature done — don't claim it works on a real device without having run it.
+Not verifiable in this environment (no browser available): a real Lighthouse PWA audit, and an actual "Add to Home Screen" test on an iOS device and an Android/Chrome device. **Specifically check on Chrome/Android whether `canInstall()` ever becomes `true`** — the final whole-branch review flagged that Chromium has historically gated `beforeinstallprompt` on a registered service worker with a fetch handler, which this build no longer has (see the plan header's amendment). If the install button never fires on a real Chrome/Android device, that's this concern confirmed, not a bug in `InstallAppButton` itself — the fix would be revisiting the service-worker decision, not the button's code. Surface this to the user as the last remaining step before calling the feature done — don't claim it works on a real device without having run it.
 
 ---
 
