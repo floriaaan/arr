@@ -32,7 +32,7 @@ function ResultRow({
   onUse?: (baseUrl: string) => void
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-md border p-2">
+    <div className="flex items-center gap-3 rounded-none border p-2">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="truncate text-sm font-medium">{instance.baseUrl}</span>
@@ -112,7 +112,7 @@ export function DiscoveryDialog({
           Scan network
         </Button>
       </DialogTrigger>
-      <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-2xl">
+      <DialogContent className="flex max-h-[85dvh] flex-col sm:max-w-2xl">
         <DialogHeader className="shrink-0">
           <DialogTitle>Find {kindLabel(kind)} on your network</DialogTitle>
         </DialogHeader>
