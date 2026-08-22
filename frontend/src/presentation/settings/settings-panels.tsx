@@ -102,7 +102,7 @@ function ServiceCard({
         onClick={() => setExpanded((value) => !value)}
         className="tap-scale flex w-full items-center gap-4 px-6 py-4 text-left"
       >
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-none bg-muted">
           <Icon className="size-4.5" />
         </div>
         <div className="min-w-0 flex-1">
@@ -204,7 +204,7 @@ function MediaServerCard({
         onClick={() => setExpanded((value) => !value)}
         className="tap-scale flex w-full items-center gap-4 px-6 py-4 text-left"
       >
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-none bg-muted">
           <Icon className="size-4.5" />
         </div>
         <div className="min-w-0 flex-1">
@@ -298,7 +298,7 @@ function SsoPanel() {
       </div>
       <Card>
         <CardHeader className="flex-row items-center gap-3 space-y-0">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-none bg-muted">
             <KeyRound className="size-4.5" />
           </div>
           <div className="flex-1">
@@ -473,7 +473,7 @@ function NotificationsPanel() {
       </div>
       <Card>
         <CardHeader className="flex-row items-center gap-3 space-y-0">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-none bg-muted">
             <Bell className="size-4.5" />
           </div>
           <div className="flex-1">
@@ -800,7 +800,7 @@ function AuthPanel() {
       {authSettings.data ? (
         <Card>
           <CardHeader className="flex-row items-center gap-3 space-y-0">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-none bg-muted">
               <ShieldCheck className="size-4.5" />
             </div>
             <div className="flex-1">

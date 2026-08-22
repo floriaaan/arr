@@ -129,7 +129,7 @@ export function MergedRecordCard<T extends { id?: number }>({
           {merged.perInstance.map(({ kind, record }) => {
             const Icon = kindMeta[kind].icon
             return (
-              <div key={kind} className="flex items-center gap-3 rounded-md border px-4 py-3">
+              <div key={kind} className="flex items-center gap-3 rounded-none border px-4 py-3">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <Badge className="gap-1 shrink-0">
                     <Icon className="size-3" />

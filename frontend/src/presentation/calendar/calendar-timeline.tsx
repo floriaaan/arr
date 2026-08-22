@@ -59,7 +59,7 @@ export function CalendarTimeline({
           <li key={group.dateKey} className="space-y-2">
             <span
               className={cn(
-                'absolute -left-[5px] mt-1.5 size-2.5 rounded-full ring-4 ring-background',
+                'absolute -left-[5px] mt-1.5 size-2.5 rounded-none ring-4 ring-background',
                 isToday ? 'bg-primary' : 'bg-border',
               )}
               aria-hidden="true"
@@ -85,9 +85,9 @@ export function CalendarTimeline({
                     type="button"
                     disabled={!entry.externalId}
                     onClick={() => onSelect(entry)}
-                    className="tap-scale flex w-full items-center gap-3 rounded-md border p-2 text-left enabled:hover:bg-accent disabled:cursor-default disabled:opacity-70"
+                    className="tap-scale flex w-full items-center gap-3 rounded-none border p-2 text-left enabled:hover:bg-accent disabled:cursor-default disabled:opacity-70"
                   >
-                    <div className="relative h-12 w-8 shrink-0 overflow-hidden rounded bg-muted">
+                    <div className="relative h-12 w-8 shrink-0 overflow-hidden rounded-none bg-muted">
                       {entry.posterUrl ? (
                         <img
                           src={entry.posterUrl}

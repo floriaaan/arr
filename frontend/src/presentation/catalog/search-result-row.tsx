@@ -21,9 +21,9 @@ export function SearchResultRow({
     <button
       type="button"
       onClick={() => onSelect?.(item)}
-      className="tap-scale flex w-full items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      className="tap-scale flex w-full items-center gap-3 rounded-none px-3 py-2 text-left hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
-      <div className="relative aspect-[2/3] w-9 shrink-0 overflow-hidden rounded bg-muted">
+      <div className="relative aspect-[2/3] w-9 shrink-0 overflow-hidden rounded-none bg-muted">
         {item.posterUrl ? (
           <img src={item.posterUrl} alt="" className="size-full object-cover" loading="lazy" />
         ) : (

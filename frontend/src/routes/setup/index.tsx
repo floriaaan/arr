@@ -51,7 +51,7 @@ function SetupRoute() {
   const currentIndex = STEPS.indexOf(step)
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="grid-backdrop flex min-h-screen items-center justify-center p-4">
       <div className="fixed top-4 right-4 z-10 w-32">
         <ThemeToggle />
       </div>
@@ -69,7 +69,7 @@ function SetupRoute() {
                   <div
                     key={s}
                     className={cn(
-                      'h-1.5 flex-1 rounded-full transition-colors',
+                      'h-1.5 flex-1 rounded-none transition-colors',
                       index <= currentIndex ? 'bg-primary' : 'bg-muted',
                     )}
                   />

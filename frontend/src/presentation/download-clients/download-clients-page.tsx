@@ -31,7 +31,7 @@ function UnconfiguredInstanceCard({ kind }: { kind: ServarrKind }) {
   return (
     <Card>
       <CardHeader className="flex-row items-center gap-3 space-y-0">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-none bg-muted">
           <Icon className="size-4.5" />
         </div>
         <div className="flex-1">

@@ -39,7 +39,7 @@ const ADMIN_NAV_ITEMS = [
 ] as const
 
 const NAV_LINK_CLASS =
-  'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors'
+  'flex items-center gap-2 rounded-none px-3 py-2 text-sm font-medium transition-colors'
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false)
@@ -76,7 +76,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const sidebar = (
     <>
       <div className="flex items-center gap-2 px-4 py-4">
-        <img src="/logo.svg" alt="" className="size-7 rounded-md" />
+        <img src="/logo.svg" alt="" className="size-7 rounded-none" />
         <span className="display-title text-base font-semibold">arr</span>
       </div>
 
@@ -92,7 +92,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           <Search className="size-4" />
           Search catalog
-          <kbd className="ml-auto hidden rounded border bg-muted px-1.5 py-0.5 font-sans text-[10px] font-medium text-muted-foreground sm:inline">
+          <kbd className="ml-auto hidden rounded-none border bg-muted px-1.5 py-0.5 font-sans text-[10px] font-medium text-muted-foreground sm:inline">
             ⌘K
           </kbd>
         </Button>
@@ -170,7 +170,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               {sidebar}
             </SheetContent>
           </Sheet>
-          <img src="/logo.svg" alt="" className="size-6 rounded-md" />
+          <img src="/logo.svg" alt="" className="size-6 rounded-none" />
           <span className="display-title text-base font-semibold">arr</span>
           <Button
             variant="ghost"
