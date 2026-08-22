@@ -46,9 +46,7 @@ export function InstallAppButton({
     <Card>
       <CardHeader>
         <CardTitle>Install app</CardTitle>
-        <CardDescription>
-          Open arr like an app, without the browser's address bar.
-        </CardDescription>
+        <CardDescription>Open arr like an app, without the browser's address bar.</CardDescription>
       </CardHeader>
       <CardContent>
         {canInstall ? (

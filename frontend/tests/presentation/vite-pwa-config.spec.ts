@@ -14,9 +14,7 @@ describe('pwaOptions', () => {
 
     const icons = manifest.icons ?? []
     expect(icons.some((icon) => icon.purpose === 'maskable')).toBe(true)
-    expect(icons.some((icon) => icon.sizes === '512x512' && icon.purpose !== 'maskable')).toBe(
-      true,
-    )
+    expect(icons.some((icon) => icon.sizes === '512x512' && icon.purpose !== 'maskable')).toBe(true)
   })
 
   test('no service-worker config — vite-plugin-pwa cannot generate one under this build', () => {
