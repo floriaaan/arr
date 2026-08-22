@@ -180,7 +180,7 @@ export function DownloadClientFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] flex-col">
+      <DialogContent className="flex max-h-[85dvh] flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
@@ -231,21 +231,21 @@ export function DownloadClientFormDialog({
               />
 
               <p className="text-xs text-muted-foreground">
-                Tip: use <code className="rounded bg-muted px-1 py-0.5">{'{{arr}}'}</code> in a text
-                field (e.g. category) to insert the target instance automatically — resolves to{' '}
-                <code className="rounded bg-muted px-1 py-0.5">radarr</code>,{' '}
-                <code className="rounded bg-muted px-1 py-0.5">sonarr</code> or{' '}
-                <code className="rounded bg-muted px-1 py-0.5">lidarr</code> per instance.
+                Tip: use <code className="rounded-none bg-muted px-1 py-0.5">{'{{arr}}'}</code> in a
+                text field (e.g. category) to insert the target instance automatically — resolves to{' '}
+                <code className="rounded-none bg-muted px-1 py-0.5">radarr</code>,{' '}
+                <code className="rounded-none bg-muted px-1 py-0.5">sonarr</code> or{' '}
+                <code className="rounded-none bg-muted px-1 py-0.5">lidarr</code> per instance.
               </p>
 
               {showTargetPicker ? (
                 <div className="space-y-2">
                   <Label>Apply to</Label>
-                  <div className="space-y-1 rounded-md border p-2">
+                  <div className="space-y-1 rounded-none border p-2">
                     {configuredKinds.map((kind) => (
                       <label
                         key={kind}
-                        className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
+                        className="flex items-center gap-2 rounded-none px-2 py-1.5 text-sm hover:bg-accent"
                       >
                         <input
                           type="checkbox"

@@ -22,19 +22,19 @@ export function LibrarySizeBreakdown({ items }: { items: LibraryItem[] }) {
   if (totalBytes === 0) return null
 
   return (
-    <div className="space-y-2 rounded-lg border bg-card p-4">
+    <div className="space-y-2 rounded-none border bg-card p-4">
       <div className="flex items-baseline justify-between">
         <p className="text-sm font-medium">Storage used</p>
         <p className="text-sm text-muted-foreground">{formatSize(totalBytes)} total</p>
       </div>
 
-      <div className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full bg-muted">
+      <div className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-none bg-muted">
         {byKind
           .filter((entry) => entry.bytes > 0)
           .map((entry) => (
             <div
               key={entry.kind}
-              className={`h-full first:rounded-l-full last:rounded-r-full ${KIND_META[entry.kind].barClass}`}
+              className={`h-full ${KIND_META[entry.kind].barClass}`}
               style={{ width: `${(entry.bytes / totalBytes) * 100}%` }}
               title={`${KIND_META[entry.kind].label}: ${formatSize(entry.bytes)} (${Math.round((entry.bytes / totalBytes) * 100)}%)`}
             />
@@ -50,7 +50,7 @@ export function LibrarySizeBreakdown({ items }: { items: LibraryItem[] }) {
               key={entry.kind}
               className="flex items-center gap-1.5 text-xs text-muted-foreground"
             >
-              <span className={`size-2 shrink-0 rounded-full ${meta.swatchClass}`} />
+              <span className={`size-2 shrink-0 rounded-none ${meta.swatchClass}`} />
               <KindIcon className="size-3.5" />
               <span>{meta.label}</span>
               <span className="font-medium text-foreground">{formatSize(entry.bytes)}</span>

@@ -34,7 +34,7 @@ export function LoginForm({ onSignedIn }: { onSignedIn: () => void }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="grid-backdrop flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>Sign in</CardTitle>

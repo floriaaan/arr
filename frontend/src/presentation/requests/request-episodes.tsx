@@ -62,7 +62,7 @@ export function RequestEpisodes({ requestId, open }: { requestId: string; open: 
       {episodes.data.value.map((episode) => (
         <li
           key={`${episode.seasonNumber}-${episode.episodeNumber}`}
-          className="flex items-center gap-2 rounded-md px-2 py-1 text-xs odd:bg-muted/40"
+          className="flex items-center gap-2 rounded-none px-2 py-1 text-xs odd:bg-muted/40"
         >
           <span className="w-14 shrink-0 font-mono text-muted-foreground tabular-nums">
             {episodeCode(episode.seasonNumber, episode.episodeNumber)}

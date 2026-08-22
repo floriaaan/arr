@@ -265,11 +265,11 @@ export function InstanceProfileFormDialog({
             <>
               <div className="space-y-2">
                 <Label>Allowed qualities</Label>
-                <div className="max-h-56 space-y-1 overflow-y-auto rounded-md border p-2">
+                <div className="max-h-56 space-y-1 overflow-y-auto rounded-none border p-2">
                   {items.map((item, index) => (
                     <label
                       key={itemKey(item, index)}
-                      className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
+                      className="flex items-center gap-2 rounded-none px-2 py-1.5 text-sm hover:bg-accent"
                     >
                       <input
                         type="checkbox"

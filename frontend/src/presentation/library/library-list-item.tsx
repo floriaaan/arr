@@ -12,9 +12,9 @@ export function LibraryListItem({ item, onSelect }: { item: LibraryItem; onSelec
     <button
       type="button"
       onClick={onSelect}
-      className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="flex w-full items-center gap-3 rounded-none px-3 py-2 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <div className="relative aspect-[2/3] w-9 shrink-0 overflow-hidden rounded bg-muted">
+      <div className="relative aspect-[2/3] w-9 shrink-0 overflow-hidden rounded-none bg-muted">
         {item.posterUrl ? (
           <img src={item.posterUrl} alt="" className="size-full object-cover" loading="lazy" />
         ) : (

@@ -49,7 +49,11 @@ function SheetContent({
         {...props}
       >
         {children}
-        <SheetPrimitive.Close className="absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-hidden">
+        {/* `size-9`, not the icon's own 16px: this is the mobile nav
+            drawer's close control — a hit target sized to its glyph is
+            unreliable on touch (cf. adapt.md's 44x44 guidance; matches the
+            app's other icon buttons at size-9). */}
+        <SheetPrimitive.Close className="absolute top-3 right-3 flex size-9 items-center justify-center rounded-none opacity-70 transition-opacity hover:bg-sidebar-accent hover:opacity-100 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-hidden">
           <XIcon className="size-4" />
           <span className="sr-only">Close</span>
         </SheetPrimitive.Close>

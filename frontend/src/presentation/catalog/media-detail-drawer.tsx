@@ -139,7 +139,11 @@ export function MediaDetailDrawer({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
+      {/* `dvh`, not `vh` (cf. `command-palette.tsx`): `vh` computes against
+          the pre-collapse viewport height, so a mobile browser's chrome
+          collapsing/expanding after open leaves this either too short or
+          clipped against a taller-than-visible area. */}
+      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-3xl">
         {detail.isLoading || !externalId ? (
           <div className="space-y-3">
             <Skeleton className="h-6 w-2/3" />
@@ -172,7 +176,7 @@ export function MediaDetailDrawer({
                       <img
                         src={value.posterUrl}
                         alt={value.title}
-                        className="h-72 w-48 shrink-0 self-center rounded-md object-cover sm:self-start"
+                        className="h-72 w-48 shrink-0 self-center rounded-none object-cover sm:self-start"
                       />
                     ) : null}
                     <div className="min-w-0 flex-1 space-y-4">
@@ -193,7 +197,7 @@ export function MediaDetailDrawer({
 
                       <p className="text-sm text-muted-foreground">{value.overview}</p>
 
-                      <div className="space-y-1.5 rounded-md border p-3">
+                      <div className="space-y-1.5 rounded-none border p-3">
                         <MetaRow icon={CalendarDays} label="Year" value={value.year ?? 'Unknown'} />
                         {value.runtimeMinutes ? (
                           <MetaRow
@@ -208,7 +212,7 @@ export function MediaDetailDrawer({
                       </div>
 
                       {value.managedBy ? (
-                        <div className="space-y-1.5 rounded-md border p-3">
+                        <div className="space-y-1.5 rounded-none border p-3">
                           <MetaRow
                             icon={Server}
                             label="Instance"
@@ -293,7 +297,7 @@ export function MediaDetailDrawer({
             {(() => {
               const value = detail.data.value
               return (
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     onClick={handleRequest}
                     disabled={value.alreadyManaged || createRequest.isPending}

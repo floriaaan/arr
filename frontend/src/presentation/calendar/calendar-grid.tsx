@@ -132,7 +132,7 @@ export function CalendarGrid() {
       {isLoading ? (
         <Skeleton className="hidden h-[600px] w-full md:block" />
       ) : (
-        <div className="hidden overflow-hidden rounded-lg border md:block">
+        <div className="hidden overflow-hidden rounded-none border md:block">
           <div className="grid grid-cols-7 border-b bg-muted/50 text-xs font-medium text-muted-foreground">
             {WEEKDAY_LABELS.map((label) => (
               <div key={label} className="px-2 py-2 text-center">
@@ -159,7 +159,7 @@ export function CalendarGrid() {
                   <div className="flex items-center justify-between gap-1">
                     <span
                       className={cn(
-                        'flex size-5 items-center justify-center rounded-full text-xs',
+                        'flex size-5 items-center justify-center rounded-none text-xs',
                         isToday && 'bg-primary font-semibold text-primary-foreground',
                         !isToday && (isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'),
                       )}
@@ -184,7 +184,7 @@ export function CalendarGrid() {
                           type="button"
                           disabled={!entry.externalId}
                           onClick={() => selectEntry(entry)}
-                          className="tap-scale flex w-full items-center gap-1 truncate rounded bg-secondary px-1.5 py-0.5 text-left text-[11px] text-secondary-foreground disabled:cursor-default disabled:opacity-70 enabled:hover:bg-secondary/70"
+                          className="tap-scale flex w-full items-center gap-1 truncate rounded-none bg-secondary px-1.5 py-0.5 text-left text-[11px] text-secondary-foreground disabled:cursor-default disabled:opacity-70 enabled:hover:bg-secondary/70"
                           title={
                             entry.subtitle ? `${entry.title} — ${entry.subtitle}` : entry.title
                           }

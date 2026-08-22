@@ -1,0 +1,33 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-color",
+        "value": "#1d2e45",
+        "createdAt": "2026-08-22T11:30:59.883Z",
+        "reason": "pre-existing .prose pre code-block background, unrelated to sharp-corner/color-unification task, unchanged from prior file"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#e8efff",
+        "createdAt": "2026-08-22T11:30:59.913Z",
+        "reason": "pre-existing .prose pre code-block text color, unrelated to sharp-corner/color-unification task, unchanged from prior file"
+      },
+      {
+        "rule": "overused-font",
+        "value": "fraunces",
+        "createdAt": "2026-08-22T12:38:19.822Z",
+        "reason": "same as Fraunces (import line, lowercase font-family match); pre-existing, confined to wordmark"
+      },
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": ["src/styles.css"],
+        "createdAt": "2026-08-22T12:38:19.897Z",
+        "reason": "user confirmed: explicitly requested a Linear-style grid background this turn, scope (login/setup only) and style (fine line grid, radial fade) both confirmed via AskUserQuestion before building"
+      }
+    ]
+  }
+}

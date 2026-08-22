@@ -117,7 +117,7 @@ export function LibraryGrid() {
       </Tabs>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1 rounded-md border p-0.5">
+        <div className="flex items-center gap-1 rounded-none border p-0.5">
           <Button
             type="button"
             variant="ghost"
@@ -218,7 +218,7 @@ export function LibraryGrid() {
           ))}
         </div>
       ) : (
-        <div className="divide-y rounded-lg border">
+        <div className="divide-y rounded-none border">
           {filtered.map((item) => (
             <LibraryListItem
               key={`${item.externalId.scheme}:${item.externalId.value}`}

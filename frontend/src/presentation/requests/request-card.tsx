@@ -117,7 +117,7 @@ export function RequestCard({ request }: { request: MediaRequest }) {
   return (
     <Card>
       <CardContent className="flex items-start justify-between gap-4">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-none bg-muted text-muted-foreground">
           <KindIcon className="size-4" />
         </div>
         <div className="min-w-0 flex-1 space-y-1">
