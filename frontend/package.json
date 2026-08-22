@@ -19,7 +19,8 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "boundaries": "depcruise --config .dependency-cruiser.cjs src"
+    "boundaries": "depcruise --config .dependency-cruiser.cjs src",
+    "generate-pwa-assets": "pwa-assets-generator"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.5.7",
@@ -58,12 +59,14 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
+    "@vite-pwa/assets-generator": "^1.0.2",
     "dependency-cruiser": "^18.1.0",
     "eslint": "^10.8.0",
     "jsdom": "^30.0.1",
     "prettier": "^3.8.1",
     "typescript": "^6.0.2",
     "vite": "^8.2.0",
+    "vite-plugin-pwa": "^1.3.0",
     "vitest": "^4.1.10"
   }
 }
